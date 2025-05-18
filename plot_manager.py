@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.widgets as widgets
+import matplotlib.patches as patches
 import numpy as np
-
 
 class PlotManager:
     def __init__(self, data, file_names, D, data_manager, event_handler):
@@ -14,10 +14,10 @@ class PlotManager:
         self.selected_indices = []
         self.scatter_plots = []
         self.indices = []
+        self.smoothed_area_patch = None  # To store the patch marking the smoothed area
 
         self.fig = plt.figure(figsize=(12, 8))
         self.ax = self.fig.add_subplot(111)
-        # Call setup_widgets before setup_plot to ensure status_text is initialized
         self.setup_widgets()
         self.setup_plot()
         self.setup_events()
@@ -44,6 +44,10 @@ class PlotManager:
             self.indices.append(np.array([]))
         self.ax.legend()
 
+        # Redraw the smoothed area patch if it exists
+        if self.smoothed_area_patch is not None:
+            self.ax.add_patch(self.smoothed_area_patch)
+
         if current_xlim and current_ylim:
             self.ax.set_xlim(current_xlim)
             self.ax.set_ylim(current_ylim)
@@ -51,16 +55,13 @@ class PlotManager:
         self.update_status()
 
     def setup_widgets(self):
-        # Adjust figure layout to make space for status text
         self.fig.subplots_adjust(top=0.85, bottom=0.15)
 
-        # Status text
         self.status_ax = self.fig.add_axes([0.1, 0.92, 0.8, 0.05], frame_on=False)
         self.status_ax.xaxis.set_visible(False)
         self.status_ax.yaxis.set_visible(False)
         self.status_text = self.status_ax.text(0.5, 0.5, "", ha='center', va='center', fontsize=10)
 
-        # Buttons
         ax_save = self.fig.add_axes([0.91, 0.02, 0.08, 0.04])
         self.btn_save = widgets.Button(ax_save, 'Save', color='lightgreen', hovercolor='lightblue')
         self.btn_save.on_clicked(self.event_handler.on_save)
@@ -97,8 +98,7 @@ class PlotManager:
         self.btn_clear.label.set_fontsize(8)
 
         ax_confirm_start = self.fig.add_axes([0.45, 0.06, 0.12, 0.04])
-        self.btn_confirm_start = widgets.Button(ax_confirm_start, 'Confirm Start', color='lightgreen',
-                                                hovercolor='cyan')
+        self.btn_confirm_start = widgets.Button(ax_confirm_start, 'Confirm Start', color='lightgreen', hovercolor='cyan')
         self.btn_confirm_start.on_clicked(self.event_handler.on_confirm_start)
         self.btn_confirm_start.label.set_fontsize(8)
 
@@ -108,12 +108,10 @@ class PlotManager:
         self.btn_confirm_end.label.set_fontsize(8)
 
         ax_cancel_smoothing = self.fig.add_axes([0.71, 0.06, 0.12, 0.04])
-        self.btn_cancel_smoothing = widgets.Button(ax_cancel_smoothing, 'Cancel Smoothing', color='salmon',
-                                                   hovercolor='cyan')
+        self.btn_cancel_smoothing = widgets.Button(ax_cancel_smoothing, 'Cancel Smoothing', color='salmon', hovercolor='cyan')
         self.btn_cancel_smoothing.on_clicked(self.event_handler.on_cancel_smoothing)
         self.btn_cancel_smoothing.label.set_fontsize(8)
 
-        # Smoothing factor slider
         ax_slider = self.fig.add_axes([0.01, 0.02, 0.3, 0.03])
         self.slider_smooth = widgets.Slider(ax_slider, 'Smooth Factor', 0.5, 5.0, valinit=2.0, valstep=0.5)
         self.slider_smooth.label.set_fontsize(8)
@@ -130,15 +128,49 @@ class PlotManager:
         self.fig.canvas.mpl_connect('pick_event', self.event_handler.on_pick)
         self.fig.canvas.mpl_connect('key_press_event', self.event_handler.on_key)
 
+    def mark_smoothed_area(self, smoothed_points):
+        """Mark the area of the smoothed segment with a bounding box."""
+        if smoothed_points.shape[0] < 2:
+            return
+
+        # Clear any existing smoothed area patch
+        self.clear_smoothed_area()
+
+        # Compute the bounding box of the smoothed points
+        x_min, x_max = np.min(smoothed_points[:, 0]), np.max(smoothed_points[:, 0])
+        y_min, y_max = np.min(smoothed_points[:, 1]), np.max(smoothed_points[:, 1])
+
+        # Add some padding to the bounding box
+        padding = 0.5
+        width = x_max - x_min + 2 * padding
+        height = y_max - y_min + 2 * padding
+        x_min -= padding
+        y_min -= padding
+
+        # Create a rectangle patch
+        self.smoothed_area_patch = patches.Rectangle(
+            (x_min, y_min), width, height,
+            linewidth=1, edgecolor='purple', facecolor='purple', alpha=0.1, label='Smoothed Area'
+        )
+        self.ax.add_patch(self.smoothed_area_patch)
+        self.ax.legend()
+        self.fig.canvas.draw_idle()
+
+    def clear_smoothed_area(self):
+        """Remove the marking of the smoothed area."""
+        if self.smoothed_area_patch is not None:
+            self.smoothed_area_patch.remove()
+            self.smoothed_area_patch = None
+            self.ax.legend()
+            self.fig.canvas.draw_idle()
+
     def update_status(self, instruction=None):
         mode = "Draw" if self.event_handler.draw_mode else (
             "Selection" if self.event_handler.selection_mode else "Add/Delete")
-        mode_color = "green" if self.event_handler.selection_mode else (
-            "blue" if self.event_handler.draw_mode else "black")
+        mode_color = "green" if self.event_handler.selection_mode else ("blue" if self.event_handler.draw_mode else "black")
         status = f"Mode: <{mode}> | Lane ID: {self.event_handler.selected_id + 1} | Selected Points: {len(self.selected_indices)}"
         if instruction:
             status += f"\nInstruction: {instruction}"
-        # Ensure status_text exists before setting text
         if hasattr(self, 'status_text'):
             self.status_text.set_text(status)
             self.status_text.set_color(mode_color)

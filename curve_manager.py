@@ -11,7 +11,7 @@ class CurveManager:
         self.draw_points = []
         self.is_curve = False
         self.current_line = None
-        self.show_debug_plot = True  # Toggle for debugging plot
+        self.show_debug_plot = True
 
     def add_draw_point(self, x, y):
         self.draw_points.append([x, y])
@@ -68,34 +68,30 @@ class CurveManager:
         self.plot_manager.update_plot(self.data_manager.data)
 
     def preview_smooth(self, selected_indices, lane_id, start_idx, end_idx):
-        """Generate points for a preview of the smoothed curve without modifying data."""
         new_points = self._smooth_segment(selected_indices, lane_id, start_idx, end_idx, preview=True)
         return new_points
 
     def straighten_segment(self, selected_indices, lane_id, start_idx, end_idx):
-        """Apply smoothing and update the data."""
         new_points = self._smooth_segment(selected_indices, lane_id, start_idx, end_idx, preview=False)
         if new_points is None:
             return []
 
-        # Extract segment indices for removal
-        valid_indices = [idx for idx in sorted(selected_indices)
-                         if int(self.data_manager.data[idx, self.data_manager.D]) == lane_id]
-        start_pos = valid_indices.index(start_idx)
-        end_pos = valid_indices.index(end_idx)
+        # Sort indices and determine the segment to replace
+        selected_indices = sorted(selected_indices)
+        start_pos = selected_indices.index(start_idx)
+        end_pos = selected_indices.index(end_idx)
         if start_pos > end_pos:
             start_idx, end_idx = end_idx, start_idx
             start_pos, end_pos = end_pos, start_pos
-        segment_indices = valid_indices[start_pos:end_pos + 1]
+        segment_indices = selected_indices[start_pos:end_pos + 1]
 
-        # Remove old points between start_idx and end_idx
+        # Remove old points in the segment
         self.data_manager.delete_points(segment_indices)
 
-        # Add new smoothed points
-        file_id = int(self.data_manager.data[segment_indices[0], self.data_manager.D])
+        # Add new smoothed points with the specified lane_id
         new_indices = []
         for x, y in new_points:
-            self.data_manager.add_point(x, y, file_id)
+            self.data_manager.add_point(x, y, lane_id)
             new_indices.append(len(self.data_manager.data) - 1)
 
         self.plot_manager.update_plot(self.data_manager.data)
@@ -108,56 +104,41 @@ class CurveManager:
 
         selected_indices = sorted(selected_indices)
 
-        # Filter points with the given lane_id
-        lane_id = int(lane_id)
-        valid_indices = [idx for idx in selected_indices
-                         if int(self.data_manager.data[idx, self.data_manager.D]) == lane_id]
-
-        if len(valid_indices) < 2:
-            print("Not enough valid points with the specified lane ID")
-            return None
-
         # Validate start_idx and end_idx
-        if start_idx not in valid_indices or end_idx not in valid_indices:
-            print("Start or end index not in valid indices for the specified lane ID")
+        if start_idx not in selected_indices or end_idx not in selected_indices:
+            print("Start or end index not in selected indices")
             return None
 
-        # Ensure start_idx and end_idx are in the correct order
-        start_pos = valid_indices.index(start_idx)
-        end_pos = valid_indices.index(end_idx)
+        # Extract points between start_idx and end_idx (inclusive)
+        start_pos = selected_indices.index(start_idx)
+        end_pos = selected_indices.index(end_idx)
         if start_pos > end_pos:
             start_idx, end_idx = end_idx, start_idx
             start_pos, end_pos = end_pos, start_pos
 
-        # Extract points between start_idx and end_idx (inclusive)
-        segment_indices = valid_indices[start_pos:end_pos + 1]
+        segment_indices = selected_indices[start_pos:end_pos + 1]
         points = self.data_manager.data[segment_indices, :2]
         start_point = self.data_manager.data[start_idx, :2]
         end_point = self.data_manager.data[end_idx, :2]
 
-        # Debug print for inspection
-        print(
-            f"Selected points for lane {lane_id} between indices {start_idx} and {end_idx}: {points[:3]} ... {points[-3:]}")
-
-        # Find adjacent points for tangent alignment
-        all_lane_indices = np.where(self.data_manager.data[:, self.data_manager.D] == lane_id)[0]
-        all_lane_indices = sorted(all_lane_indices)
+        # Find adjacent points for tangent alignment, regardless of lane_id
+        all_indices = np.arange(len(self.data_manager.data))
         selected_set = set(segment_indices)
         prev_point, next_point = None, None
 
-        for idx in reversed(all_lane_indices):
+        for idx in reversed(all_indices):
             if idx < start_idx and idx not in selected_set:
                 prev_point = self.data_manager.data[idx, :2]
                 break
 
-        for idx in all_lane_indices:
+        for idx in all_indices:
             if idx > end_idx and idx not in selected_set:
                 next_point = self.data_manager.data[idx, :2]
                 break
 
         # Include adjacent points for tangent alignment
         fitting_points = points.copy()
-        weights = np.ones(len(fitting_points)) * 50
+        weights = np.ones(len(fitting_points)) * 10
         if prev_point is not None:
             fitting_points = np.vstack([prev_point, fitting_points])
             weights = np.concatenate(([1], weights))
@@ -172,7 +153,6 @@ class CurveManager:
             u[1:] = np.cumsum(distances)
             u = u / u[-1] if u[-1] > 0 else np.linspace(0, 1, len(fitting_points))
 
-            # Use the smoothing factor from the slider
             smoothing_factor = len(points) * self.plot_manager.slider_smooth.val
             tck, u_fitted = splprep([x, y], u=u, s=smoothing_factor, k=3, w=weights)
 
@@ -194,7 +174,6 @@ class CurveManager:
             print(f"Spline fitting failed: {e}")
             return None
 
-        # Show debugging plot only if enabled and not in preview mode
         if self.show_debug_plot and not preview:
             plt.figure(figsize=(8, 6))
             plt.plot(points[:, 0], points[:, 1], 'ro-', label='Original')
@@ -204,7 +183,7 @@ class CurveManager:
             if next_point is not None:
                 plt.plot([points[-1, 0], next_point[0]], [points[-1, 1], next_point[1]], 'b--', label='Next Adjacent')
             plt.legend()
-            plt.title(f"Smoothing Segment for Lane ID {lane_id}")
+            plt.title("Smoothing Segment")
             plt.xlabel("x")
             plt.ylabel("y")
             plt.grid(True)
