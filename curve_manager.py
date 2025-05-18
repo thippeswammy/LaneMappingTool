@@ -78,7 +78,7 @@ class CurveManager:
         points = self.data_manager.data[selected_indices, :2]
         start_point = points[0]
         end_point = points[-1]
-
+        print(points[:5], points[-5:-1])
         # Find adjacent points for natural tangent alignment
         all_indices = np.where(self.data_manager.data[:, self.data_manager.D] == file_id)[0]
         all_indices = sorted(all_indices)
@@ -117,7 +117,7 @@ class CurveManager:
 
             # Fit a smoothing spline (not interpolating all points)
             smoothing_factor = len(points) * 1.0  # Increased for more smoothness
-            tck, u_fitted = splprep([x, y], u=u, s=smoothing_factor, k=3)
+            tck, u_fitted = splprep([x, y], u=u, s=smoothing_factor, k=4)
 
             # Generate new points on the smoothed curve, only for the selected segment
             # Map the original u values of the selected points to the fitted u
@@ -130,7 +130,7 @@ class CurveManager:
                 0, 1, len(u_segment))
 
             # Generate new points for the selected segment
-            num_new_points = max(10, len(points) * 2)  # More points for smoother curve
+            num_new_points = max(3, int(len(points) * 0.95))  # More points for smoother curve
             u_fine = np.linspace(0, 1, num_new_points)
             x_smooth, y_smooth = splev(u_fine, tck)
 

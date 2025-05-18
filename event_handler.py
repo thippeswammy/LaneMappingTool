@@ -7,7 +7,7 @@ class EventHandler:
         self.data_manager = data_manager
         self.plot_manager = None
         self.curve_manager = None
-        self.selection_mode = False
+        self.selection_mode = True
         self.draw_mode = False
         self.selected_id = 0
         self.id_set = False
