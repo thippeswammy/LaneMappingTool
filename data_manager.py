@@ -1,7 +1,7 @@
-import numpy as np
-import glob
 import os
-from data_loader import DataLoader
+
+import numpy as np
+
 
 class DataManager:
     def __init__(self, data, file_names, D):
@@ -26,18 +26,22 @@ class DataManager:
         return self.data
 
     def delete_points(self, indices):
-        """Delete points at the specified indices."""
         if not indices:
             return
         mask = np.ones(len(self.data), dtype=bool)
         mask[indices] = False
+        deleted_data = self.data[~mask].copy()
         self.data = self.data[mask]
-        # Don't save to history here; wait for the action to complete
+        self.undo_stack.append(('delete', deleted_data, sorted(indices)))
+        self.redo_stack.clear()
 
     def change_ids(self, indices, new_file_id):
-        """Change the file_id of points at the specified indices."""
+        if not indices:
+            return
+        old_data = self.data[indices].copy()
         self.data[indices, self.D] = new_file_id
-        # Don't save to history here; wait for the action to complete
+        self.undo_stack.append(('change_id', old_data, indices))
+        self.redo_stack.clear()
 
     def undo(self):
         if not self.undo_stack:
@@ -57,20 +61,27 @@ class DataManager:
         return self.data, True
 
     def redo(self):
-        """Redo the last undone action."""
-        if self.action_in_progress:
-            print("Cannot redo while an action is in progress.")
+        if not self.redo_stack:
             return self.data, False
-        if self.history_index < len(self.history) - 1:
-            self.history_index += 1
-            self.data = self.history[self.history_index][0].copy()
-            print(f"Redone action: {self.history[self.history_index][1]}")
-            return self.data, True
-        print("Nothing to redo.")
-        return self.data, False
+        action, data, *rest = self.redo_stack.pop()
+        if action == 'add':
+            self.undo_stack.append(('add', data))
+            self.data = np.vstack((self.data, data))
+        elif action == 'delete':
+            indices = rest[0]
+            mask = np.ones(len(self.data), dtype=bool)
+            mask[indices] = False
+            deleted_data = self.data[~mask].copy()
+            self.data = self.data[mask]
+            self.undo_stack.append(('delete', deleted_data, indices))
+        elif action == 'change_id':
+            indices = rest[0]
+            old_data = self.data[indices].copy()
+            self.data[indices] = data
+            self.undo_stack.append(('change_id', old_data, indices))
+        return self.data, True
 
     def save(self):
-        """Save the current data to files."""
         output_dir = "output_lanes"
         os.makedirs(output_dir, exist_ok=True)
         for file_id in np.unique(self.data[:, self.D]):

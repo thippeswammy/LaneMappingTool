@@ -1,8 +1,9 @@
+import matplotlib.pyplot as plt
+
 from data_loader import DataLoader
 from data_manager import DataManager
-from plot_manager import PlotManager
 from event_handler import EventHandler
-import matplotlib.pyplot as plt
+from plot_manager import PlotManager
 
 
 def main():
