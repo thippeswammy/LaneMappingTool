@@ -12,9 +12,9 @@ def main():
         return
 
     data_manager = DataManager(merged_data, file_names, D)
-    event_handler = EventHandler(data_manager, None)  # PlotManager will set itself
+    event_handler = EventHandler(data_manager)
     plot_manager = PlotManager(merged_data, file_names, D, data_manager, event_handler)
-    event_handler.plot_manager = plot_manager  # Complete the circular reference
+    event_handler.set_plot_manager(plot_manager)  # Set plot_manager and initialize curve_manager
     plt.show()
 
 
