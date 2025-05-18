@@ -11,6 +11,12 @@ class EventHandler:
         self.draw_mode = False
         self.selected_id = 0
         self.id_set = False
+        # State for smoothing point selection
+        self.smoothing_point_selection = False
+        self.smoothing_start_idx = None
+        self.smoothing_end_idx = None
+        self.smoothing_selected_indices = None
+        self.smoothing_lane_id = None
 
     def set_plot_manager(self, plot_manager):
         self.plot_manager = plot_manager
@@ -67,20 +73,92 @@ class EventHandler:
         if not self.selection_mode or not self.plot_manager.selected_indices:
             print("Must be in Selection Mode with points selected to smooth")
             return
-        # self.data_manager.start_action("Smooth segment")
-        new_indices = self.curve_manager.straighten_segment(self.plot_manager.selected_indices)
-        if new_indices:
-            self.plot_manager.selected_indices = new_indices
-            print(f"Smoothed selected lane points, {len(new_indices)} points remain selected")
-        else:
-            self.plot_manager.selected_indices = []
-            print("Smoothing failed, selection cleared")
-        # self.data_manager.end_action()
+
+        # Store the current state for smoothing
+        self.smoothing_selected_indices = self.plot_manager.selected_indices
+        self.smoothing_lane_id = self.selected_id  # Use the current selected ID as lane_id
+        self.smoothing_point_selection = True
+        self.smoothing_start_idx = None
+        self.smoothing_end_idx = None
+
+        # Highlight selected points to guide the user
+        for sc in self.plot_manager.scatter_plots:
+            sizes = [50 if i in self.smoothing_selected_indices else 10 for i in range(len(self.data_manager.data))]
+            sc.set_sizes(sizes)
+        self.plot_manager.fig.canvas.draw_idle()
+
+        print(
+            f"Please click on the starting point for smoothing (from selected points with lane ID {self.smoothing_lane_id})")
 
     def on_click(self, event):
         if self.plot_manager is None or event.inaxes != self.plot_manager.ax or event.button != 1:
             print("Click ignored: invalid action")
             return
+
+        # Handle smoothing point selection
+        if self.smoothing_point_selection:
+            # Find the closest point in selected_indices to the click
+            click_x, click_y = event.xdata, event.ydata
+            selected_points = self.data_manager.data[self.smoothing_selected_indices, :2]
+            distances = np.sqrt((selected_points[:, 0] - click_x) ** 2 + (selected_points[:, 1] - click_y) ** 2)
+            closest_idx = np.argmin(distances)
+            global_idx = self.smoothing_selected_indices[closest_idx]
+
+            selected_indices = set(self.smoothing_selected_indices)
+            selected_indices = list(selected_indices)
+            # Verify the point matches the lane_id
+            if int(self.data_manager.data[global_idx, self.data_manager.D]) != self.smoothing_lane_id:
+                print(f"Clicked point (index {global_idx}) does not match lane ID {self.smoothing_lane_id}")
+                return
+
+            if self.smoothing_start_idx is None:
+                self.smoothing_start_idx = global_idx
+                print(f"Start point selected (index {self.smoothing_start_idx}). Now click on the ending point.")
+                # Highlight the start point
+                for sc in self.plot_manager.scatter_plots:
+                    sizes = [
+                        100 if i == self.smoothing_start_idx else (50 if i in self.smoothing_selected_indices else 10)
+                        for i in range(len(self.data_manager.data))]
+                    sc.set_sizes(sizes)
+                self.plot_manager.fig.canvas.draw_idle()
+            elif self.smoothing_end_idx is None:
+                self.smoothing_end_idx = global_idx
+                print(f"End point selected (index {self.smoothing_end_idx}). Smoothing the segment...")
+
+                selected_indices = set(self.smoothing_selected_indices)
+                selected_indices = list(selected_indices)
+                if len(selected_indices) == 1:
+                    self.smoothing_lane_id = selected_indices[0]
+                # Perform smoothing
+                new_indices = self.curve_manager.straighten_segment(
+                    self.smoothing_selected_indices,
+                    self.smoothing_lane_id,
+                    self.smoothing_start_idx,
+                    self.smoothing_end_idx
+                )
+
+                # Reset smoothing state
+                self.smoothing_point_selection = True
+                self.smoothing_start_idx = None
+                self.smoothing_end_idx = None
+                self.smoothing_selected_indices = None
+                self.smoothing_lane_id = None
+
+                if new_indices:
+                    self.plot_manager.selected_indices = new_indices
+                    self.plot_manager.update_plot(self.data_manager.data)
+                    print(f"Smoothed {len(new_indices)} points")
+                else:
+                    self.plot_manager.selected_indices = []
+                    print("Smoothing failed or returned empty result, selection cleared")
+
+                # Reset point sizes
+                for sc in self.plot_manager.scatter_plots:
+                    sc.set_sizes([10] * len(sc.get_offsets()))
+                self.plot_manager.fig.canvas.draw_idle()
+            return
+
+        # Existing click handling for drawing and adding points
         if self.draw_mode:
             if not self.id_set:
                 print("Press 1-9 to select an ID before drawing")
@@ -150,10 +228,8 @@ class EventHandler:
                 self.id_set = True
                 print(f"Set ID {self.selected_id} ({self.data_manager.file_names[self.selected_id]})")
                 if self.selection_mode and self.plot_manager.selected_indices:
-                    # self.data_manager.start_action(f"Change IDs to {self.selected_id}")
                     self.data_manager.change_ids(self.plot_manager.selected_indices, self.selected_id)
                     self.plot_manager.update_plot(self.data_manager.data)
-                    # self.data_manager.end_action()
                     print(f"Changed {len(self.plot_manager.selected_indices)} points to ID {self.selected_id}")
                 self.plot_manager.update_title()
             else:
@@ -168,6 +244,12 @@ class EventHandler:
         self.selection_mode = False
         self.draw_mode = False
         self.id_set = False
+        # Reset smoothing state if in point selection mode
+        self.smoothing_point_selection = False
+        self.smoothing_start_idx = None
+        self.smoothing_end_idx = None
+        self.smoothing_selected_indices = None
+        self.smoothing_lane_id = None
         self.plot_manager.rs.set_active(False)
         self.curve_manager.draw_points = []
         if self.curve_manager.current_line:
@@ -193,7 +275,6 @@ class EventHandler:
             if i not in deleted_indices and i in self.plot_manager.selected_indices
         ]
         self.plot_manager.update_plot(self.data_manager.data)
-        # self.data_manager.end_action()
         print(
             f"Deleted {len(deleted_indices)} points, {len(self.plot_manager.selected_indices)} points remain selected")
 

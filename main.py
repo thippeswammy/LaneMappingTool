@@ -10,7 +10,7 @@ def main():
     if D is None and not file_names:
         print("No .npy files found.")
         return
-
+    # print(merged_data)
     data_manager = DataManager(merged_data, file_names, D)
     event_handler = EventHandler(data_manager)
     plot_manager = PlotManager(merged_data, file_names, D, data_manager, event_handler)

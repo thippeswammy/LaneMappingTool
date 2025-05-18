@@ -1,6 +1,7 @@
 import glob
 import numpy as np
 
+
 class DataLoader:
     @staticmethod
     def load_and_merge_npy_files(file_pattern="../lanes/lane-*.npy"):

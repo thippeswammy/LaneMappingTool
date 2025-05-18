@@ -67,102 +67,123 @@ class CurveManager:
             self.current_line = None
         self.plot_manager.update_plot(self.data_manager.data)
 
-    def straighten_segment(self, selected_indices):
+    def straighten_segment(self, selected_indices, lane_id, start_idx, end_idx):
         if len(selected_indices) < 2:
             print("Need at least 2 points to smooth")
             return []
+
         selected_indices = sorted(selected_indices)
-        file_id = int(self.data_manager.data[selected_indices[0], self.data_manager.D])
 
-        # Extract selected points
-        points = self.data_manager.data[selected_indices, :2]
-        start_point = points[0]
-        end_point = points[-1]
-        print(points[:5], points[-5:-1])
-        # Find adjacent points for natural tangent alignment
-        all_indices = np.where(self.data_manager.data[:, self.data_manager.D] == file_id)[0]
-        all_indices = sorted(all_indices)
-        selected_set = set(selected_indices)
-        prev_point = None
-        next_point = None
+        # Filter points with the given lane_id
+        lane_id = int(lane_id)
+        valid_indices = [idx for idx in selected_indices
+                         if int(self.data_manager.data[idx, self.data_manager.D]) == lane_id]
 
-        # Find the point before the selected segment
-        for idx in reversed(all_indices):
-            if idx < selected_indices[0] and idx not in selected_set:
+        if len(valid_indices) < 2:
+            print("Not enough valid points with the specified lane ID")
+            return []
+
+        # Validate start_idx and end_idx
+        if start_idx not in valid_indices or end_idx not in valid_indices:
+            print("Start or end index not in valid indices for the specified lane ID")
+            return []
+
+        # Ensure start_idx and end_idx are in the correct order
+        start_pos = valid_indices.index(start_idx)
+        end_pos = valid_indices.index(end_idx)
+        if start_pos > end_pos:
+            start_idx, end_idx = end_idx, start_idx
+            start_pos, end_pos = end_pos, start_pos
+
+        # Extract points between start_idx and end_idx (inclusive)
+        segment_indices = valid_indices[start_pos:end_pos + 1]
+        points = self.data_manager.data[segment_indices, :2]
+        start_point = self.data_manager.data[start_idx, :2]
+        end_point = self.data_manager.data[end_idx, :2]
+
+        # Debug print for inspection
+        print(
+            f"Selected points for lane {lane_id} between indices {start_idx} and {end_idx}: {points[:3]} ... {points[-3:]}")
+
+        # Find adjacent points for tangent alignment
+        all_lane_indices = np.where(self.data_manager.data[:, self.data_manager.D] == lane_id)[0]
+        all_lane_indices = sorted(all_lane_indices)
+        selected_set = set(segment_indices)
+        prev_point, next_point = None, None
+
+        for idx in reversed(all_lane_indices):
+            if idx < start_idx and idx not in selected_set:
                 prev_point = self.data_manager.data[idx, :2]
                 break
 
-        # Find the point after the selected segment
-        for idx in all_indices:
-            if idx > selected_indices[-1] and idx not in selected_set:
+        for idx in all_lane_indices:
+            if idx > end_idx and idx not in selected_set:
                 next_point = self.data_manager.data[idx, :2]
                 break
 
-        # Include adjacent points in the spline fitting for natural tangent alignment
+        # Include adjacent points for tangent alignment
         fitting_points = points.copy()
+        weights = np.ones(len(fitting_points)) * 10  # Higher weight for selected points
         if prev_point is not None:
             fitting_points = np.vstack([prev_point, fitting_points])
+            weights = np.concatenate(([1], weights))  # Lower weight for prev_point
         if next_point is not None:
             fitting_points = np.vstack([fitting_points, next_point])
+            weights = np.concatenate((weights, [1]))  # Lower weight for next_point
 
         try:
-            # Use a parametric smoothing spline to approximate the points
             x, y = fitting_points[:, 0], fitting_points[:, 1]
 
-            # Compute cumulative distance as the parameter for better spline fitting
+            # Compute cumulative distances
             distances = np.sqrt(np.sum(np.diff(fitting_points, axis=0) ** 2, axis=1))
             u = np.zeros(len(fitting_points))
             u[1:] = np.cumsum(distances)
-            u = u / u[-1] if u[-1] > 0 else np.linspace(0, 1, len(fitting_points))  # Normalize to [0, 1]
+            u = u / u[-1] if u[-1] > 0 else np.linspace(0, 1, len(fitting_points))
 
-            # Fit a smoothing spline (not interpolating all points)
-            smoothing_factor = len(points) * 1.0  # Increased for more smoothness
-            tck, u_fitted = splprep([x, y], u=u, s=smoothing_factor, k=4)
+            # Fit a smoothing spline
+            smoothing_factor = len(points) * 2.0  # Increased for smoother curve
+            tck, u_fitted = splprep([x, y], u=u, s=smoothing_factor, k=5)
 
-            # Generate new points on the smoothed curve, only for the selected segment
-            # Map the original u values of the selected points to the fitted u
-            start_idx = 1 if prev_point is not None else 0
-            end_idx = len(fitting_points) - (2 if next_point is not None else 1)
-            u_segment = u_fitted[start_idx:end_idx]
-            u_segment_normalized = (u_segment - u_segment[0]) / (u_segment[-1] - u_segment[0]) if u_segment[-1] != \
-                                                                                                  u_segment[
-                                                                                                      0] else np.linspace(
-                0, 1, len(u_segment))
+            # Determine u range corresponding to selected segment
+            start_idx_u = 1 if prev_point is not None else 0
+            end_idx_u = len(fitting_points) - (2 if next_point is not None else 1)
+            u_segment = u_fitted[start_idx_u:end_idx_u]
+            u_segment_normalized = (u_segment - u_segment[0]) / (u_segment[-1] - u_segment[0]) \
+                if u_segment[-1] != u_segment[0] else np.linspace(0, 1, len(u_segment))
 
-            # Generate new points for the selected segment
-            num_new_points = max(3, int(len(points) * 0.95))  # More points for smoother curve
+            # Generate new points
+            num_new_points = max(10, len(points) * 2)  # Increased for smoother curve
             u_fine = np.linspace(0, 1, num_new_points)
             x_smooth, y_smooth = splev(u_fine, tck)
 
             new_points = np.stack((x_smooth, y_smooth), axis=1)
-
-            # Ensure start and end points are exactly the same (numerical precision)
             new_points[0] = start_point
             new_points[-1] = end_point
 
         except ValueError as e:
-            print(f"Smoothing failed: {e}")
+            print(f"Spline fitting failed: {e}")
             return []
 
-        # Debugging: Plot original and smoothed points in a separate figure
+        # Plot for debugging
         plt.figure(figsize=(8, 6))
         plt.plot(points[:, 0], points[:, 1], 'ro-', label='Original')
         plt.plot(new_points[:, 0], new_points[:, 1], 'g.-', label='Smoothed')
         if prev_point is not None:
-            plt.plot([prev_point[0], points[0, 0]], [prev_point[1], points[0, 1]], 'b--', label='Previous Segment')
+            plt.plot([prev_point[0], points[0, 0]], [prev_point[1], points[0, 1]], 'b--', label='Prev Adjacent')
         if next_point is not None:
-            plt.plot([points[-1, 0], next_point[0]], [points[-1, 1], next_point[1]], 'b--', label='Next Segment')
+            plt.plot([points[-1, 0], next_point[0]], [points[-1, 1], next_point[1]], 'b--', label='Next Adjacent')
         plt.legend()
-        plt.title("Waypoint Smoothing")
+        plt.title(f"Smoothing Segment for Lane ID {lane_id}")
         plt.xlabel("x")
         plt.ylabel("y")
         plt.grid(True)
         plt.show()
 
-        # Remove old points
-        self.data_manager.delete_points(selected_indices)
+        # Remove old points between start_idx and end_idx
+        self.data_manager.delete_points(segment_indices)
 
         # Add new smoothed points
+        file_id = int(self.data_manager.data[segment_indices[0], self.data_manager.D])
         new_indices = []
         for x, y in new_points:
             self.data_manager.add_point(x, y, file_id)
