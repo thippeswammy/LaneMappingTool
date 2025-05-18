@@ -7,17 +7,22 @@ from plot_manager import PlotManager
 
 
 def main():
-    merged_data, file_names, D = DataLoader.load_and_merge_npy_files()
-    if D is None and not file_names:
-        print("No .npy files found.")
-        return
-    # print(merged_data)
-    data_manager = DataManager(merged_data, file_names, D)
+    # Load data
+    loader = DataLoader("F:/RunningProjects/SAM2/lanes")
+    merged_data, file_names = loader.load_data()
+    D = loader.D
+
+    # Initialize managers
+    data_manager = DataManager(merged_data, file_names)
     event_handler = EventHandler(data_manager)
     plot_manager = PlotManager(merged_data, file_names, D, data_manager, event_handler)
-    event_handler.set_plot_manager(plot_manager)  # Set plot_manager and initialize curve_manager
+
+    # Set plot manager in event handler before setup_plot is called
+    event_handler.set_plot_manager(plot_manager)
+
+    # Show plot
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

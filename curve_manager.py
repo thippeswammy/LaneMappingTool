@@ -138,7 +138,7 @@ class CurveManager:
 
         # Include adjacent points for tangent alignment
         fitting_points = points.copy()
-        weights = np.ones(len(fitting_points)) * 10
+        weights = np.ones(len(fitting_points)) * 30
         if prev_point is not None:
             fitting_points = np.vstack([prev_point, fitting_points])
             weights = np.concatenate(([1], weights))
@@ -162,7 +162,7 @@ class CurveManager:
             u_segment_normalized = (u_segment - u_segment[0]) / (u_segment[-1] - u_segment[0]) \
                 if u_segment[-1] != u_segment[0] else np.linspace(0, 1, len(u_segment))
 
-            num_new_points = max(10, len(points) * 2)
+            num_new_points = max(10, int(len(points) * 1.0))
             u_fine = np.linspace(0, 1, num_new_points)
             x_smooth, y_smooth = splev(u_fine, tck)
 

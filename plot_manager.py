@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import matplotlib.widgets as widgets
-import matplotlib.patches as patches
 import numpy as np
 
 class PlotManager:
@@ -14,7 +13,6 @@ class PlotManager:
         self.selected_indices = []
         self.scatter_plots = []
         self.indices = []
-        self.smoothed_area_patch = None  # To store the patch marking the smoothed area
 
         self.fig = plt.figure(figsize=(12, 8))
         self.ax = self.fig.add_subplot(111)
@@ -22,6 +20,9 @@ class PlotManager:
         self.setup_plot()
         self.setup_events()
         self.update_status()
+
+        # Call update_point_sizes after setup is complete
+        self.event_handler.update_point_sizes()
 
     def setup_plot(self):
         current_xlim = self.ax.get_xlim() if self.ax.get_xlim() != (0, 1) else None
@@ -43,10 +44,6 @@ class PlotManager:
                                                       label='Empty', s=10))
             self.indices.append(np.array([]))
         self.ax.legend()
-
-        # Redraw the smoothed area patch if it exists
-        if self.smoothed_area_patch is not None:
-            self.ax.add_patch(self.smoothed_area_patch)
 
         if current_xlim and current_ylim:
             self.ax.set_xlim(current_xlim)
@@ -128,42 +125,6 @@ class PlotManager:
         self.fig.canvas.mpl_connect('pick_event', self.event_handler.on_pick)
         self.fig.canvas.mpl_connect('key_press_event', self.event_handler.on_key)
 
-    def mark_smoothed_area(self, smoothed_points):
-        """Mark the area of the smoothed segment with a bounding box."""
-        if smoothed_points.shape[0] < 2:
-            return
-
-        # Clear any existing smoothed area patch
-        self.clear_smoothed_area()
-
-        # Compute the bounding box of the smoothed points
-        x_min, x_max = np.min(smoothed_points[:, 0]), np.max(smoothed_points[:, 0])
-        y_min, y_max = np.min(smoothed_points[:, 1]), np.max(smoothed_points[:, 1])
-
-        # Add some padding to the bounding box
-        padding = 0.5
-        width = x_max - x_min + 2 * padding
-        height = y_max - y_min + 2 * padding
-        x_min -= padding
-        y_min -= padding
-
-        # Create a rectangle patch
-        self.smoothed_area_patch = patches.Rectangle(
-            (x_min, y_min), width, height,
-            linewidth=1, edgecolor='purple', facecolor='purple', alpha=0.1, label='Smoothed Area'
-        )
-        self.ax.add_patch(self.smoothed_area_patch)
-        self.ax.legend()
-        self.fig.canvas.draw_idle()
-
-    def clear_smoothed_area(self):
-        """Remove the marking of the smoothed area."""
-        if self.smoothed_area_patch is not None:
-            self.smoothed_area_patch.remove()
-            self.smoothed_area_patch = None
-            self.ax.legend()
-            self.fig.canvas.draw_idle()
-
     def update_status(self, instruction=None):
         mode = "Draw" if self.event_handler.draw_mode else (
             "Selection" if self.event_handler.selection_mode else "Add/Delete")
@@ -180,15 +141,6 @@ class PlotManager:
         self.data = data
         valid_indices = [idx for idx in self.selected_indices if idx < len(self.data)]
         self.selected_indices = valid_indices
+        print("Calling setup_plot from update_plot")
         self.setup_plot()
-        if self.selected_indices:
-            for idx in self.selected_indices:
-                if idx < len(self.data):
-                    file_idx = int(self.data[idx, -1])
-                    sc = self.scatter_plots[file_idx]
-                    current_sizes = sc.get_sizes()
-                    offset_idx = np.where(self.indices[file_idx] == idx)[0]
-                    if offset_idx.size > 0 and offset_idx[0] < len(current_sizes):
-                        current_sizes[offset_idx[0]] = 30
-                        sc.set_sizes(current_sizes)
         self.update_status()
