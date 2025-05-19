@@ -243,7 +243,7 @@ class EventHandler:
                 elif global_idx in self.plot_manager.selected_indices:
                     sizes[local_idx] = 30
 
-            print(f"Setting sizes for lane {lane_id}: {sizes[:5]}... (total {len(sizes)} points)")
+            print(f"Setting sizes for lane {lane_id}: (total {len(sizes)} points)")
             sc.set_sizes(sizes)
 
         self.plot_manager.fig.canvas.draw_idle()

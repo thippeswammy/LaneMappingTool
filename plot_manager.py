@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.widgets as widgets
 import numpy as np
 
+
 class PlotManager:
     def __init__(self, data, file_names, D, data_manager, event_handler):
         self.data = data
@@ -21,9 +22,6 @@ class PlotManager:
         self.setup_events()
         self.update_status()
 
-        # Call update_point_sizes after setup is complete
-        self.event_handler.update_point_sizes()
-
     def setup_plot(self):
         current_xlim = self.ax.get_xlim() if self.ax.get_xlim() != (0, 1) else None
         current_ylim = self.ax.get_ylim() if self.ax.get_ylim() != (0, 1) else None
@@ -35,12 +33,14 @@ class PlotManager:
             mask = self.data[:, -1] == i
             indices = np.where(mask)[0]
             self.indices.append(indices)
+            # Use the color keyword to set a single color for all points in this lane
             sc = self.ax.scatter(self.data[indices, 0], self.data[indices, 1],
-                                 c=[self.colors[i]], label=f'{self.file_names[i]}',
+                                 color=self.colors[i],  # Use color instead of c
+                                 label=f'{self.file_names[i]}',
                                  picker=5, s=10, alpha=0.6)
             self.scatter_plots.append(sc)
         if not self.file_names:
-            self.scatter_plots.append(self.ax.scatter([], [], c=[self.colors[0]],
+            self.scatter_plots.append(self.ax.scatter([], [], color=self.colors[0],
                                                       label='Empty', s=10))
             self.indices.append(np.array([]))
         self.ax.legend()
@@ -95,7 +95,8 @@ class PlotManager:
         self.btn_clear.label.set_fontsize(8)
 
         ax_confirm_start = self.fig.add_axes([0.45, 0.06, 0.12, 0.04])
-        self.btn_confirm_start = widgets.Button(ax_confirm_start, 'Confirm Start', color='lightgreen', hovercolor='cyan')
+        self.btn_confirm_start = widgets.Button(ax_confirm_start, 'Confirm Start', color='lightgreen',
+                                                hovercolor='cyan')
         self.btn_confirm_start.on_clicked(self.event_handler.on_confirm_start)
         self.btn_confirm_start.label.set_fontsize(8)
 
@@ -105,7 +106,8 @@ class PlotManager:
         self.btn_confirm_end.label.set_fontsize(8)
 
         ax_cancel_smoothing = self.fig.add_axes([0.71, 0.06, 0.12, 0.04])
-        self.btn_cancel_smoothing = widgets.Button(ax_cancel_smoothing, 'Cancel Smoothing', color='salmon', hovercolor='cyan')
+        self.btn_cancel_smoothing = widgets.Button(ax_cancel_smoothing, 'Cancel Smoothing', color='salmon',
+                                                   hovercolor='cyan')
         self.btn_cancel_smoothing.on_clicked(self.event_handler.on_cancel_smoothing)
         self.btn_cancel_smoothing.label.set_fontsize(8)
 
@@ -128,7 +130,8 @@ class PlotManager:
     def update_status(self, instruction=None):
         mode = "Draw" if self.event_handler.draw_mode else (
             "Selection" if self.event_handler.selection_mode else "Add/Delete")
-        mode_color = "green" if self.event_handler.selection_mode else ("blue" if self.event_handler.draw_mode else "black")
+        mode_color = "green" if self.event_handler.selection_mode else (
+            "blue" if self.event_handler.draw_mode else "black")
         status = f"Mode: <{mode}> | Lane ID: {self.event_handler.selected_id + 1} | Selected Points: {len(self.selected_indices)}"
         if instruction:
             status += f"\nInstruction: {instruction}"

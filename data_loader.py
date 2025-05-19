@@ -1,5 +1,7 @@
 import os
+
 import numpy as np
+
 
 class DataLoader:
     def __init__(self, directory):
@@ -21,10 +23,8 @@ class DataLoader:
             points = np.load(file_path)
             if points.size == 0:
                 continue
-            # Ensure points have a third column for file index
-            if points.shape[1] == 2:  # If only x, y coordinates
-                file_indices = np.full((points.shape[0], 1), idx)
-                points = np.hstack((points, file_indices))
+            # Ensure the last column is the lane ID
+            points[:, -1] = idx  # Overwrite the last column with the lane ID
             data_list.append(points)
             file_names.append(file)
 
@@ -34,13 +34,11 @@ class DataLoader:
         else:
             merged_data = np.vstack(data_list)
 
-        # Compute D (assuming it's the maximum distance between points in x-y space)
+        # Compute D (maximum distance between points in x-y space)
         if merged_data.size > 0:
             points_2d = merged_data[:, :2]
             distances = np.sqrt(((points_2d[:, None] - points_2d[None, :]) ** 2).sum(axis=-1))
             self.D = np.max(distances) if distances.size > 0 else 1.0
         else:
             self.D = 1.0  # Default value if no data
-
-        print(f"Loaded {len(file_names)} files, D = {self.D}")
         return merged_data, file_names
