@@ -69,6 +69,6 @@ class DataManager:
         return self.data, True
 
     def save(self):
-        filename = "output.npy"
+        filename = "WorkingLane.npy"
         np.save(filename, self.data)
         return filename
