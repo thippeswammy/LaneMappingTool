@@ -23,6 +23,12 @@ class DataLoader:
             points = np.load(file_path)
             if points.size == 0:
                 continue
+            # print('points=>', points[0:2], 'len', len(points))
+            # pointss = []
+            # for i, n in enumerate(points):
+            #     print(i, n)
+            #     # pointss.append()
+            # points.appends()
             # Ensure the last column is the lane ID
             points[:, -1] = idx  # Overwrite the last column with the lane ID
             data_list.append(points)
