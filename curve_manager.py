@@ -3,7 +3,6 @@ import numpy as np
 from scipy.interpolate import splprep, splev
 from scipy.signal import savgol_filter
 
-
 class CurveManager:
     def __init__(self, data_manager, plot_manager):
         self.data_manager = data_manager
@@ -85,17 +84,32 @@ class CurveManager:
             start_pos, end_pos = end_pos, start_pos
         segment_indices = selected_indices[start_pos:end_pos + 1]
 
-        # Remove old points in the segment
-        self.data_manager.delete_points(segment_indices)
+        # Update points in-place at segment_indices
+        if len(new_points) != len(segment_indices):
+            print(f"Warning: Expected {len(segment_indices)} new points, got {len(new_points)}")
+            return []
 
-        # Add new smoothed points with the specified lane_id
-        new_indices = []
-        for x, y in new_points:
-            self.data_manager.add_point(x, y, lane_id)
-            new_indices.append(len(self.data_manager.data) - 1)
+        # Update x, y coordinates
+        self.data_manager.data[segment_indices, 0:2] = new_points
+
+        # Recompute yaw for the segment based on new points
+        for i, idx in enumerate(segment_indices):
+            if i < len(new_points) - 1:
+                dx = new_points[i + 1, 0] - new_points[i, 0]
+                dy = new_points[i + 1, 1] - new_points[i, 1]
+                self.data_manager.data[idx, 2] = np.arctan2(dy, dx)
+            else:
+                self.data_manager.data[idx, 2] = self.data_manager.data[segment_indices[-2], 2] if len(segment_indices) > 1 else 0.0
+
+        # Preserve index and lane_id (already correct, but ensure lane_id matches)
+        self.data_manager.data[segment_indices, -1] = lane_id
+
+        # Update history for undo/redo
+        self.data_manager.history.append(self.data_manager.data.copy())
+        self.data_manager.redo_stack = []
 
         self.plot_manager.update_plot(self.data_manager.data)
-        return new_indices
+        return segment_indices  # Return the same indices
 
     def _smooth_segment(self, selected_indices, lane_id, start_idx, end_idx, preview=False):
         if len(selected_indices) < 2:
@@ -121,7 +135,7 @@ class CurveManager:
         start_point = self.data_manager.data[start_idx, :2]
         end_point = self.data_manager.data[end_idx, :2]
 
-        # Find adjacent points for tangent alignment, regardless of lane_id
+        # Find adjacent points for tangent alignment
         all_indices = np.arange(len(self.data_manager.data))
         selected_set = set(segment_indices)
         prev_point, next_point = None, None
@@ -162,7 +176,8 @@ class CurveManager:
             u_segment_normalized = (u_segment - u_segment[0]) / (u_segment[-1] - u_segment[0]) \
                 if u_segment[-1] != u_segment[0] else np.linspace(0, 1, len(u_segment))
 
-            num_new_points = max(10, int(len(points) * 1.0))
+            # Generate exactly len(segment_indices) points
+            num_new_points = len(segment_indices)
             u_fine = np.linspace(0, 1, num_new_points)
             x_smooth, y_smooth = splev(u_fine, tck)
 
