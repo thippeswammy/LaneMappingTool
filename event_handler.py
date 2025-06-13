@@ -51,10 +51,16 @@ class EventHandler:
         ax_draw = plt.axes([0.01, 0.90, 0.1, 0.04])
         self.buttons['draw'] = Button(ax_draw, 'Draw')
         self.buttons['draw'].on_clicked(self.on_toggle_draw_mode)
+        self.buttons['draw'].eventson = False
+        self.buttons['draw'].ax.set_facecolor("lightgray")
+        self.buttons['draw'].label.set_color("gray")
 
         ax_linecurve = plt.axes([0.01, 0.85, 0.1, 0.04])
         self.buttons['linecurve'] = Button(ax_linecurve, 'Line')
         self.buttons['linecurve'].on_clicked(self.on_toggle_linecurve)
+        self.buttons['linecurve'].eventson = False
+        self.buttons['linecurve'].ax.set_facecolor("lightgray")
+        self.buttons['linecurve'].label.set_color("gray")
 
         ax_straighten = plt.axes([0.01, 0.80, 0.1, 0.04])
         self.buttons['straighten'] = Button(ax_straighten, 'Smooth')
