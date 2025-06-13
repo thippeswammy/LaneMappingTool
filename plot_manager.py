@@ -10,8 +10,10 @@ class PlotManager:
         self.D = D
         self.event_handler = event_handler
         self.fig, self.ax = plt.subplots(figsize=(12, 8))
-        self.scatter_plots = []
-        self.indices = []
+        self.lane_scatter_plots = []  # Scatter plots for lane points
+        self.start_point_plots = []  # Scatter plots for start points
+        self.extra_scatter_plots = []  # Scatter plots for selected/merge points
+        self.indices = []  # Indices for lane scatter plots only
         self.curve_manager = None
         self.selected_indices = []
         self.rs = RectangleSelector(self.ax, self.event_handler.on_select, useblit=True, button=[1])
@@ -35,9 +37,12 @@ class PlotManager:
             selected_indices = self.selected_indices
         self.selected_indices = selected_indices
 
-        for plot in self.scatter_plots:
+        # Remove all existing scatter plots
+        for plot in self.lane_scatter_plots + self.start_point_plots + self.extra_scatter_plots:
             plot.remove()
-        self.scatter_plots = []
+        self.lane_scatter_plots = []
+        self.start_point_plots = []
+        self.extra_scatter_plots = []
         self.indices = []
 
         if data.size == 0:
@@ -55,31 +60,35 @@ class PlotManager:
                 label = self.file_names[int(lane_id)] if int(lane_id) < len(self.file_names) else f"Lane {lane_id}"
                 sc = self.ax.scatter(lane_data[:, 0], lane_data[:, 1], s=10, label=label, color=colors[int(lane_id)],
                                      marker='o', picker=True)
-                self.scatter_plots.append(sc)
+                self.lane_scatter_plots.append(sc)
                 self.indices.append(np.where(mask)[0])
 
                 # Plot starting point with square marker
                 start_idx = lane_data[:, 4].argmin()  # Lowest index is start
                 start_point = lane_data[start_idx]
-                self.ax.scatter(start_point[0], start_point[1], s=50, color=colors[int(lane_id)], marker='s',
-                                label=f'Lane {lane_id} Start')
+                start_sc = self.ax.scatter(start_point[0], start_point[1], s=50, color=colors[int(lane_id)], marker='s',
+                                           label=f'Lane {lane_id} Start')
+                self.start_point_plots.append(start_sc)
 
         if selected_indices:
             selected_points = data[np.array(selected_indices, dtype=int)]
-            self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=50, color='red', marker='o',
-                            label='Selected')
+            sc = self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=50, color='red', marker='o',
+                                 label='Selected')
+            self.extra_scatter_plots.append(sc)
 
         if self.event_handler.merge_mode:
             if self.event_handler.merge_point_1 is not None:
                 point_1 = data[self.event_handler.merge_point_1]
                 marker = '>' if self.event_handler.merge_point_1_type == 'end' else '<'
-                self.ax.scatter(point_1[0], point_1[1], s=100, color='purple', marker=marker,
-                                label=f'Lane {self.event_handler.merge_lane_1} {self.event_handler.merge_point_1_type}')
+                sc = self.ax.scatter(point_1[0], point_1[1], s=100, color='purple', marker=marker,
+                                     label=f'Lane {self.event_handler.merge_lane_1} {self.event_handler.merge_point_1_type}')
+                self.extra_scatter_plots.append(sc)
             if self.event_handler.merge_point_2 is not None:
                 point_2 = data[self.event_handler.merge_point_2]
                 marker = '>' if self.event_handler.merge_point_2_type == 'end' else '<'
-                self.ax.scatter(point_2[0], point_2[1], s=100, color='orange', marker=marker,
-                                label=f'Lane {self.event_handler.merge_lane_2} {self.event_handler.merge_point_2_type}')
+                sc = self.ax.scatter(point_2[0], point_2[1], s=100, color='orange', marker=marker,
+                                     label=f'Lane {self.event_handler.merge_lane_2} {self.event_handler.merge_point_2_type}')
+                self.extra_scatter_plots.append(sc)
 
         self.ax.set_xlabel('X')
         self.ax.set_ylabel('Y')

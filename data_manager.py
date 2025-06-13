@@ -1,4 +1,7 @@
+import os
+
 import numpy as np
+
 
 class DataManager:
     def __init__(self, data, file_names):
@@ -119,10 +122,31 @@ class DataManager:
         other_data = self.data[other_lanes_mask]
         self.data = np.vstack([merged_data, other_data]) if other_data.size > 0 else merged_data
 
-        self.file_names = [self.file_names[i] if i < len(self.file_names) else f"Lane_{i}" for i in range(max(np.unique(self.data[:, -1]).astype(int)) + 1)]
+        self.file_names = [self.file_names[i] if i < len(self.file_names) else f"Lane_{i}" for i in
+                           range(max(np.unique(self.data[:, -1]).astype(int)) + 1)]
         self.history.append(self.data.copy())
         self.redo_stack = []
         print(f"Merged lane {lane_id_2} into lane {lane_id_1}, new data shape: {self.data.shape}")
+
+    def save_all_lanes(self):
+        os.makedirs("workspace-Temp", exist_ok=True)
+        unique_lane_ids = np.unique(self.data[:, -1])
+        for lane_id in unique_lane_ids:
+            mask = self.data[:, -1] == lane_id
+            lane_data = self.data[mask]
+            if lane_data.size > 0:
+                filename = os.path.join("workspace-Temp", f"Lane_{int(lane_id)}.npy")
+                np.save(filename, lane_data[:, :3])  # Save x, y, yaw
+                print(f"Saved lane {lane_id} to {filename}")
+            else:
+                print(f"No data for lane {lane_id}, skipping save")
+
+    def clear_data(self):
+        self.data = np.array([])
+        self.history = [np.array([])]
+        self.redo_stack = []
+        self.file_names = []
+        print("Cleared all data")
 
     def undo(self):
         if len(self.history) <= 1:

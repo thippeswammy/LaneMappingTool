@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
 import numpy as np
+from matplotlib.widgets import Button
 
 from curve_manager import CurveManager
+from data_loader import DataLoader
+
 
 class EventHandler:
     def __init__(self, data_manager):
@@ -24,8 +26,8 @@ class EventHandler:
         self.merge_point_2 = None
         self.merge_lane_1 = None
         self.merge_lane_2 = None
-        self.merge_point_1_type = None  # 'start' or 'end'
-        self.merge_point_2_type = None  # 'start' or 'end'
+        self.merge_point_1_type = None
+        self.merge_point_2_type = None
         self.buttons = {}
 
     def set_plot_manager(self, plot_manager):
@@ -243,10 +245,18 @@ class EventHandler:
             self.merge_point_1, self.merge_point_2,
             self.merge_point_1_type, self.merge_point_2_type
         )
+        # Save all lanes to workspace-Temp
+        self.data_manager.save_all_lanes()
+        # Clear current data
+        self.data_manager.clear_data()
+        # Reload data from workspace-Temp
+        temp_loader = DataLoader("workspace-Temp")
+        data, file_names = temp_loader.load_data()
+        self.data_manager.__init__(data, file_names)
         self.plot_manager.selected_indices = []
-        self.plot_manager.file_names = self.data_manager.file_names
+        self.plot_manager.file_names = file_names
         self.plot_manager.update_plot(self.data_manager.data)
-        print(f"Merged lane {self.merge_lane_2} into lane {self.merge_lane_1}")
+        print(f"Merged lane {self.merge_lane_2} into lane {self.merge_lane_1}, saved to workspace-Temp, and reloaded")
         self.clear_merge_state()
         self.update_point_sizes()
         self.plot_manager.update_status()
@@ -273,7 +283,8 @@ class EventHandler:
             lane_data = self.data_manager.data[lane_indices]
             min_idx = lane_data[:, 4].argmin()
             max_idx = lane_data[:, 4].argmax()
-            point_type = 'start' if closest_idx == lane_indices[min_idx] else 'end' if closest_idx == lane_indices[max_idx] else None
+            point_type = 'start' if closest_idx == lane_indices[min_idx] else 'end' if closest_idx == lane_indices[
+                max_idx] else None
 
             if point_type is None:
                 print("Please select a start or end point")
@@ -304,7 +315,8 @@ class EventHandler:
                 self.smoothing_start_idx = global_idx
                 self.update_point_sizes()
                 self.plot_manager.fig.canvas.draw_idle()
-                print(f"Start point selected (index {self.smoothing_start_idx}). Click 'Confirm Start' or select the ending point.")
+                print(
+                    f"Start point selected (index {self.smoothing_start_idx}). Click 'Confirm Start' or select the ending point.")
                 self.plot_manager.update_status("Click 'Confirm Start' or select the ending point")
             elif self.smoothing_end_idx is None:
                 self.smoothing_end_idx = global_idx
@@ -345,8 +357,8 @@ class EventHandler:
         if self.plot_manager is None:
             print("Plot manager not set, skipping update_point_sizes")
             return
-        for lane_id, sc in enumerate(self.plot_manager.scatter_plots):
-            indices = self.plot_manager.indices[lane_id]
+        for plot_idx, sc in enumerate(self.plot_manager.lane_scatter_plots):
+            indices = self.plot_manager.indices[plot_idx]
             if len(indices) == 0:
                 continue
             sizes = np.full(len(indices), 10, dtype=float)
@@ -365,7 +377,7 @@ class EventHandler:
                         sizes[local_idx] = 50
                 elif global_idx in self.plot_manager.selected_indices:
                     sizes[local_idx] = 30
-            print(f"Setting sizes for lane {lane_id}: (total {len(sizes)} points)")
+            print(f"Setting sizes for plot {plot_idx}: (total {len(sizes)} points)")
             sc.set_sizes(sizes)
         self.plot_manager.fig.canvas.draw_idle()
         self.plot_manager.fig.canvas.flush_events()
@@ -377,8 +389,10 @@ class EventHandler:
             self.plot_manager.selected_indices = []
             self.update_point_sizes()
         artist = event.artist
+        if artist not in self.plot_manager.lane_scatter_plots:
+            return  # Ignore picks on non-lane scatter plots
         ind = event.ind[0]
-        file_index = self.plot_manager.scatter_plots.index(artist)
+        file_index = self.plot_manager.lane_scatter_plots.index(artist)
         global_ind = self.plot_manager.indices[file_index][ind]
         self.data_manager.delete_points([global_ind])
         self.plot_manager.selected_indices = [i for i in self.plot_manager.selected_indices if i != global_ind]
