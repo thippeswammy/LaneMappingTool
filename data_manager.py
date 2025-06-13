@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class DataManager:
     def __init__(self, data, file_names):
         if data.size > 0:
@@ -67,40 +66,43 @@ class DataManager:
         self.redo_stack = []
         print(f"Changed lane IDs for {len(indices)} points to {new_id}")
 
-    def merge_lanes(self, lane_id_0, lane_id_target, point_0, point_target):
+    def merge_lanes(self, lane_id_1, lane_id_2, point_1, point_2, point_1_type, point_2_type):
         if self.data.size == 0:
             print("No data to merge")
             return
-        lane_0_mask = self.data[:, -1] == lane_id_0
-        lane_target_mask = self.data[:, -1] == lane_id_target
-        if not np.any(lane_0_mask) or not np.any(lane_target_mask):
-            print(f"One or both lanes ({lane_id_0}, {lane_id_target}) are empty")
+        lane_1_mask = self.data[:, -1] == lane_id_1
+        lane_2_mask = self.data[:, -1] == lane_id_2
+        if not np.any(lane_1_mask) or not np.any(lane_2_mask):
+            print(f"One or both lanes ({lane_id_1}, {lane_id_2}) are empty")
             return
 
-        lane_0_data = self.data[lane_0_mask]
-        lane_target_data = self.data[lane_target_mask]
+        lane_1_data = self.data[lane_1_mask]
+        lane_2_data = self.data[lane_2_mask]
+        lane_1_indices = np.where(lane_1_mask)[0]
+        lane_2_indices = np.where(lane_2_mask)[0]
 
-        lane_0_indices = np.where(lane_0_mask)[0]
-        lane_target_indices = np.where(lane_target_mask)[0]
+        lane_1_sorted = lane_1_data[np.argsort(lane_1_data[:, 4])]
+        lane_2_sorted = lane_2_data[np.argsort(lane_2_data[:, 4])]
 
-        point_0_local = np.where(lane_0_indices == point_0)[0][0]
-        point_target_local = np.where(lane_target_indices == point_target)[0][0]
+        point_1_local = np.where(lane_1_indices == point_1)[0][0]
+        point_2_local = np.where(lane_2_indices == point_2)[0][0]
 
-        lane_0_sorted = lane_0_data[np.argsort(lane_0_data[:, 4])]
-        lane_target_sorted = lane_target_data[np.argsort(lane_target_data[:, 4])]
+        if point_1_type == 'end':
+            lane_1_part = lane_1_sorted[:point_1_local + 1]
+        else:  # start
+            lane_1_part = lane_1_sorted[point_1_local:]
 
-        if point_0_local < len(lane_0_sorted) - 1:
-            lane_0_part = lane_0_sorted[:point_0_local + 1]
-        else:
-            lane_0_part = lane_0_sorted
+        if point_2_type == 'start' and point_1_type == 'end':
+            lane_2_part = lane_2_sorted
+        elif point_2_type == 'end' and point_1_type == 'start':
+            lane_2_part = lane_2_sorted
+        elif point_2_type == 'start' and point_1_type == 'start':
+            lane_2_part = lane_2_sorted[::-1]
+        elif point_2_type == 'end' and point_1_type == 'end':
+            lane_2_part = lane_2_sorted[::-1]
 
-        if point_target_local > 0:
-            lane_target_part = lane_target_sorted[point_target_local:]
-        else:
-            lane_target_part = lane_target_sorted
-
-        merged_data = np.vstack([lane_0_part, lane_target_part])
-        merged_data[:, -1] = lane_id_0
+        merged_data = np.vstack([lane_1_part, lane_2_part])
+        merged_data[:, -1] = lane_id_1
 
         N = len(merged_data)
         for i in range(N - 1):
@@ -113,15 +115,14 @@ class DataManager:
         merged_data[:, 3] = new_indices
         merged_data[:, 4] = new_indices
 
-        other_lanes_mask = ~np.logical_or(lane_0_mask, lane_target_mask)
+        other_lanes_mask = ~np.logical_or(lane_1_mask, lane_2_mask)
         other_data = self.data[other_lanes_mask]
         self.data = np.vstack([merged_data, other_data]) if other_data.size > 0 else merged_data
 
-        self.file_names = [self.file_names[0] if i == lane_id_0 else f"Lane_{i}" for i in
-                           range(max(len(self.file_names), 1))]
+        self.file_names = [self.file_names[i] if i < len(self.file_names) else f"Lane_{i}" for i in range(max(np.unique(self.data[:, -1]).astype(int)) + 1)]
         self.history.append(self.data.copy())
         self.redo_stack = []
-        print(f"Merged lane {lane_id_target} into lane {lane_id_0}, new data shape: {self.data.shape}")
+        print(f"Merged lane {lane_id_2} into lane {lane_id_1}, new data shape: {self.data.shape}")
 
     def undo(self):
         if len(self.history) <= 1:

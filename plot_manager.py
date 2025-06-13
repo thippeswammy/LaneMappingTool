@@ -64,13 +64,16 @@ class PlotManager:
                             label='Selected')
 
         if self.event_handler.merge_mode:
-            if self.event_handler.merge_point_0 is not None:
-                point_0 = data[self.event_handler.merge_point_0]
-                self.ax.scatter(point_0[0], point_0[1], s=100, color='purple', marker='o', label='Merge Lane 0')
-            if self.event_handler.merge_point_target is not None:
-                point_target = data[self.event_handler.merge_point_target]
-                self.ax.scatter(point_target[0], point_target[1], s=100, color='orange', marker='o',
-                                label=f'Merge Lane {self.event_handler.merge_lane_id}')
+            if self.event_handler.merge_point_1 is not None:
+                point_1 = data[self.event_handler.merge_point_1]
+                marker = '>' if self.event_handler.merge_point_1_type == 'end' else '<'
+                self.ax.scatter(point_1[0], point_1[1], s=100, color='purple', marker=marker,
+                                label=f'Lane {self.event_handler.merge_lane_1} {self.event_handler.merge_point_1_type}')
+            if self.event_handler.merge_point_2 is not None:
+                point_2 = data[self.event_handler.merge_point_2]
+                marker = '>' if self.event_handler.merge_point_2_type == 'end' else '<'
+                self.ax.scatter(point_2[0], point_2[1], s=100, color='orange', marker=marker,
+                                label=f'Lane {self.event_handler.merge_lane_2} {self.event_handler.merge_point_2_type}')
 
         self.ax.set_xlabel('X')
         self.ax.set_ylabel('Y')

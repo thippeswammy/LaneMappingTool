@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.widgets import Button
+import numpy as np
 
 from curve_manager import CurveManager
-
 
 class EventHandler:
     def __init__(self, data_manager):
@@ -21,9 +20,12 @@ class EventHandler:
         self.smoothing_lane_id = None
         self.smoothing_preview_line = None
         self.merge_mode = False
-        self.merge_lane_id = 1  # Start with lane 1
-        self.merge_point_0 = None
-        self.merge_point_target = None
+        self.merge_point_1 = None
+        self.merge_point_2 = None
+        self.merge_lane_1 = None
+        self.merge_lane_2 = None
+        self.merge_point_1_type = None  # 'start' or 'end'
+        self.merge_point_2_type = None  # 'start' or 'end'
         self.buttons = {}
 
     def set_plot_manager(self, plot_manager):
@@ -205,8 +207,12 @@ class EventHandler:
 
     def clear_merge_state(self):
         self.merge_mode = False
-        self.merge_point_0 = None
-        self.merge_point_target = None
+        self.merge_point_1 = None
+        self.merge_point_2 = None
+        self.merge_lane_1 = None
+        self.merge_lane_2 = None
+        self.merge_point_1_type = None
+        self.merge_point_2_type = None
         self.plot_manager.update_status()
 
     def merge_lanes(self, event):
@@ -215,28 +221,32 @@ class EventHandler:
             print("Only one lane present, no merging needed")
             self.clear_merge_state()
             return
-        if self.merge_lane_id not in unique_lanes:
-            print(f"Lane {self.merge_lane_id} does not exist")
-            self.clear_merge_state()
-            return
         self.merge_mode = True
-        self.merge_point_0 = None
-        self.merge_point_target = None
-        self.plot_manager.update_status(f"Select a point in lane 0")
-        print("Please select a point in lane 0")
+        self.merge_point_1 = None
+        self.merge_point_2 = None
+        self.merge_lane_1 = None
+        self.merge_lane_2 = None
+        self.merge_point_1_type = None
+        self.merge_point_2_type = None
+        self.plot_manager.update_status("Select first point (start or end)")
+        print("Please select first point (start or end)")
         self.update_point_sizes()
         self.plot_manager.fig.canvas.draw_idle()
 
     def finalize_merge(self):
-        if self.merge_point_0 is None or self.merge_point_target is None:
-            print("Both points must be selected for merging")
+        if self.merge_point_1 is None or self.merge_point_2 is None or self.merge_lane_1 == self.merge_lane_2:
+            print("Two different lanes must be selected for merging")
+            self.clear_merge_state()
             return
-        self.data_manager.merge_lanes(0, self.merge_lane_id, self.merge_point_0, self.merge_point_target)
+        self.data_manager.merge_lanes(
+            self.merge_lane_1, self.merge_lane_2,
+            self.merge_point_1, self.merge_point_2,
+            self.merge_point_1_type, self.merge_point_2_type
+        )
         self.plot_manager.selected_indices = []
         self.plot_manager.file_names = self.data_manager.file_names
         self.plot_manager.update_plot(self.data_manager.data)
-        print(f"Merged lane {self.merge_lane_id} into lane 0")
-        self.merge_lane_id += 1  # Move to next lane
+        print(f"Merged lane {self.merge_lane_2} into lane {self.merge_lane_1}")
         self.clear_merge_state()
         self.update_point_sizes()
         self.plot_manager.update_status()
@@ -253,31 +263,35 @@ class EventHandler:
             return
         if self.merge_mode:
             click_x, click_y = event.xdata, event.ydata
-            if self.merge_point_0 is None:
-                lane_0_indices = np.where(self.data_manager.data[:, -1] == 0)[0]
-                if len(lane_0_indices) == 0:
-                    print("No points in lane 0")
-                    self.clear_merge_state()
-                    return
-                lane_0_points = self.data_manager.data[lane_0_indices, :2]
-                distances = np.sqrt((lane_0_points[:, 0] - click_x) ** 2 + (lane_0_points[:, 1] - click_y) ** 2)
-                closest_idx = np.argmin(distances)
-                self.merge_point_0 = lane_0_indices[closest_idx]
-                print(f"Selected point in lane 0 (index {self.merge_point_0})")
-                self.plot_manager.update_status(f"Select a point in lane {self.merge_lane_id}")
+            distances = np.sqrt(
+                (self.data_manager.data[:, 0] - click_x) ** 2 +
+                (self.data_manager.data[:, 1] - click_y) ** 2
+            )
+            closest_idx = np.argmin(distances)
+            lane_id = int(self.data_manager.data[closest_idx, -1])
+            lane_indices = np.where(self.data_manager.data[:, -1] == lane_id)[0]
+            lane_data = self.data_manager.data[lane_indices]
+            min_idx = lane_data[:, 4].argmin()
+            max_idx = lane_data[:, 4].argmax()
+            point_type = 'start' if closest_idx == lane_indices[min_idx] else 'end' if closest_idx == lane_indices[max_idx] else None
+
+            if point_type is None:
+                print("Please select a start or end point")
+                return
+
+            if self.merge_point_1 is None:
+                self.merge_point_1 = closest_idx
+                self.merge_lane_1 = lane_id
+                self.merge_point_1_type = point_type
+                print(f"Selected {point_type} point in lane {lane_id} (index {closest_idx})")
+                self.plot_manager.update_status("Select second point (start or end) in a different lane")
                 self.update_point_sizes()
                 self.plot_manager.fig.canvas.draw_idle()
-            elif self.merge_point_target is None:
-                target_indices = np.where(self.data_manager.data[:, -1] == self.merge_lane_id)[0]
-                if len(target_indices) == 0:
-                    print(f"No points in lane {self.merge_lane_id}")
-                    self.clear_merge_state()
-                    return
-                target_points = self.data_manager.data[target_indices, :2]
-                distances = np.sqrt((target_points[:, 0] - click_x) ** 2 + (target_points[:, 1] - click_y) ** 2)
-                closest_idx = np.argmin(distances)
-                self.merge_point_target = target_indices[closest_idx]
-                print(f"Selected point in lane {self.merge_lane_id} (index {self.merge_point_target})")
+            elif self.merge_point_2 is None and lane_id != self.merge_lane_1:
+                self.merge_point_2 = closest_idx
+                self.merge_lane_2 = lane_id
+                self.merge_point_2_type = point_type
+                print(f"Selected {point_type} point in lane {lane_id} (index {closest_idx})")
                 self.finalize_merge()
             return
         if self.smoothing_point_selection:
@@ -290,8 +304,7 @@ class EventHandler:
                 self.smoothing_start_idx = global_idx
                 self.update_point_sizes()
                 self.plot_manager.fig.canvas.draw_idle()
-                print(
-                    f"Start point selected (index {self.smoothing_start_idx}). Click 'Confirm Start' or select the ending point.")
+                print(f"Start point selected (index {self.smoothing_start_idx}). Click 'Confirm Start' or select the ending point.")
                 self.plot_manager.update_status("Click 'Confirm Start' or select the ending point")
             elif self.smoothing_end_idx is None:
                 self.smoothing_end_idx = global_idx
@@ -339,9 +352,9 @@ class EventHandler:
             sizes = np.full(len(indices), 10, dtype=float)
             for local_idx, global_idx in enumerate(indices):
                 if self.merge_mode:
-                    if global_idx == self.merge_point_0:
+                    if global_idx == self.merge_point_1:
                         sizes[local_idx] = 100
-                    elif global_idx == self.merge_point_target:
+                    elif global_idx == self.merge_point_2:
                         sizes[local_idx] = 80
                 elif self.smoothing_point_selection:
                     if global_idx == self.smoothing_start_idx:
