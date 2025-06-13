@@ -3,7 +3,7 @@ import pickle
 import matplotlib.pyplot as plt
 import networkx as nx
 
-graph_file_path = "../output.pickle"
+graph_file_path = "./files/output.pickle"
 
 
 def network_view2():

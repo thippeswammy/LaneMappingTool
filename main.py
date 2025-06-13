@@ -1,3 +1,6 @@
+import os
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -8,8 +11,13 @@ from DataVisualizationEditingTool.utils.plot_manager import PlotManager
 
 
 def main():
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    lanes_path = os.path.join(base_path, 'lanes')
     # Load data
-    loader = DataLoader("./lanes")
+    loader = DataLoader(lanes_path)
     merged_data, file_names = loader.load_data()
     D = loader.D
 

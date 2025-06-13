@@ -125,12 +125,12 @@ def main(args):
 
 
 parser = argparse.ArgumentParser(description="Process lane.npy files and build a directional graph.")
-parser.add_argument("lane_files", nargs="*", default=["WorkingLane.npy"],
-                    help="List of lane.npy file locations (default: WorkingLane.npy)"
+parser.add_argument("lane_files", nargs="*", default=["./files/WorkingLane.npy"],
+                    help="List of lane.npy file locations (default: ./files/WorkingLane.npy)"
                     )
 
 # Optional named argument
-parser.add_argument("-o", "--output_file", default="output.pickle",
+parser.add_argument("-o", "--output_file", default="./files/output.pickle",
                     help="Output pickle file to save the graph (default: output.pickle)"
                     )
 args = parser.parse_args()
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     #                     )
     #
     # # Optional named argument
-    # parser.add_argument("-o", "--output_file", default="output.pickle",
+    # parser.add_argument("-o", "--output_file", default="\output.pickle",
     #                     help="Output pickle file to save the graph (default: output.pickle)"
     #                     )
     # args = parser.parse_args()

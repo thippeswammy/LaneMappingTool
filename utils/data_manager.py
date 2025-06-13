@@ -213,7 +213,7 @@ class DataManager:
 
     def save(self):
         try:
-            filename = "../WorkingLane.npy"
+            filename = "./files/WorkingLane.npy"
             if self.data.size > 0:
                 np.save(filename, self.data[:, :3])
             else:
