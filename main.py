@@ -9,7 +9,7 @@ from plot_manager import PlotManager
 
 def main():
     # Load data
-    loader = DataLoader("F:/RunningProjects/SAM2/lanes")
+    loader = DataLoader("./lanes")
     merged_data, file_names = loader.load_data()
     D = loader.D
 
