@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import numpy as np
 
@@ -129,7 +130,20 @@ class DataManager:
         print(f"Merged lane {lane_id_2} into lane {lane_id_1}, new data shape: {self.data.shape}")
 
     def save_all_lanes(self):
-        os.makedirs("workspace-Temp", exist_ok=True)
+        # os.makedirs("workspace-Temp", exist_ok=True)
+        folder = "workspace-Temp"
+        os.makedirs(folder, exist_ok=True)  # Ensure the folder exists
+
+        # Delete all files and subfolders inside the folder
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)  # Delete file or link
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)  # Delete folder and its contents
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
         unique_lane_ids = np.unique(self.data[:, -1])
         for lane_id in unique_lane_ids:
             mask = self.data[:, -1] == lane_id
