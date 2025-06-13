@@ -50,10 +50,10 @@ This tool is used to:
 
 1. **Run the Application**:
    ```bash
-   python main.py or .exe files
+   python main.py
    ```
    ```bash
-   DataEditer.exe files
+   DataEditer.exe
    ```
 
 2. **Interact with the Interface**:
@@ -78,20 +78,23 @@ This tool is used to:
 ## Directory Structure
 ```
 DataVisualizationEditingTool/
-├── lanes/                        # Input lane .npy files
-│   └── *.npy                     # e.g., lane_0.npy, lane_1.npy, etc.
+├── lanes/                          # Input lane .npy files
+│   └── lane_0.npy, lane_1.npy, ... # Individual lane files
 │
-├── workspace-Temp/              # Temporary saves (auto-generated at runtime)
-├── workspace-Backup/            # Backup saves (auto-generated at runtime)
+├── utils/                          # Utility modules
+│   ├── data_loader.py              # Loads and merges .npy lane files
+│   ├── data_manager.py             # Manages lane data (add, delete, merge, save)
+│   ├── event_handler.py            # Handles events (clicks, selections, modes)
+│   ├── plot_manager.py             # Renders and updates Matplotlib plot and widgets
+│   ├── curve_manager.py            # Manages lane drawing and smoothing logic
+│   ├── network_.py                 # Launches network viewer, handles threading
+│   └── network_view2.py            # Displays lane graph (network) view
 │
-├── main.py                      # Entry point: loads data, initializes GUI
-├── data_loader.py               # Loads and merges lane files from /lanes
-├── data_manager.py              # Handles lane data (add, delete, merge, save)
-├── event_handler.py             # Handles events like button clicks and selections
-├── plot_manager.py              # Manages plotting lanes and GUI widgets
-├── curve_manager.py             # Deals with drawing, smoothing lane curves
+├── workspace-Temp/                # Temporary saves (auto-generated at runtime)
+├── workspace-Backup/              # Backup saves (auto-generated at runtime)
 │
-├── DataEditer.exe
-├── requirements.txt             # Python dependencies (e.g., numpy, matplotlib)
-├── README.md                    # Project overview and usage instructions
+├── main.py                        #  Entry point: loads data, initializes GUI
+├── DataEditer.exe                 # Compiled executable version (optional)
+├── README.md                      #  Project overview and usage instructions
+
 ```

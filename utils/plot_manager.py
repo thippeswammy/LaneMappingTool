@@ -1,7 +1,9 @@
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
-import time
-from matplotlib.widgets import Slider, RectangleSelector, Button
+from matplotlib.widgets import Slider, RectangleSelector
+
 
 class PlotManager:
     def __init__(self, data, file_names, D, data_manager, event_handler):
@@ -108,7 +110,8 @@ class PlotManager:
                     else:
                         self.highlighted_lane = lane_id
                     self.event_handler.update_point_sizes()
-                    self.update_status(f"{'Highlighted' if self.highlighted_lane is not None else 'Unhighlighted'} lane {lane_id}")
+                    self.update_status(
+                        f"{'Highlighted' if self.highlighted_lane is not None else 'Unhighlighted'} lane {lane_id}")
             except Exception as e:
                 print(f"Error during legend pick: {e}")
         self.fig.canvas.draw_idle()

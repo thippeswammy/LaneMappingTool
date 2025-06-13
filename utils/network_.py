@@ -4,7 +4,7 @@ import os
 
 import networkx as nx
 
-import network_view2
+from DataVisualizationEditingTool.utils.network_view2 import network_view2 as network_view2
 
 # from networkx.readwrite import gpickle
 print(nx.__file__)
@@ -139,7 +139,7 @@ args = parser.parse_args()
 def pickerGenerateViewer():
     global args
     main(args)
-    network_view2.main()
+    network_view2()
 
 
 if __name__ == "__main__":
@@ -154,4 +154,4 @@ if __name__ == "__main__":
     #                     )
     # args = parser.parse_args()
     main(args)
-    network_view2.main()
+    network_view2()

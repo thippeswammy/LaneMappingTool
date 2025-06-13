@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from network_ import pickerGenerateViewer
+from DataVisualizationEditingTool.utils.network_ import pickerGenerateViewer
 
 
 class DataManager:
@@ -213,7 +213,7 @@ class DataManager:
 
     def save(self):
         try:
-            filename = "WorkingLane.npy"
+            filename = "../WorkingLane.npy"
             if self.data.size > 0:
                 np.save(filename, self.data[:, :3])
             else:
@@ -234,9 +234,9 @@ class DataManager:
         try:
             if time.time() - self.last_backup < self.backup_interval:
                 return
-            os.makedirs("workspace-Backup", exist_ok=True)
+            os.makedirs("../workspace-Backup", exist_ok=True)
             timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = os.path.join("workspace-Backup", f"backup_{timestamp}.npy")
+            filename = os.path.join("../workspace-Backup", f"backup_{timestamp}.npy")
             if self.data.size > 0:
                 np.save(filename, self.data[:, :3])
                 print(f"Auto-saved backup to {filename}")

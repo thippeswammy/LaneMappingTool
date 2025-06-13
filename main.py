@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from data_loader import DataLoader
-from data_manager import DataManager
-from event_handler import EventHandler
-from plot_manager import PlotManager
+from DataVisualizationEditingTool.utils.data_loader import DataLoader
+from DataVisualizationEditingTool.utils.data_manager import DataManager
+from DataVisualizationEditingTool.utils.event_handler import EventHandler
+from DataVisualizationEditingTool.utils.plot_manager import PlotManager
 
 
 def main():

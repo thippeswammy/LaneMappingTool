@@ -3,6 +3,7 @@ import numpy as np
 from scipy.interpolate import splprep, splev
 from scipy.signal import savgol_filter
 
+
 class CurveManager:
     def __init__(self, data_manager, plot_manager):
         self.data_manager = data_manager
@@ -102,7 +103,8 @@ class CurveManager:
                     dy = new_points[i + 1, 1] - new_points[i, 1]
                     self.data_manager.data[idx, 2] = np.arctan2(dy, dx)
                 else:
-                    self.data_manager.data[idx, 2] = self.data_manager.data[segment_indices[-2], 2] if len(segment_indices) > 1 else 0.0
+                    self.data_manager.data[idx, 2] = self.data_manager.data[segment_indices[-2], 2] if len(
+                        segment_indices) > 1 else 0.0
 
             self.data_manager.data[segment_indices, -1] = lane_id
 
@@ -191,7 +193,8 @@ class CurveManager:
                 if prev_point is not None:
                     plt.plot([prev_point[0], points[0, 0]], [prev_point[1], points[0, 1]], 'b--', label='Prev Adjacent')
                 if next_point is not None:
-                    plt.plot([points[-1, 0], next_point[0]], [points[-1, 1], next_point[1]], 'b--', label='Next Adjacent')
+                    plt.plot([points[-1, 0], next_point[0]], [points[-1, 1], next_point[1]], 'b--',
+                             label='Next Adjacent')
                 plt.legend()
                 plt.title("Smoothing Segment")
                 plt.xlabel("x")

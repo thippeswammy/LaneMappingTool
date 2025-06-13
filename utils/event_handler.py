@@ -1,9 +1,12 @@
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
-import time
 from matplotlib.widgets import Button
-from curve_manager import CurveManager
-from data_loader import DataLoader
+
+from DataVisualizationEditingTool.utils.curve_manager import CurveManager
+from DataVisualizationEditingTool.utils.data_loader import DataLoader
+
 
 class EventHandler:
     def __init__(self, data_manager):
@@ -340,7 +343,8 @@ class EventHandler:
             lane_data = self.data_manager.data[lane_indices]
             min_idx = lane_data[:, 4].argmin()
             max_idx = lane_data[:, 4].argmax()
-            point_type = 'start' if closest_idx == lane_indices[min_idx] else 'end' if closest_idx == lane_indices[max_idx] else None
+            point_type = 'start' if closest_idx == lane_indices[min_idx] else 'end' if closest_idx == lane_indices[
+                max_idx] else None
 
             if point_type is None:
                 print("Please select a start or end point")
@@ -570,6 +574,7 @@ class EventHandler:
                     if time.time() - self.last_status_time >= self.status_timeout:
                         self.plot_manager.update_status("")
                         self.fig.canvas.draw_idle()
+
                 self.fig.canvas.manager.window.after(int(self.status_timeout * 1000), clear_status)
         except Exception as e:
             print(f"Error updating status: {e}")

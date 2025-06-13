@@ -3,10 +3,10 @@ import pickle
 import matplotlib.pyplot as plt
 import networkx as nx
 
-graph_file_path = "output.pickle"
+graph_file_path = "../output.pickle"
 
 
-def main():
+def network_view2():
     # Load graph
     with open(graph_file_path, "rb") as f:
         data = pickle.load(f, encoding='latin1')
@@ -42,4 +42,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    network_view2()
