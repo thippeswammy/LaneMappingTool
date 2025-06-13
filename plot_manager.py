@@ -54,13 +54,19 @@ class PlotManager:
             if len(lane_data) > 0:
                 label = self.file_names[int(lane_id)] if int(lane_id) < len(self.file_names) else f"Lane {lane_id}"
                 sc = self.ax.scatter(lane_data[:, 0], lane_data[:, 1], s=10, label=label, color=colors[int(lane_id)],
-                                     picker=True)
+                                     marker='o', picker=True)
                 self.scatter_plots.append(sc)
                 self.indices.append(np.where(mask)[0])
 
+                # Plot starting point with square marker
+                start_idx = lane_data[:, 4].argmin()  # Lowest index is start
+                start_point = lane_data[start_idx]
+                self.ax.scatter(start_point[0], start_point[1], s=50, color=colors[int(lane_id)], marker='s',
+                                label=f'Lane {lane_id} Start')
+
         if selected_indices:
             selected_points = data[np.array(selected_indices, dtype=int)]
-            self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=50, color='red', marker='^',
+            self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=50, color='red', marker='o',
                             label='Selected')
 
         if self.event_handler.merge_mode:
