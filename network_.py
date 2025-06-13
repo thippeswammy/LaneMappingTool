@@ -124,16 +124,34 @@ def main(args):
     # gpickle.write_gpickle(G1, args.output_file)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process lane.npy files and build a directional graph.")
-    parser.add_argument("lane_files", nargs="*", default=["WorkingLane.npy"],
-                        help="List of lane.npy file locations (default: WorkingLane.npy)"
-                        )
+parser = argparse.ArgumentParser(description="Process lane.npy files and build a directional graph.")
+parser.add_argument("lane_files", nargs="*", default=["WorkingLane.npy"],
+                    help="List of lane.npy file locations (default: WorkingLane.npy)"
+                    )
 
-    # Optional named argument
-    parser.add_argument("-o", "--output_file", default="output.pickle",
-                        help="Output pickle file to save the graph (default: output.pickle)"
-                        )
-    args = parser.parse_args()
+# Optional named argument
+parser.add_argument("-o", "--output_file", default="output.pickle",
+                    help="Output pickle file to save the graph (default: output.pickle)"
+                    )
+args = parser.parse_args()
+
+
+def pickerGenerateViewer():
+    global args
+    main(args)
+    network_view2.main()
+
+
+if __name__ == "__main__":
+    # parser = argparse.ArgumentParser(description="Process lane.npy files and build a directional graph.")
+    # parser.add_argument("lane_files", nargs="*", default=["WorkingLane.npy"],
+    #                     help="List of lane.npy file locations (default: WorkingLane.npy)"
+    #                     )
+    #
+    # # Optional named argument
+    # parser.add_argument("-o", "--output_file", default="output.pickle",
+    #                     help="Output pickle file to save the graph (default: output.pickle)"
+    #                     )
+    # args = parser.parse_args()
     main(args)
     network_view2.main()
