@@ -1,5 +1,7 @@
 import os
+
 import numpy as np
+
 
 class DataLoader:
     def __init__(self, directory):
@@ -30,24 +32,26 @@ class DataLoader:
                 continue
 
             N = points.shape[0]
-            # Add yaw if missing
-            if points.shape[1] < 3:
-                yaw = np.zeros((N, 1))
+            data = np.zeros((N, 6))
+            data[:, 0:2] = points[:, 0:2]
+
+            if points.shape[1] >= 3:
+                data[:, 2] = points[:, 2]
+            else:
                 for j in range(1, N):
-                    dx = points[j, 0] - points[j-1, 0]
-                    dy = points[j, 1] - points[j-1, 1]
-                    yaw[j-1] = np.arctan2(dy, dx)
-                points = np.hstack([points, yaw])
+                    dx = points[j, 0] - points[j - 1, 0]
+                    dy = points[j, 1] - points[j - 1, 1]
+                    data[j - 1, 2] = np.arctan2(dy, dx)
 
-            # Add frame_idx and index (temporary per file)
-            indices = np.arange(N).reshape(-1, 1)  # Used for both frame_idx and index
+            if points.shape[1] >= 4:
+                data[:, 3] = points[:, 3]
+            else:
+                data[:, 3] = np.arange(N)
 
-            # Add lane_id
-            lane_ids = np.full((N, 1), i, dtype=int)
+            data[:, 4] = np.arange(N)
+            data[:, 5] = i
 
-            # Combine: x, y, yaw, ..., frame_idx, index, lane_id
-            merged_points = np.hstack([points, indices, indices, lane_ids])
-            data_list.append(merged_points)
+            data_list.append(data)
             file_names.append(file)
 
         if not data_list:
@@ -55,13 +59,10 @@ class DataLoader:
             return np.array([]), []
 
         merged_data = np.vstack(data_list)
-
-        # Reassign global frame_idx and index
         N_total = merged_data.shape[0]
-        merged_data[:, 3] = np.arange(N_total)  # frame_idx
-        merged_data[:, -2] = np.arange(N_total)  # index
+        merged_data[:, 3] = np.arange(N_total)
+        merged_data[:, 4] = np.arange(N_total)
 
-        # Compute D
         if merged_data.size > 0:
             points_2d = merged_data[:, :2]
             distances = np.sqrt(((points_2d[:, None] - points_2d[None, :]) ** 2).sum(axis=-1))

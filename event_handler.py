@@ -1,4 +1,6 @@
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.widgets import Button
 
 from curve_manager import CurveManager
 
@@ -11,28 +13,83 @@ class EventHandler:
         self.selection_mode = True
         self.draw_mode = False
         self.selected_id = 0
-        self.id_set = False
-        # State for smoothing point selection
+        self.id_set = True
         self.smoothing_point_selection = False
         self.smoothing_start_idx = None
         self.smoothing_end_idx = None
         self.smoothing_selected_indices = None
         self.smoothing_lane_id = None
         self.smoothing_preview_line = None
+        self.merge_mode = False
+        self.merge_lane_id = 1  # Start with lane 1
+        self.merge_point_0 = None
+        self.merge_point_target = None
+        self.buttons = {}
 
     def set_plot_manager(self, plot_manager):
         self.plot_manager = plot_manager
         self.curve_manager = CurveManager(self.data_manager, self.plot_manager)
+        self.fig = self.plot_manager.fig
+        self.setup_event_handlers()
+        self.setup_buttons()
+
+    def setup_event_handlers(self):
+        self.fig.canvas.mpl_connect('button_press_event', self.on_click)
+        self.fig.canvas.mpl_connect('key_press_event', self.on_key)
+        self.fig.canvas.mpl_connect('pick_event', self.on_pick)
+        self.plot_manager.rs.onselect = self.on_select
+
+    def setup_buttons(self):
+        ax_toggle = plt.axes([0.01, 0.95, 0.1, 0.04])
+        self.buttons['toggle'] = Button(ax_toggle, 'Select Mode')
+        self.buttons['toggle'].on_clicked(self.on_toggle_mode)
+
+        ax_draw = plt.axes([0.01, 0.90, 0.1, 0.04])
+        self.buttons['draw'] = Button(ax_draw, 'Draw')
+        self.buttons['draw'].on_clicked(self.on_toggle_draw_mode)
+
+        ax_linecurve = plt.axes([0.01, 0.85, 0.1, 0.04])
+        self.buttons['linecurve'] = Button(ax_linecurve, 'Line')
+        self.buttons['linecurve'].on_clicked(self.on_toggle_linecurve)
+
+        ax_straighten = plt.axes([0.01, 0.80, 0.1, 0.04])
+        self.buttons['straighten'] = Button(ax_straighten, 'Smooth')
+        self.buttons['straighten'].on_clicked(self.on_straighten)
+
+        ax_confirm_start = plt.axes([0.01, 0.75, 0.1, 0.04])
+        self.buttons['confirm_start'] = Button(ax_confirm_start, 'Confirm Start')
+        self.buttons['confirm_start'].on_clicked(self.on_confirm_start)
+
+        ax_confirm_end = plt.axes([0.01, 0.70, 0.1, 0.04])
+        self.buttons['confirm_end'] = Button(ax_confirm_end, 'Confirm End')
+        self.buttons['confirm_end'].on_clicked(self.on_confirm_end)
+
+        ax_cancel = plt.axes([0.01, 0.65, 0.1, 0.04])
+        self.buttons['cancel'] = Button(ax_cancel, 'Cancel Smooth')
+        self.buttons['cancel'].on_clicked(self.on_cancel_smoothing)
+
+        ax_clear = plt.axes([0.01, 0.60, 0.1, 0.04])
+        self.buttons['clear'] = Button(ax_clear, 'Clear Selection')
+        self.buttons['clear'].on_clicked(self.on_clear_selection)
+
+        ax_save = plt.axes([0.01, 0.55, 0.1, 0.04])
+        self.buttons['save'] = Button(ax_save, 'Save')
+        self.buttons['save'].on_clicked(self.save_data)
+
+        ax_merge = plt.axes([0.01, 0.50, 0.1, 0.04])
+        self.buttons['merge'] = Button(ax_merge, 'Merge Lanes')
+        self.buttons['merge'].on_clicked(self.merge_lanes)
+
+        self.fig.canvas.draw()
 
     def on_toggle_mode(self, event):
         self.draw_mode = False
         self.selection_mode = not self.selection_mode
         self.plot_manager.rs.set_active(self.selection_mode)
-        self.plot_manager.btn_toggle.label.set_text(
-            'Select Mode' if self.selection_mode else 'Add/Delete Mode')
-        self.plot_manager.btn_toggle.color = 'lightcoral' if self.selection_mode else 'lightgreen'
+        self.buttons['toggle'].label.set_text('Select Mode' if self.selection_mode else 'Add/Delete Mode')
+        self.buttons['toggle'].color = 'lightcoral' if self.selection_mode else 'lightgreen'
         if not self.selection_mode:
-            self.id_set = False
+            self.id_set = True
             self.clear_smoothing_state()
             if self.plot_manager.selected_indices:
                 self.plot_manager.selected_indices = []
@@ -45,10 +102,10 @@ class EventHandler:
         self.selection_mode = False
         self.draw_mode = not self.draw_mode
         self.plot_manager.rs.set_active(False)
-        self.plot_manager.btn_toggle.label.set_text('Select Mode')
-        self.plot_manager.btn_toggle.color = 'lightcoral'
+        self.buttons['toggle'].label.set_text('Select Mode')
+        self.buttons['toggle'].color = 'lightcoral'
         if not self.draw_mode:
-            self.id_set = False
+            self.id_set = True
             self.clear_smoothing_state()
             self.curve_manager.draw_points = []
             if self.curve_manager.current_line:
@@ -67,7 +124,7 @@ class EventHandler:
             print("Must be in Draw Mode to toggle line/curve")
             return
         self.curve_manager.is_curve = not self.curve_manager.is_curve
-        self.plot_manager.btn_linecurve.label.set_text('Curve' if self.curve_manager.is_curve else 'Line')
+        self.buttons['linecurve'].label.set_text('Curve' if self.curve_manager.is_curve else 'Line')
         self.curve_manager.update_draw_line()
         print(f"Drawing {'curve' if self.curve_manager.is_curve else 'line'}")
         self.plot_manager.update_status()
@@ -76,19 +133,14 @@ class EventHandler:
         if not self.selection_mode or not self.plot_manager.selected_indices:
             print("Must be in Selection Mode with points selected to smooth")
             return
-
-        # Store the current state for smoothing
         self.smoothing_selected_indices = self.plot_manager.selected_indices
         self.smoothing_lane_id = self.selected_id
         self.smoothing_point_selection = True
         self.smoothing_start_idx = None
         self.smoothing_end_idx = None
-
-        # Highlight selected points to guide the user
         self.update_point_sizes()
         self.plot_manager.fig.canvas.draw_idle()
-
-        print(f"Please click on the starting point for smoothing (from selected points)")
+        print("Please click on the starting point for smoothing (from selected points)")
         self.plot_manager.update_status("Click to select the starting point for smoothing")
 
     def on_confirm_start(self, event):
@@ -105,16 +157,12 @@ class EventHandler:
             print("Please select both start and end points")
             return
         print(f"End point confirmed (index {self.smoothing_end_idx}). Smoothing the segment...")
-
-        # Perform smoothing
         new_indices = self.curve_manager.straighten_segment(
             self.smoothing_selected_indices,
             self.smoothing_lane_id,
             self.smoothing_start_idx,
             self.smoothing_end_idx
         )
-
-        # Reset smoothing state and clear highlights
         self.clear_smoothing_state()
         if new_indices:
             self.plot_manager.selected_indices = new_indices
@@ -124,7 +172,6 @@ class EventHandler:
             self.plot_manager.selected_indices = []
             self.update_point_sizes()
             print("Smoothing failed or returned empty result, selection cleared")
-
         self.plot_manager.fig.canvas.draw_idle()
         self.plot_manager.update_status()
 
@@ -140,6 +187,7 @@ class EventHandler:
             self.plot_manager.selected_indices = []
             print("Cleared selection")
         self.clear_smoothing_state()
+        self.clear_merge_state()
         self.update_point_sizes()
         self.plot_manager.fig.canvas.draw_idle()
         self.plot_manager.update_status()
@@ -155,20 +203,89 @@ class EventHandler:
             self.smoothing_preview_line = None
             self.plot_manager.fig.canvas.draw_idle()
 
+    def clear_merge_state(self):
+        self.merge_mode = False
+        self.merge_point_0 = None
+        self.merge_point_target = None
+        self.plot_manager.update_status()
+
+    def merge_lanes(self, event):
+        unique_lanes = np.unique(self.data_manager.data[:, -1])
+        if len(unique_lanes) <= 1:
+            print("Only one lane present, no merging needed")
+            self.clear_merge_state()
+            return
+        if self.merge_lane_id not in unique_lanes:
+            print(f"Lane {self.merge_lane_id} does not exist")
+            self.clear_merge_state()
+            return
+        self.merge_mode = True
+        self.merge_point_0 = None
+        self.merge_point_target = None
+        self.plot_manager.update_status(f"Select a point in lane 0")
+        print("Please select a point in lane 0")
+        self.update_point_sizes()
+        self.plot_manager.fig.canvas.draw_idle()
+
+    def finalize_merge(self):
+        if self.merge_point_0 is None or self.merge_point_target is None:
+            print("Both points must be selected for merging")
+            return
+        self.data_manager.merge_lanes(0, self.merge_lane_id, self.merge_point_0, self.merge_point_target)
+        self.plot_manager.selected_indices = []
+        self.plot_manager.file_names = self.data_manager.file_names
+        self.plot_manager.update_plot(self.data_manager.data)
+        print(f"Merged lane {self.merge_lane_id} into lane 0")
+        self.merge_lane_id += 1  # Move to next lane
+        self.clear_merge_state()
+        self.update_point_sizes()
+        self.plot_manager.update_status()
+
+    def save_data(self, event):
+        filename = self.data_manager.save()
+        print(f"Saved to {filename}")
+        self.plot_manager.update_plot(self.data_manager.data)
+        self.plot_manager.update_status()
+
     def on_click(self, event):
         if self.plot_manager is None or event.inaxes != self.plot_manager.ax or event.button != 1:
             print("Click ignored: invalid action")
             return
-
-        # Handle smoothing point selection
+        if self.merge_mode:
+            click_x, click_y = event.xdata, event.ydata
+            if self.merge_point_0 is None:
+                lane_0_indices = np.where(self.data_manager.data[:, -1] == 0)[0]
+                if len(lane_0_indices) == 0:
+                    print("No points in lane 0")
+                    self.clear_merge_state()
+                    return
+                lane_0_points = self.data_manager.data[lane_0_indices, :2]
+                distances = np.sqrt((lane_0_points[:, 0] - click_x) ** 2 + (lane_0_points[:, 1] - click_y) ** 2)
+                closest_idx = np.argmin(distances)
+                self.merge_point_0 = lane_0_indices[closest_idx]
+                print(f"Selected point in lane 0 (index {self.merge_point_0})")
+                self.plot_manager.update_status(f"Select a point in lane {self.merge_lane_id}")
+                self.update_point_sizes()
+                self.plot_manager.fig.canvas.draw_idle()
+            elif self.merge_point_target is None:
+                target_indices = np.where(self.data_manager.data[:, -1] == self.merge_lane_id)[0]
+                if len(target_indices) == 0:
+                    print(f"No points in lane {self.merge_lane_id}")
+                    self.clear_merge_state()
+                    return
+                target_points = self.data_manager.data[target_indices, :2]
+                distances = np.sqrt((target_points[:, 0] - click_x) ** 2 + (target_points[:, 1] - click_y) ** 2)
+                closest_idx = np.argmin(distances)
+                self.merge_point_target = target_indices[closest_idx]
+                print(f"Selected point in lane {self.merge_lane_id} (index {self.merge_point_target})")
+                self.finalize_merge()
+            return
         if self.smoothing_point_selection:
-            # Find the closest point in selected_indices to the click
             click_x, click_y = event.xdata, event.ydata
             selected_points = self.data_manager.data[self.smoothing_selected_indices, :2]
             distances = np.sqrt((selected_points[:, 0] - click_x) ** 2 + (selected_points[:, 1] - click_y) ** 2)
             closest_idx = np.argmin(distances)
             global_idx = self.smoothing_selected_indices[closest_idx]
-
             if self.smoothing_start_idx is None:
                 self.smoothing_start_idx = global_idx
                 self.update_point_sizes()
@@ -179,7 +296,6 @@ class EventHandler:
             elif self.smoothing_end_idx is None:
                 self.smoothing_end_idx = global_idx
                 self.update_point_sizes()
-                # Preview the smoothed curve
                 preview_points = self.curve_manager.preview_smooth(
                     self.smoothing_selected_indices,
                     self.smoothing_lane_id,
@@ -196,21 +312,13 @@ class EventHandler:
                 print(f"End point selected (index {self.smoothing_end_idx}). Click 'Confirm End' to apply smoothing.")
                 self.plot_manager.update_status("Click 'Confirm End' to apply smoothing or 'Cancel Smoothing' to abort")
             return
-
-        # Existing click handling for drawing and adding points
         if self.draw_mode:
-            if not self.id_set:
-                print("Press 1-9 to select an ID before drawing")
-                return
             self.curve_manager.add_draw_point(event.xdata, event.ydata)
             print(f"Added point to {'curve' if self.curve_manager.is_curve else 'line'}")
             self.plot_manager.update_status()
             return
         if self.selection_mode:
             print("Click ignored: in selection mode")
-            return
-        if not self.id_set:
-            print("Press 1-9 to select an ID before adding a point")
             return
         self.plot_manager.selected_indices = []
         self.update_point_sizes()
@@ -224,16 +332,18 @@ class EventHandler:
         if self.plot_manager is None:
             print("Plot manager not set, skipping update_point_sizes")
             return
-        # Reset all sizes to default
         for lane_id, sc in enumerate(self.plot_manager.scatter_plots):
             indices = self.plot_manager.indices[lane_id]
             if len(indices) == 0:
                 continue
             sizes = np.full(len(indices), 10, dtype=float)
-
-            # Highlight selected points, start point, and end point
             for local_idx, global_idx in enumerate(indices):
-                if self.smoothing_point_selection:
+                if self.merge_mode:
+                    if global_idx == self.merge_point_0:
+                        sizes[local_idx] = 100
+                    elif global_idx == self.merge_point_target:
+                        sizes[local_idx] = 80
+                elif self.smoothing_point_selection:
                     if global_idx == self.smoothing_start_idx:
                         sizes[local_idx] = 100
                     elif global_idx == self.smoothing_end_idx:
@@ -242,10 +352,8 @@ class EventHandler:
                         sizes[local_idx] = 50
                 elif global_idx in self.plot_manager.selected_indices:
                     sizes[local_idx] = 30
-
             print(f"Setting sizes for lane {lane_id}: (total {len(sizes)} points)")
             sc.set_sizes(sizes)
-
         self.plot_manager.fig.canvas.draw_idle()
         self.plot_manager.fig.canvas.flush_events()
 
@@ -283,7 +391,6 @@ class EventHandler:
 
     def on_key(self, event):
         key_map = {
-            '1-9': lambda k: int(k) - 1 if int(k) - 1 < len(self.data_manager.file_names) else None,
             'ctrl+z': self.on_undo,
             'ctrl+y': self.on_redo,
             'tab': self.on_toggle_mode,
@@ -292,21 +399,8 @@ class EventHandler:
             'delete': self.on_delete,
             'enter': self.on_finalize_draw
         }
-
         if event.key in '123456789':
-            new_id = key_map['1-9'](event.key)
-            if new_id is not None:
-                self.selected_id = new_id
-                self.id_set = True
-                print(f"Set ID {self.selected_id} ({self.data_manager.file_names[self.selected_id]})")
-                if self.selection_mode and self.plot_manager.selected_indices:
-                    self.data_manager.change_ids(self.plot_manager.selected_indices, self.selected_id)
-                    self.plot_manager.update_plot(self.data_manager.data)
-                    print(f"Changed {len(self.plot_manager.selected_indices)} points to ID {self.selected_id}")
-                self.plot_manager.update_status()
-            else:
-                print(f"Invalid ID: only {len(self.data_manager.file_names)} files available")
-                self.id_set = False
+            print("Lane ID selection disabled; use default ID 0 or Merge Lanes button")
         elif event.key.lower() in key_map:
             key_map[event.key.lower()](event)
 
@@ -315,8 +409,9 @@ class EventHandler:
             return
         self.selection_mode = False
         self.draw_mode = False
-        self.id_set = False
+        self.id_set = True
         self.clear_smoothing_state()
+        self.clear_merge_state()
         self.plot_manager.rs.set_active(False)
         self.curve_manager.draw_points = []
         if self.curve_manager.current_line:
@@ -335,13 +430,9 @@ class EventHandler:
             return
         deleted_indices = self.plot_manager.selected_indices
         self.data_manager.delete_points(deleted_indices)
-        self.plot_manager.selected_indices = [
-            i for i in range(len(self.data_manager.data))
-            if i not in deleted_indices and i in self.plot_manager.selected_indices
-        ]
+        self.plot_manager.selected_indices = []
         self.plot_manager.update_plot(self.data_manager.data)
-        print(
-            f"Deleted {len(deleted_indices)} points, {len(self.plot_manager.selected_indices)} points remain selected")
+        print(f"Deleted {len(deleted_indices)} points")
         self.plot_manager.update_status()
 
     def on_undo(self, event):
@@ -361,12 +452,7 @@ class EventHandler:
         if success:
             self.plot_manager.selected_indices = []
             self.plot_manager.update_plot(data)
-            print("Redo performed, selection cleared")
-        self.plot_manager.update_status()
-
-    def on_save(self, event):
-        filename = self.data_manager.save()
-        print(f"Saved to {filename}")
+            print("Redo performed")
         self.plot_manager.update_status()
 
     def on_finalize_draw(self, event):
