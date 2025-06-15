@@ -155,6 +155,11 @@ class DataManager:
             print(f"Error removing points below: {e}")
 
     def merge_lanes(self, lane_id_1, lane_id_2, point_1, point_2, point_1_type, point_2_type):
+        """Merge lane_id_2 into lane_id_1, ensuring continuous index sequence with correct start/end connections."""
+        if point_1 < point_2:
+            lane_id_1, point_1, point_1_type, lane_id_2, point_2, point_2_type = (
+                lane_id_2, point_2, point_2_type, lane_id_1, point_1, point_1_type)
+
         if self.data.size == 0:
             print("No data to merge")
             return
@@ -170,44 +175,113 @@ class DataManager:
             lane_1_indices = np.where(lane_1_mask)[0]
             lane_2_indices = np.where(lane_2_mask)[0]
 
+            # Find local indices of selected points
+            point_1_local = np.where(lane_1_indices == point_1)[0]
+            point_2_local = np.where(lane_2_indices == point_2)[0]
+            if len(point_1_local) == 0 or len(point_2_local) == 0:
+                print(f"Invalid points: point_1={point_1}, point_2={point_2}")
+                return
+            point_1_local = point_1_local[0]
+            point_2_local = point_2_local[0]
+
+            # Sort lanes by index column (data[:, 4]) for consistent ordering
             lane_1_sorted = lane_1_data[np.argsort(lane_1_data[:, 4])]
             lane_2_sorted = lane_2_data[np.argsort(lane_2_data[:, 4])]
 
-            point_1_local = np.where(lane_1_indices == point_1)[0][0]
-            point_2_local = np.where(lane_2_indices == point_2)[0][0]
+            # Debug: Print input points and their coordinates
+            print(
+                f"Point 1 ({point_1_type}): index={point_1}, local={point_1_local}, coords=({lane_1_sorted[point_1_local, 0]}, {lane_1_sorted[point_1_local, 1]})")
+            print(
+                f"Point 2 ({point_2_type}): index={point_2}, local={point_2_local}, coords=({lane_2_sorted[point_2_local, 0]}, {lane_2_sorted[point_2_local, 1]})")
 
+            # Select parts based on start/end
             if point_1_type == 'end':
                 lane_1_part = lane_1_sorted[:point_1_local + 1]
-            else:
+            else:  # start
                 lane_1_part = lane_1_sorted[point_1_local:]
+            print(f"Lane 1 part indices: {lane_1_part[:, 4]}")
 
+            # Determine lane_2_part direction based on connection
             if point_2_type == 'start' and point_1_type == 'end':
                 lane_2_part = lane_2_sorted
             elif point_2_type == 'end' and point_1_type == 'start':
                 lane_2_part = lane_2_sorted
             elif point_2_type == 'start' and point_1_type == 'start':
-                lane_2_part = lane_2_sorted[::-1]
+                lane_2_part = lane_2_sorted[::-1]  # Reverse for start-to-start
             elif point_2_type == 'end' and point_1_type == 'end':
-                lane_2_part = lane_2_sorted[::-1]
+                lane_2_part = lane_2_sorted[::-1]  # Reverse for end-to-end
+            print(f"Lane 2 part indices: {lane_2_part[:, 4]}")
 
+            # Check connection point proximity
+            connection_x1 = lane_1_part[-1, 0]
+            connection_y1 = lane_1_part[-1, 1]
+            connection_x2 = lane_2_part[0, 0]
+            connection_y2 = lane_2_part[0, 1]
+            distance = np.sqrt((connection_x2 - connection_x1) ** 2 + (connection_y2 - connection_y1) ** 2)
+            print(f"Connection distance between lanes: {distance}")
+
+            # If distance is too large, try reversing lane_2_part
+            if distance > 1.0:  # Adjust threshold based on your data
+                print("Connection distance too large, reversing lane_2_part")
+                lane_2_part = lane_2_part[::-1]
+                connection_x2 = lane_2_part[0, 0]
+                connection_y2 = lane_2_part[0, 1]
+                distance = np.sqrt((connection_x2 - connection_x1) ** 2 + (connection_y2 - connection_y1) ** 2)
+                print(f"New connection distance: {distance}")
+
+            # Combine parts, preserving original index order
             merged_data = np.vstack([lane_1_part, lane_2_part])
             merged_data[:, -1] = lane_id_1
 
+            # Debug: Print merged data before indexing
+            print(f"Merged data x-coordinates: {merged_data[:, 0]}")
+            print(f"Merged data original indices: {merged_data[:, 4]}")
+
+            # Recalculate yaw based on new order
             N = len(merged_data)
-            for i in range(N - 1):
-                dx = merged_data[i + 1, 0] - merged_data[i, 0]
-                dy = merged_data[i + 1, 1] - merged_data[i, 1]
-                merged_data[i, 2] = np.arctan2(dy, dx)
-            merged_data[-1, 2] = merged_data[-2, 2] if N > 1 else 0.0
+            if N > 1:
+                dx = np.diff(merged_data[:, 0])
+                dy = np.diff(merged_data[:, 1])
+                merged_data[:-1, 2] = np.arctan2(dy, dx)
+                merged_data[-1, 2] = merged_data[-2, 2]
+            else:
+                merged_data[:, 2] = 0.0 if N > 0 else 0.0
 
-            new_indices = np.arange(N)
-            merged_data[:, 3] = new_indices
-            merged_data[:, 4] = new_indices
+            # Assign indices for merged lane (0 to N-1, +1 increments)
+            merged_data[:, 3] = np.arange(N)
+            merged_data[:, 4] = np.arange(N)
 
+            # Check for duplicate indices
+            if len(np.unique(merged_data[:, 4])) != len(merged_data):
+                print(f"Warning: Duplicate indices in merged lane {lane_id_1}: {merged_data[:, 4]}")
+
+            # Collect other lanes' data
             other_lanes_mask = ~np.logical_or(lane_1_mask, lane_2_mask)
-            other_data = self.data[other_lanes_mask]
+            other_data = self.data[other_lanes_mask].copy() if np.any(other_lanes_mask) else np.array([])
+
+            # Reindex other lanes starting from N
+            if other_data.size > 0:
+                unique_lanes = np.unique(other_data[:, -1])
+                offset = N
+                for lane_id in unique_lanes:
+                    lane_mask = other_data[:, -1] == lane_id
+                    lane_size = np.sum(lane_mask)
+                    other_data[lane_mask, 3] = np.arange(offset, offset + lane_size)
+                    other_data[lane_mask, 4] = np.arange(offset, offset + lane_size)
+                    offset += lane_size
+                # Check for duplicates in other lanes
+                if len(np.unique(other_data[:, 4])) != len(other_data):
+                    print(f"Warning: Duplicate indices in other lanes: {other_data[:, 4]}")
+
+            # Combine merged and other lanes
             self.data = np.vstack([merged_data, other_data]) if other_data.size > 0 else merged_data
 
+            # Debug: Print final indices
+            print(f"Merged lane {lane_id_1} indices: {self.data[self.data[:, -1] == lane_id_1][:, 4]}")
+            if other_data.size > 0:
+                print(f"Other lanes indices: {self.data[self.data[:, -1] != lane_id_1][:, 4]}")
+
+            # Update file names
             self.file_names = [self.file_names[i] if i < len(self.file_names) else f"Lane_{i}" for i in
                                range(max(np.unique(self.data[:, -1]).astype(int)) + 1)]
             self.history.append(self.data.copy())
