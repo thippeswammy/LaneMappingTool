@@ -86,7 +86,7 @@ class PlotManager:
                 self.tooltip.set_text(
                     f'X: {point[0]:.2f}\nY: {point[1]:.2f}\nLane: {int(point[-1])}\nIndex: {int(point[4])}')
                 self.tooltip.set_position((point[0], point[1]))
-                self.tooltip.set_visible(False)
+                self.tooltip.set_visible(True)
                 if self.nearest_point:
                     self.nearest_point.remove()
                 self.nearest_point = self.ax.scatter(point[0], point[1], s=30, color='cyan', marker='o', alpha=0.5)
@@ -129,15 +129,13 @@ class PlotManager:
 
         start_time = time.time()
         try:
-            # Remove all existing scatter plots
             for plot in self.lane_scatter_plots + self.start_point_plots + self.extra_scatter_plots:
                 plot.remove()
-            # Remove smoothing preview line separately if it exists
             if self.event_handler.smoothing_preview_line is not None:
                 try:
                     self.event_handler.smoothing_preview_line.remove()
                 except ValueError:
-                    pass  # Line already removed
+                    pass
                 self.event_handler.smoothing_preview_line = None
             self.lane_scatter_plots = []
             self.start_point_plots = []

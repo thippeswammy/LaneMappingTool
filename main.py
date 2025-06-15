@@ -1,5 +1,4 @@
 import os
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,11 +10,15 @@ from DataVisualizationEditingTool.utils.plot_manager import PlotManager
 
 
 def main():
-    if getattr(sys, 'frozen', False):
-        base_path = sys._MEIPASS
-    else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
+    # Get path where the user is running the .exe from
+    base_path = os.getcwd()  # Not sys._MEIPASS
+
+    # Use that to find the 'lanes' folder
     lanes_path = os.path.join(base_path, 'lanes')
+
+    if not os.path.isdir(lanes_path):
+        raise ValueError(f"Directory does not exist: {lanes_path}")
+
     # Load data
     loader = DataLoader(lanes_path)
     merged_data, file_names = loader.load_data()
@@ -34,13 +37,9 @@ def main():
     event_handler = EventHandler(data_manager)
     plot_manager = PlotManager(merged_data, file_names, D, data_manager, event_handler)
 
-    # Set plot manager in event handler
     event_handler.set_plot_manager(plot_manager)
-
-    # Update point sizes after initialization
     event_handler.update_point_sizes()
 
-    # Show plot
     plt.show()
 
 

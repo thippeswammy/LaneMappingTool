@@ -30,6 +30,10 @@ class EventHandler:
         self.merge_lane_2 = None
         self.merge_point_1_type = None
         self.merge_point_2_type = None
+        self.remove_above_mode = False
+        self.remove_below_mode = False
+        self.remove_point_idx = None
+        self.remove_lane_id = None
         self.buttons = {}
         self.status_timeout = 5  # seconds
         self.last_status_time = 0
@@ -74,8 +78,8 @@ class EventHandler:
         self.buttons['confirm_end'].on_clicked(self.on_confirm_end)
 
         ax_cancel = plt.axes([0.01, 0.65, 0.1, 0.04])
-        self.buttons['cancel'] = Button(ax_cancel, 'Cancel Smooth')
-        self.buttons['cancel'].on_clicked(self.on_cancel_smoothing)
+        self.buttons['cancel'] = Button(ax_cancel, 'Cancel Operation')
+        self.buttons['cancel'].on_clicked(self.on_cancel_operation)
 
         ax_clear = plt.axes([0.01, 0.60, 0.1, 0.04])
         self.buttons['clear'] = Button(ax_clear, 'Clear Selection')
@@ -97,6 +101,14 @@ class EventHandler:
         self.buttons['grid'] = Button(ax_grid, 'Toggle Grid')
         self.buttons['grid'].on_clicked(self.toggle_grid)
 
+        ax_remove_above = plt.axes([0.01, 0.35, 0.1, 0.04])
+        self.buttons['remove_above'] = Button(ax_remove_above, 'Remove Above')
+        self.buttons['remove_above'].on_clicked(self.on_remove_above)
+
+        ax_remove_below = plt.axes([0.01, 0.30, 0.1, 0.04])
+        self.buttons['remove_below'] = Button(ax_remove_below, 'Remove Below')
+        self.buttons['remove_below'].on_clicked(self.on_remove_below)
+
         self.fig.canvas.draw()
 
     def update_button_states(self):
@@ -112,12 +124,21 @@ class EventHandler:
         self.buttons['confirm_end'].eventson = self.smoothing_point_selection
         self.buttons['confirm_end'].ax.set_facecolor('white' if self.smoothing_point_selection else 'lightgray')
         self.buttons['confirm_end'].label.set_color('black' if self.smoothing_point_selection else 'gray')
-        self.buttons['cancel'].eventson = self.smoothing_point_selection
-        self.buttons['cancel'].ax.set_facecolor('white' if self.smoothing_point_selection else 'lightgray')
-        self.buttons['cancel'].label.set_color('black' if self.smoothing_point_selection else 'gray')
+        self.buttons['cancel'].eventson = any([self.smoothing_point_selection, self.merge_mode, self.draw_mode,
+                                               self.remove_above_mode, self.remove_below_mode])
+        self.buttons['cancel'].ax.set_facecolor('white' if self.buttons['cancel'].eventson else 'lightgray')
+        self.buttons['cancel'].label.set_color('black' if self.buttons['cancel'].eventson else 'gray')
         self.buttons['export'].eventson = bool(self.plot_manager.selected_indices)
         self.buttons['export'].ax.set_facecolor('white' if self.plot_manager.selected_indices else 'lightgray')
         self.buttons['export'].label.set_color('black' if self.plot_manager.selected_indices else 'gray')
+        self.buttons['remove_above'].eventson = not (
+                    self.remove_below_mode or self.smoothing_point_selection or self.merge_mode)
+        self.buttons['remove_above'].ax.set_facecolor('white' if self.buttons['remove_above'].eventson else 'lightgray')
+        self.buttons['remove_above'].label.set_color('black' if self.buttons['remove_above'].eventson else 'gray')
+        self.buttons['remove_below'].eventson = not (
+                    self.remove_above_mode or self.smoothing_point_selection or self.merge_mode)
+        self.buttons['remove_below'].ax.set_facecolor('white' if self.buttons['remove_below'].eventson else 'lightgray')
+        self.buttons['remove_below'].label.set_color('black' if self.buttons['remove_below'].eventson else 'gray')
         self.fig.canvas.draw_idle()
 
     def toggle_grid(self, event):
@@ -135,6 +156,7 @@ class EventHandler:
         if not self.selection_mode:
             self.id_set = True
             self.clear_smoothing_state()
+            self.clear_remove_state()
             if self.plot_manager.selected_indices:
                 self.plot_manager.selected_indices = []
                 self.update_point_sizes()
@@ -152,6 +174,7 @@ class EventHandler:
         if not self.draw_mode:
             self.id_set = True
             self.clear_smoothing_state()
+            self.clear_remove_state()
             self.curve_manager.draw_points = []
             if self.curve_manager.current_line:
                 self.curve_manager.current_line.remove()
@@ -225,12 +248,52 @@ class EventHandler:
             self.update_status("Smoothing failed")
         self.update_button_states()
 
-    def on_cancel_smoothing(self, event):
-        print("Smoothing canceled")
-        self.clear_smoothing_state()
+    def on_remove_above(self, event):
+        if self.remove_below_mode or self.smoothing_point_selection or self.merge_mode:
+            print("Cannot enter Remove Above mode while other operations are active")
+            self.update_status("Cancel other operations first")
+            return
+        self.remove_above_mode = True
+        self.remove_below_mode = False
+        self.remove_point_idx = None
+        self.remove_lane_id = None
+        self.plot_manager.rs.set_active(False)
         self.update_point_sizes()
         self.update_button_states()
-        self.update_status("Smoothing canceled")
+        print("Please click on a point to remove points above it in the same lane")
+        self.update_status("Click to select point for Remove Above")
+
+    def on_remove_below(self, event):
+        if self.remove_above_mode or self.smoothing_point_selection or self.merge_mode:
+            print("Cannot enter Remove Below mode while other operations are active")
+            self.update_status("Cancel other operations first")
+            return
+        self.remove_below_mode = True
+        self.remove_above_mode = False
+        self.remove_point_idx = None
+        self.remove_lane_id = None
+        self.plot_manager.rs.set_active(False)
+        self.update_point_sizes()
+        self.update_button_states()
+        print("Please click on a point to remove points below it in the same lane")
+        self.update_status("Click to select point for Remove Below")
+
+    def on_cancel_operation(self, event):
+        print("Operation canceled")
+        self.clear_smoothing_state()
+        self.clear_merge_state()
+        self.clear_remove_state()
+        self.draw_mode = False
+        self.selection_mode = False
+        self.plot_manager.rs.set_active(False)
+        self.curve_manager.draw_points = []
+        if self.curve_manager.current_line:
+            self.curve_manager.current_line.remove()
+            self.curve_manager.current_line = None
+            self.plot_manager.fig.canvas.draw_idle()
+        self.update_point_sizes()
+        self.update_button_states()
+        self.update_status("Operation canceled")
 
     def on_clear_selection(self, event):
         if self.plot_manager.selected_indices:
@@ -238,6 +301,7 @@ class EventHandler:
             print("Cleared selection")
         self.clear_smoothing_state()
         self.clear_merge_state()
+        self.clear_remove_state()
         self.update_point_sizes()
         self.update_button_states()
         self.update_status("Selection cleared")
@@ -262,6 +326,12 @@ class EventHandler:
         self.merge_point_1_type = None
         self.merge_point_2_type = None
         self.update_status()
+
+    def clear_remove_state(self):
+        self.remove_above_mode = False
+        self.remove_below_mode = False
+        self.remove_point_idx = None
+        self.remove_lane_id = None
 
     def merge_lanes(self, event):
         unique_lanes = np.unique(self.data_manager.data[:, -1])
@@ -331,14 +401,37 @@ class EventHandler:
     def on_click(self, event):
         if self.plot_manager is None or event.inaxes != self.plot_manager.ax or event.button != 1:
             return
+        click_x, click_y = event.xdata, event.ydata
+        distances = np.sqrt(
+            (self.data_manager.data[:, 0] - click_x) ** 2 +
+            (self.data_manager.data[:, 1] - click_y) ** 2
+        )
+        closest_idx = np.argmin(distances)
+        lane_id = int(self.data_manager.data[closest_idx, -1])
+
+        if self.remove_above_mode:
+            self.remove_point_idx = closest_idx
+            self.remove_lane_id = lane_id
+            self.data_manager.remove_points_above(self.remove_point_idx, self.remove_lane_id)
+            self.plot_manager.update_plot(self.data_manager.data)
+            self.clear_remove_state()
+            self.update_point_sizes()
+            self.update_button_states()
+            self.update_status(f"Removed points above index {closest_idx} in lane {lane_id}")
+            return
+
+        if self.remove_below_mode:
+            self.remove_point_idx = closest_idx
+            self.remove_lane_id = lane_id
+            self.data_manager.remove_points_below(self.remove_point_idx, self.remove_lane_id)
+            self.plot_manager.update_plot(self.data_manager.data)
+            self.clear_remove_state()
+            self.update_point_sizes()
+            self.update_button_states()
+            self.update_status(f"Removed points below index {closest_idx} in lane {lane_id}")
+            return
+
         if self.merge_mode:
-            click_x, click_y = event.xdata, event.ydata
-            distances = np.sqrt(
-                (self.data_manager.data[:, 0] - click_x) ** 2 +
-                (self.data_manager.data[:, 1] - click_y) ** 2
-            )
-            closest_idx = np.argmin(distances)
-            lane_id = int(self.data_manager.data[closest_idx, -1])
             lane_indices = np.where(self.data_manager.data[:, -1] == lane_id)[0]
             lane_data = self.data_manager.data[lane_indices]
             min_idx = lane_data[:, 4].argmin()
@@ -366,8 +459,8 @@ class EventHandler:
                 print(f"Selected {point_type} point in lane {lane_id} (index {closest_idx})")
                 self.finalize_merge()
             return
+
         if self.smoothing_point_selection:
-            click_x, click_y = event.xdata, event.ydata
             selected_points = self.data_manager.data[self.smoothing_selected_indices, :2]
             distances = np.sqrt((selected_points[:, 0] - click_x) ** 2 + (selected_points[:, 1] - click_y) ** 2)
             closest_idx = np.argmin(distances)
@@ -396,13 +489,16 @@ class EventHandler:
                 print(f"End point selected (index {self.smoothing_end_idx})")
                 self.update_status("Confirm end or cancel")
             return
+
         if self.draw_mode:
             self.curve_manager.add_draw_point(event.xdata, event.ydata)
             print(f"Added point to {'curve' if self.curve_manager.is_curve else 'line'}")
             self.update_status()
             return
+
         if self.selection_mode:
             return
+
         self.plot_manager.selected_indices = []
         self.update_point_sizes()
         self.data_manager.add_point(event.xdata, event.ydata, self.selected_id)
@@ -435,6 +531,8 @@ class EventHandler:
                             sizes[local_idx] = 80
                         elif global_idx in self.smoothing_selected_indices:
                             sizes[local_idx] = 50
+                    elif (self.remove_above_mode or self.remove_below_mode) and global_idx == self.remove_point_idx:
+                        sizes[local_idx] = 100
                     elif global_idx in self.plot_manager.selected_indices:
                         sizes[local_idx] = 30
                 sc.set_sizes(sizes)
@@ -508,6 +606,7 @@ class EventHandler:
         self.id_set = True
         self.clear_smoothing_state()
         self.clear_merge_state()
+        self.clear_remove_state()
         self.plot_manager.rs.set_active(False)
         self.curve_manager.draw_points = []
         if self.curve_manager.current_line:

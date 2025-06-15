@@ -4,8 +4,6 @@ import time
 
 import numpy as np
 
-from DataVisualizationEditingTool.utils.network_ import pickerGenerateViewer
-
 
 class DataManager:
     def __init__(self, data, file_names):
@@ -36,8 +34,6 @@ class DataManager:
         print(f"DataManager initialized with {len(self.data)} points")
 
     def add_point(self, x, y, lane_id):
-        print("temper disabled")
-        '''
         try:
             new_point = np.zeros((1, self.total_cols))
             new_point[0, 0] = x
@@ -53,16 +49,24 @@ class DataManager:
             print(f"Added point: ({x:.2f}, {y:.2f}, lane_id={lane_id})")
         except Exception as e:
             print(f"Error adding point: {e}")
-        '''
 
     def delete_points(self, indices):
+        """Delete points at specified indices from the data array."""
         if not indices:
             return
         try:
+            # Validate indices
+            indices = np.asarray(indices, dtype=int)
+            if np.any(indices < 0) or np.any(indices >= len(self.data)):
+                print(f"Error: Indices {indices} out of bounds for data of length {len(self.data)}")
+                return
             mask = np.ones(len(self.data), dtype=bool)
             mask[indices] = False
             self.data = self.data[mask]
-            if self.data.size > 0:
+            # Handle empty data case
+            if self.data.size == 0:
+                self.data = np.array([], dtype=self.data.dtype).reshape(0, self.total_cols)
+            else:
                 new_indices = np.arange(len(self.data))
                 self.data[:, 3] = new_indices
                 self.data[:, 4] = new_indices
@@ -84,6 +88,71 @@ class DataManager:
             print(f"Changed lane IDs for {len(indices)} points to {new_id}")
         except Exception as e:
             print(f"Error changing IDs: {e}")
+
+    def remove_points_above(self, index, lane_id):
+        """Remove points in the specified lane with local indices >= the local index of the given global index."""
+        try:
+            # Validate index and lane
+            if index < 0 or index >= len(self.data) or int(self.data[index, -1]) != lane_id:
+                print(f"Invalid index {index} or lane mismatch for lane {lane_id}")
+                return
+            lane_mask = self.data[:, -1] == lane_id
+            lane_indices = np.where(lane_mask)[0]
+            if len(lane_indices) == 0:
+                print(f"No points found in lane {lane_id}")
+                return
+            lane_data = self.data[lane_mask]
+            # Check for duplicate indices
+            indices = lane_data[:, 4]
+            if len(indices) != len(np.unique(indices)):
+                print(f"Warning: Duplicate indices found in lane {lane_id}: {indices}")
+            # Sort by index column (data[:, 4])
+            sorted_indices = lane_data[:, 4].argsort()
+            sorted_global_indices = lane_indices[sorted_indices]
+            # Find the local index of the clicked point
+            target_global_idx = np.where(sorted_global_indices == index)[0]
+            if len(target_global_idx) == 0:
+                print(f"Global index {index} not found in lane {lane_id}")
+                return
+            if len(target_global_idx) > 1:
+                print(f"Warning: Multiple matches for global index {index} in lane {lane_id}, using first match")
+            local_index = target_global_idx[0]
+            indices_to_remove = sorted_global_indices[:local_index]
+            list_ = []
+            for i in indices_to_remove:
+                list_.append(i)
+            self.delete_points(list_)
+            print(
+                f"Removed {len(indices_to_remove)} points above local index {local_index} (global index {index}) in lane {lane_id}")
+        except Exception as e:
+            print(f"Error removing points above: {e}")
+
+    def remove_points_below(self, index, lane_id):
+        """Remove points in the specified lane with global indices <= the given index."""
+        try:
+            # Validate index
+            if index < 0 or index >= len(self.data):
+                print(f"Invalid index {index}")
+                return
+            # Filter points by lane_id
+            lane_mask = self.data[:, -1] == lane_id
+            lane_indices = np.where(lane_mask)[0]
+            if len(lane_indices) == 0:
+                print(f"No points found in lane {lane_id}")
+                return
+            # Select points with global indices <= index
+            indices_to_remove = lane_indices[lane_indices >= index]
+            # print('indices_to_remove=>', indices_to_remove)
+            if len(indices_to_remove) == 0:
+                print(f"No points with global indices <= {index} in lane {lane_id}")
+                return
+            list_ = []
+            for i in indices_to_remove:
+                list_.append(i)
+            self.delete_points(list_)
+            print(f"Removed {len(indices_to_remove)} points below index {index} in lane {lane_id}")
+        except Exception as e:
+            print(f"Error removing points below: {e}")
 
     def merge_lanes(self, lane_id_1, lane_id_2, point_1, point_2, point_1_type, point_2_type):
         if self.data.size == 0:
@@ -213,18 +282,13 @@ class DataManager:
 
     def save(self):
         try:
-            filename = "./files/WorkingLane.npy"
+            filename = "WorkingLane.npy"
             if self.data.size > 0:
                 np.save(filename, self.data[:, :3])
             else:
                 np.save(filename, np.array([]))
             print(f"Saved x, y, yaw to {filename}")
             self._auto_save_backup()
-            pickerGenerateViewer()
-            print("view the generated picked file")
-            # You can put background tasks (non-GUI) in threads
-            # thread = threading.Thread(target=some_background_function)
-            # thread.start()
             return filename
         except Exception as e:
             print(f"Error saving data: {e}")
@@ -234,9 +298,9 @@ class DataManager:
         try:
             if time.time() - self.last_backup < self.backup_interval:
                 return
-            os.makedirs("../workspace-Backup", exist_ok=True)
+            os.makedirs("workspace-Backup", exist_ok=True)
             timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = os.path.join("../workspace-Backup", f"backup_{timestamp}.npy")
+            filename = os.path.join("workspace-Backup", f"backup_{timestamp}.npy")
             if self.data.size > 0:
                 np.save(filename, self.data[:, :3])
                 print(f"Auto-saved backup to {filename}")
