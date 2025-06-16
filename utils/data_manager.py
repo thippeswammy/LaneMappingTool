@@ -4,6 +4,8 @@ import time
 
 import numpy as np
 
+from DataVisualizationEditingTool.utils.network_ import pickerGenerateViewer
+
 
 class DataManager:
     def __init__(self, data, file_names):
@@ -156,9 +158,23 @@ class DataManager:
 
     def merge_lanes(self, lane_id_1, lane_id_2, point_1, point_2, point_1_type, point_2_type):
         """Merge lane_id_2 into lane_id_1, ensuring continuous index sequence with correct start/end connections."""
-        if point_1 > point_2:
-            lane_id_1, point_1, point_1_type, lane_id_2, point_2, point_2_type = (
-                lane_id_2, point_2, point_2_type, lane_id_1, point_1, point_1_type)
+        # lane_1_mask = self.data[:, -1] == lane_id_1
+        # lane_2_mask = self.data[:, -1] == lane_id_2
+        # if not np.any(lane_1_mask) or not np.any(lane_2_mask):
+        #     print(f"One or both lanes ({lane_id_1}, {lane_id_2}) are empty")
+        #     return
+        #
+        # lane_1_indices = np.where(lane_1_mask)[0]
+        # lane_2_indices = np.where(lane_2_mask)[0]
+        # print('lane_1_indices=>', lane_1_indices)
+        # print('lane_2_indices=>', lane_2_indices)
+        # print('-' * 50)
+        # print(lane_2_indices[-1] > lane_1_indices[0], ' ||', point_1 > point_2)
+        # print('point_1=>', point_1, 'point_2=>', point_2)
+        # print('==>', lane_2_indices[-1], lane_1_indices[0])
+        # if point_1 > point_2:
+        #     lane_id_1, point_1, point_1_type, lane_id_2, point_2, point_2_type = (
+        #         lane_id_2, point_2, point_2_type, lane_id_1, point_1, point_1_type)
 
         if self.data.size == 0:
             print("No data to merge")
@@ -348,13 +364,14 @@ class DataManager:
 
     def save(self):
         try:
-            filename = "WorkingLane.npy"
+            filename = "./files/WorkingLane.npy"
             if self.data.size > 0:
                 np.save(filename, self.data[:, :3])
             else:
                 np.save(filename, np.array([]))
             print(f"Saved x, y, yaw to {filename}")
             self._auto_save_backup()
+            pickerGenerateViewer()
             return filename
         except Exception as e:
             print(f"Error saving data: {e}")
