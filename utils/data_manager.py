@@ -156,7 +156,7 @@ class DataManager:
 
     def merge_lanes(self, lane_id_1, lane_id_2, point_1, point_2, point_1_type, point_2_type):
         """Merge lane_id_2 into lane_id_1, ensuring continuous index sequence with correct start/end connections."""
-        if point_1 < point_2:
+        if point_1 > point_2:
             lane_id_1, point_1, point_1_type, lane_id_2, point_2, point_2_type = (
                 lane_id_2, point_2, point_2_type, lane_id_1, point_1, point_1_type)
 
