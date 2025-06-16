@@ -279,6 +279,7 @@ class DataManager:
             self.redo_stack = []
             self._auto_save_backup()
             print(f"Merged lane {lane_id_2} into lane {lane_id_1}")
+            return point_1, point_1 + 1
         except Exception as e:
             print(f"Error merging lanes: {e}")
 

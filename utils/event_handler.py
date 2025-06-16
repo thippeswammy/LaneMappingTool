@@ -132,11 +132,11 @@ class EventHandler:
         self.buttons['export'].ax.set_facecolor('white' if self.plot_manager.selected_indices else 'lightgray')
         self.buttons['export'].label.set_color('black' if self.plot_manager.selected_indices else 'gray')
         self.buttons['remove_above'].eventson = not (
-                    self.remove_below_mode or self.smoothing_point_selection or self.merge_mode)
+                self.remove_below_mode or self.smoothing_point_selection or self.merge_mode)
         self.buttons['remove_above'].ax.set_facecolor('white' if self.buttons['remove_above'].eventson else 'lightgray')
         self.buttons['remove_above'].label.set_color('black' if self.buttons['remove_above'].eventson else 'gray')
         self.buttons['remove_below'].eventson = not (
-                    self.remove_above_mode or self.smoothing_point_selection or self.merge_mode)
+                self.remove_above_mode or self.smoothing_point_selection or self.merge_mode)
         self.buttons['remove_below'].ax.set_facecolor('white' if self.buttons['remove_below'].eventson else 'lightgray')
         self.buttons['remove_below'].label.set_color('black' if self.buttons['remove_below'].eventson else 'gray')
         self.fig.canvas.draw_idle()
@@ -357,7 +357,7 @@ class EventHandler:
             self.update_status("Select two different lanes")
             self.clear_merge_state()
             return
-        self.data_manager.merge_lanes(
+        self.merge_point_1, self.merge_point_2 = self.data_manager.merge_lanes(
             self.merge_lane_1, self.merge_lane_2,
             self.merge_point_1, self.merge_point_2,
             self.merge_point_1_type, self.merge_point_2_type
