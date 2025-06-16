@@ -220,15 +220,6 @@ class DataManager:
             distance = np.sqrt((connection_x2 - connection_x1) ** 2 + (connection_y2 - connection_y1) ** 2)
             print(f"Connection distance between lanes: {distance}")
 
-            # If distance is too large, try reversing lane_2_part
-            if distance > 1.0:  # Adjust threshold based on your data
-                print("Connection distance too large, reversing lane_2_part")
-                lane_2_part = lane_2_part[::-1]
-                connection_x2 = lane_2_part[0, 0]
-                connection_y2 = lane_2_part[0, 1]
-                distance = np.sqrt((connection_x2 - connection_x1) ** 2 + (connection_y2 - connection_y1) ** 2)
-                print(f"New connection distance: {distance}")
-
             # Combine parts, preserving original index order
             merged_data = np.vstack([lane_1_part, lane_2_part])
             merged_data[:, -1] = lane_id_1
