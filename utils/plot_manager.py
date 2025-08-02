@@ -34,7 +34,7 @@ class PlotManager:
         self.slider_size.on_changed(self.event_handler.update_point_sizes)
 
         ax_smooth = plt.axes([0.15, 0.06, 0.65, 0.03])
-        self.slider_smooth = Slider(ax_smooth, 'Smoothness', 0.1, 10.0, valinit=1.0)
+        self.slider_smooth = Slider(ax_smooth, 'Smoothness', 0.1, 30.0, valinit=1.0)
 
         self.fig.canvas.draw()
 
@@ -168,7 +168,7 @@ class PlotManager:
 
             if selected_indices:
                 selected_points = data[np.array(selected_indices, dtype=int)]
-                sc = self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=50, color='red', marker='o',
+                sc = self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=10, color='red', marker='o',
                                      label='Selected')
                 self.extra_scatter_plots.append(sc)
 

@@ -111,6 +111,8 @@ class CurveManager:
             self.data_manager.history.append(self.data_manager.data.copy())
             self.data_manager.redo_stack = []
 
+            self.plot_manager.selected_indices = []
+
             self.plot_manager.update_plot(self.data_manager.data)
             return segment_indices
         except Exception as e:
@@ -136,13 +138,16 @@ class CurveManager:
 
         segment_indices = selected_indices[start_pos:end_pos + 1]
         points = self.data_manager.data[segment_indices, :2]
-        start_point = self.data_manager.data[start_idx, :2]
-        end_point = self.data_manager.data[end_idx, :2]
+
+        # Original start and end points of the selected segment (for final assignment)
+        original_start_point = self.data_manager.data[start_idx, :2]
+        original_end_point = self.data_manager.data[end_idx, :2]
 
         all_indices = np.arange(len(self.data_manager.data))
         selected_set = set(segment_indices)
         prev_point, next_point = None, None
 
+        # Find the adjacent points outside the selected segment
         for idx in reversed(all_indices):
             if idx < start_idx and idx not in selected_set:
                 prev_point = self.data_manager.data[idx, :2]
@@ -154,13 +159,29 @@ class CurveManager:
                 break
 
         fitting_points = points.copy()
-        weights = np.ones(len(fitting_points)) * 30
+        weights = np.ones(len(fitting_points)) * 20  # Default weight for segment points
+
+        segment_start_in_fitting = 0
+        segment_end_in_fitting = len(fitting_points) - 1
+
+        # High weight for the segment's true start and end points
+        HIGH_WEIGHT = 100
+
         if prev_point is not None:
             fitting_points = np.vstack([prev_point, fitting_points])
-            weights = np.concatenate(([1], weights))
+            weights = np.concatenate(([1], weights))  # Low weight for the distant prev_point
+            segment_start_in_fitting += 1  # Shift index due to prev_point
+            segment_end_in_fitting += 1  # Shift index due to prev_point
+
         if next_point is not None:
             fitting_points = np.vstack([fitting_points, next_point])
-            weights = np.concatenate((weights, [1]))
+            weights = np.concatenate((weights, [1]))  # Low weight for the distant next_point
+
+        # Apply high weights to the actual start and end points of the *selected segment*
+        # within the now potentially expanded `fitting_points` and `weights` arrays.
+        weights[segment_start_in_fitting] = HIGH_WEIGHT
+        weights[segment_end_in_fitting] = HIGH_WEIGHT
+        # --- MODIFICATION END ---
 
         try:
             x, y = fitting_points[:, 0], fitting_points[:, 1]
@@ -170,33 +191,55 @@ class CurveManager:
             u = u / u[-1] if u[-1] > 0 else np.linspace(0, 1, len(fitting_points))
 
             smoothing_factor = len(points) * self.plot_manager.slider_smooth.val
+
+            if smoothing_factor < 0.1:
+                smoothing_factor = 0.1
             tck, u_fitted = splprep([x, y], u=u, s=smoothing_factor, k=3, w=weights)
 
-            start_idx_u = 1 if prev_point is not None else 0
-            end_idx_u = len(fitting_points) - (2 if next_point is not None else 1)
-            u_segment = u_fitted[start_idx_u:end_idx_u]
-            u_segment_normalized = (u_segment - u_segment[0]) / (u_segment[-1] - u_segment[0]) \
-                if u_segment[-1] != u_segment[0] else np.linspace(0, 1, len(u_segment))
+            # Determine the range of 'u' values corresponding to the selected segment
+            # This is tricky because u_fitted corresponds to the entire fitting_points array.
+            # We need to find the u values for the *original* start and end points of the segment.
+            # Using original start/end points' u-values from the initial 'u' array.
+
+            # Find the u-values corresponding to the original start and end points of the segment.
+            # These are the u-values at indices `segment_start_in_fitting` and `segment_end_in_fitting`
+            # in the `u` array that was passed to splprep.
+            u_start_segment = u[segment_start_in_fitting]
+            u_end_segment = u[segment_end_in_fitting]
 
             num_new_points = len(segment_indices)
-            u_fine = np.linspace(0, 1, num_new_points)
+            # Generate new u values that span only the segment, distributing points evenly.
+            u_fine = np.linspace(u_start_segment, u_end_segment, num_new_points)
+
             x_smooth, y_smooth = splev(u_fine, tck)
 
             new_points = np.stack((x_smooth, y_smooth), axis=1)
-            new_points[0] = start_point
-            new_points[-1] = end_point
+
+            # Re-assert the exact start and end points to counter any residual deviation
+            new_points[0] = original_start_point
+            new_points[-1] = original_end_point
 
             if self.show_debug_plot and not preview:
                 plt.figure(figsize=(8, 6))
-                plt.plot(points[:, 0], points[:, 1], 'ro-', label='Original')
-                plt.plot(new_points[:, 0], new_points[:, 1], 'g.-', label='Smoothed')
+                plt.plot(points[:, 0], points[:, 1], 'ro-', label='Original Segment')
+                plt.plot(new_points[:, 0], new_points[:, 1], 'g.-', label='Smoothed Segment')
+                plt.plot(fitting_points[:, 0], fitting_points[:, 1], 'bx', markersize=10,
+                         label='Fitting Points (incl. adjacent)')
+
+                # Highlight the points that were given high weights in fitting_points
+                plt.plot(fitting_points[segment_start_in_fitting, 0], fitting_points[segment_start_in_fitting, 1], 'ko',
+                         markersize=12, fillstyle='none', label='High Weight Start')
+                plt.plot(fitting_points[segment_end_in_fitting, 0], fitting_points[segment_end_in_fitting, 1], 'ko',
+                         markersize=12, fillstyle='none', label='High Weight End')
+
                 if prev_point is not None:
-                    plt.plot([prev_point[0], points[0, 0]], [prev_point[1], points[0, 1]], 'b--', label='Prev Adjacent')
+                    plt.plot([prev_point[0], points[0, 0]], [prev_point[1], points[0, 1]], 'c--',
+                             label='Prev Adjacent Link')
                 if next_point is not None:
-                    plt.plot([points[-1, 0], next_point[0]], [points[-1, 1], next_point[1]], 'b--',
-                             label='Next Adjacent')
+                    plt.plot([points[-1, 0], next_point[0]], [points[-1, 1], next_point[1]], 'm--',
+                             label='Next Adjacent Link')
                 plt.legend()
-                plt.title("Smoothing Segment")
+                plt.title("Smoothing Segment with High Endpoint Weights")
                 plt.xlabel("x")
                 plt.ylabel("y")
                 plt.grid(True)
