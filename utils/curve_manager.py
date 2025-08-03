@@ -12,7 +12,7 @@ class CurveManager:
         self.is_curve = False
         self.current_line = None
         self.show_debug_plot = False  # Disabled by default
-        self.smoothing_weight = 20
+        self.smoothing_weight = 20 # Default value, updated via text box
 
     def add_draw_point(self, x, y):
         try:

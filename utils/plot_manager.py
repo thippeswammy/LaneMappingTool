@@ -2,7 +2,7 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.widgets import Slider, RectangleSelector
+from matplotlib.widgets import TextBox, RectangleSelector
 
 
 class PlotManager:
@@ -22,24 +22,25 @@ class PlotManager:
         self.tooltip = self.ax.text(0, 0, '', bbox=dict(facecolor='white', alpha=0.8), visible=False)
         self.nearest_point = None
         self.rs = RectangleSelector(self.ax, self.event_handler.on_select, useblit=True, button=[1])
-        self.slider_smooth = None
-        self.slider_size = None
-        self.slider_weight = None
+        self.text_point_size = None
+        self.text_smoothness = None
+        self.text_weight = None
         self.setup_widgets()
         self.setup_navigation()
         self.update_plot(data)
 
     def setup_widgets(self):
-        ax_size = plt.axes([0.15, 0.02, 0.65, 0.03])
-        self.slider_size = Slider(ax_size, 'Point Size', 1, 100, valinit=10)
-        self.slider_size.on_changed(self.event_handler.update_point_sizes)
+        ax_point_size = plt.axes([0.15, 0.02, 0.65, 0.03])
+        self.text_point_size = TextBox(ax_point_size, 'Point Size', initial='10')
+        self.text_point_size.on_submit(lambda val: self.event_handler.update_point_sizes(float(val) if val else 10))
 
-        ax_smooth = plt.axes([0.15, 0.06, 0.65, 0.03])
-        self.slider_smooth = Slider(ax_smooth, 'Smoothness', 0.1, 30.0, valinit=1.0)
+        ax_smoothness = plt.axes([0.15, 0.06, 0.65, 0.03])
+        self.text_smoothness = TextBox(ax_smoothness, 'Smoothness', initial='1.0')
+        self.text_smoothness.on_submit(lambda val: self.event_handler.update_smoothness(float(val) if val else 1.0))
 
-        ax_weight = plt.axes([0.15, 0.10, 0.65, 0.03])  # New slider position
-        self.slider_weight = Slider(ax_weight, 'Smoothing Weight', 1, 100, valinit=20)  # Default value 20
-        self.slider_weight.on_changed(lambda val: self.event_handler.update_smoothing_weight(val))
+        ax_weight = plt.axes([0.15, 0.10, 0.65, 0.03])
+        self.text_weight = TextBox(ax_weight, 'Smoothing Weight', initial='20')
+        self.text_weight.on_submit(lambda val: self.event_handler.update_smoothing_weight(float(val) if val else 20))
 
         self.fig.canvas.draw()
 

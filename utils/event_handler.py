@@ -35,7 +35,7 @@ class EventHandler:
         self.remove_point_idx = None
         self.remove_lane_id = None
         self.buttons = {}
-        self.status_timeout = 5  # seconds
+        self.status_timeout = 5
         self.last_status_time = 0
 
     def set_plot_manager(self, plot_manager):
@@ -141,12 +141,62 @@ class EventHandler:
         self.buttons['remove_below'].label.set_color('black' if self.buttons['remove_below'].eventson else 'gray')
         self.fig.canvas.draw_idle()
 
-    def update_smoothing_weight(self, val):
-        if self.curve_manager:
-            self.curve_manager.smoothing_weight = val  # Store the weight in CurveManager
-            print(f"Updated smoothing weight to {val}")
+    def update_point_sizes(self, val=None):
+        if self.plot_manager is None or val is None:
+            val = float(self.plot_manager.text_point_size.text) if self.plot_manager.text_point_size.text else 10
+        try:
+            val = float(val)
+            if val < 1:
+                val = 1
+            elif val > 100:
+                val = 100
+            for plot_idx, sc in enumerate(self.plot_manager.lane_scatter_plots):
+                indices = self.plot_manager.indices[plot_idx]
+                if len(indices) == 0:
+                    continue
+                lane_id = int(self.data_manager.data[indices[0], -1])
+                base_size = val if self.plot_manager.highlighted_lane == lane_id else val / 2
+                sizes = np.full(len(indices), base_size, dtype=float)
+                for local_idx, global_idx in enumerate(indices):
+                    if self.merge_mode:
+                        if global_idx == self.merge_point_1:
+                            sizes[local_idx] = 100
+                        elif global_idx == self.merge_point_2:
+                            sizes[local_idx] = 80
+                    elif self.smoothing_point_selection:
+                        if global_idx == self.smoothing_start_idx:
+                            sizes[local_idx] = 100
+                        elif global_idx == self.smoothing_end_idx:
+                            sizes[local_idx] = 80
+                        elif global_idx in self.smoothing_selected_indices:
+                            sizes[local_idx] = 50
+                    elif (self.remove_above_mode or self.remove_below_mode) and global_idx == self.remove_point_idx:
+                        sizes[local_idx] = 100
+                    elif global_idx in self.plot_manager.selected_indices:
+                        sizes[local_idx] = val * 1.5
+                sc.set_sizes(sizes)
+            self.plot_manager.fig.canvas.draw_idle()
+            self.plot_manager.fig.canvas.flush_events()
+            self.update_button_states()
+            self.update_status(f"Point size set to {val}")
+        except ValueError:
+            self.update_status("Invalid point size, using 10")
+            self.plot_manager.text_point_size.set_val('10')
+            self.update_point_sizes(10)
+
+    def update_smoothing_weight(self, val=None):
+        if self.plot_manager is None or val is None:
+            val = float(self.plot_manager.text_weight.text) if self.plot_manager.text_weight.text else 20
+        try:
+            val = float(val)
+            if val < 1:
+                val = 1
+            elif val > 100:
+                val = 100
+            self.curve_manager.smoothing_weight = val
+            self.plot_manager.text_weight.set_val(str(val))
             self.update_status(f"Smoothing weight set to {val}")
-            # Optionally trigger a preview update if smoothing is active
+            # Update preview if smoothing is active
             if self.smoothing_point_selection and self.smoothing_start_idx and self.smoothing_end_idx:
                 preview_points = self.curve_manager.preview_smooth(
                     self.smoothing_selected_indices,
@@ -160,6 +210,40 @@ class EventHandler:
                         preview_points[:, 0], preview_points[:, 1], 'b--', alpha=0.5, label='Preview')[0]
                     self.plot_manager.ax.legend()
                     self.plot_manager.fig.canvas.draw_idle()
+        except ValueError:
+            self.update_status("Invalid weight, using 20")
+            self.plot_manager.text_weight.set_val('20')
+            self.update_smoothing_weight(20)
+
+    def update_smoothness(self, val=None):
+        if self.plot_manager is None or val is None:
+            val = float(self.plot_manager.text_smoothness.text) if self.plot_manager.text_smoothness.text else 1.0
+        try:
+            val = float(val)
+            if val < 0.1:
+                val = 0.1
+            elif val > 30.0:
+                val = 30.0
+            self.plot_manager.text_smoothness.set_val(str(val))
+            self.update_status(f"Smoothness set to {val}")
+            # Update preview if smoothing is active
+            if self.smoothing_point_selection and self.smoothing_start_idx and self.smoothing_end_idx:
+                preview_points = self.curve_manager.preview_smooth(
+                    self.smoothing_selected_indices,
+                    self.smoothing_lane_id,
+                    self.smoothing_start_idx,
+                    self.smoothing_end_idx
+                )
+                if preview_points is not None and self.smoothing_preview_line:
+                    self.smoothing_preview_line.remove()
+                    self.smoothing_preview_line = self.plot_manager.ax.plot(
+                        preview_points[:, 0], preview_points[:, 1], 'b--', alpha=0.5, label='Preview')[0]
+                    self.plot_manager.ax.legend()
+                    self.plot_manager.fig.canvas.draw_idle()
+        except ValueError:
+            self.update_status("Invalid smoothness, using 1.0")
+            self.plot_manager.text_smoothness.set_val('1.0')
+            self.update_smoothness(1.0)
 
     def toggle_grid(self, event):
         self.plot_manager.grid_visible = not self.plot_manager.grid_visible
@@ -525,42 +609,6 @@ class EventHandler:
         self.plot_manager.update_plot(self.data_manager.data)
         print(f"Added point with ID {self.selected_id} ({self.data_manager.file_names[self.selected_id]})")
         self.update_status("Point added")
-
-    def update_point_sizes(self):
-        if self.plot_manager is None:
-            print("Plot manager not set, skipping update_point_sizes")
-            return
-        try:
-            for plot_idx, sc in enumerate(self.plot_manager.lane_scatter_plots):
-                indices = self.plot_manager.indices[plot_idx]
-                if len(indices) == 0:
-                    continue
-                lane_id = int(self.data_manager.data[indices[0], -1])
-                base_size = 20 if self.plot_manager.highlighted_lane == lane_id else 10
-                sizes = np.full(len(indices), base_size, dtype=float)
-                for local_idx, global_idx in enumerate(indices):
-                    if self.merge_mode:
-                        if global_idx == self.merge_point_1:
-                            sizes[local_idx] = 100
-                        elif global_idx == self.merge_point_2:
-                            sizes[local_idx] = 80
-                    elif self.smoothing_point_selection:
-                        if global_idx == self.smoothing_start_idx:
-                            sizes[local_idx] = 100
-                        elif global_idx == self.smoothing_end_idx:
-                            sizes[local_idx] = 80
-                        elif global_idx in self.smoothing_selected_indices:
-                            sizes[local_idx] = 50
-                    elif (self.remove_above_mode or self.remove_below_mode) and global_idx == self.remove_point_idx:
-                        sizes[local_idx] = 100
-                    elif global_idx in self.plot_manager.selected_indices:
-                        sizes[local_idx] = 30
-                sc.set_sizes(sizes)
-            self.plot_manager.fig.canvas.draw_idle()
-            self.plot_manager.fig.canvas.flush_events()
-            self.update_button_states()
-        except Exception as e:
-            print(f"Error updating point sizes: {e}")
 
     def on_pick(self, event):
         if self.plot_manager is None or event.mouseevent.button != 3 or self.plot_manager.rs.active:
