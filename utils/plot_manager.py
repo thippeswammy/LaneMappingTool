@@ -24,6 +24,7 @@ class PlotManager:
         self.rs = RectangleSelector(self.ax, self.event_handler.on_select, useblit=True, button=[1])
         self.slider_smooth = None
         self.slider_size = None
+        self.slider_weight = None
         self.setup_widgets()
         self.setup_navigation()
         self.update_plot(data)
@@ -35,6 +36,10 @@ class PlotManager:
 
         ax_smooth = plt.axes([0.15, 0.06, 0.65, 0.03])
         self.slider_smooth = Slider(ax_smooth, 'Smoothness', 0.1, 30.0, valinit=1.0)
+
+        ax_weight = plt.axes([0.15, 0.10, 0.65, 0.03])  # New slider position
+        self.slider_weight = Slider(ax_weight, 'Smoothing Weight', 1, 100, valinit=20)  # Default value 20
+        self.slider_weight.on_changed(lambda val: self.event_handler.update_smoothing_weight(val))
 
         self.fig.canvas.draw()
 
@@ -166,11 +171,11 @@ class PlotManager:
                                                marker='s', label=f'Lane {lane_id} Start')
                     self.start_point_plots.append(start_sc)
 
-            if selected_indices:
-                selected_points = data[np.array(selected_indices, dtype=int)]
-                sc = self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=10, color='red', marker='o',
-                                     label='Selected')
-                self.extra_scatter_plots.append(sc)
+            # if selected_indices:
+            #     selected_points = data[np.array(selected_indices, dtype=int)]
+            #     sc = self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=10, color='red', marker='o',
+            #                          label='Selected')
+            #     self.extra_scatter_plots.append(sc)
 
             if self.event_handler.merge_mode:
                 if self.event_handler.merge_point_1 is not None:

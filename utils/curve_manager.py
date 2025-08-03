@@ -12,6 +12,7 @@ class CurveManager:
         self.is_curve = False
         self.current_line = None
         self.show_debug_plot = False  # Disabled by default
+        self.smoothing_weight = 20
 
     def add_draw_point(self, x, y):
         try:
@@ -159,7 +160,7 @@ class CurveManager:
                 break
 
         fitting_points = points.copy()
-        weights = np.ones(len(fitting_points)) * 20  # Default weight for segment points
+        weights = np.ones(len(fitting_points)) * self.smoothing_weight  # Default weight for segment points
 
         segment_start_in_fitting = 0
         segment_end_in_fitting = len(fitting_points) - 1

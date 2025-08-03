@@ -141,6 +141,26 @@ class EventHandler:
         self.buttons['remove_below'].label.set_color('black' if self.buttons['remove_below'].eventson else 'gray')
         self.fig.canvas.draw_idle()
 
+    def update_smoothing_weight(self, val):
+        if self.curve_manager:
+            self.curve_manager.smoothing_weight = val  # Store the weight in CurveManager
+            print(f"Updated smoothing weight to {val}")
+            self.update_status(f"Smoothing weight set to {val}")
+            # Optionally trigger a preview update if smoothing is active
+            if self.smoothing_point_selection and self.smoothing_start_idx and self.smoothing_end_idx:
+                preview_points = self.curve_manager.preview_smooth(
+                    self.smoothing_selected_indices,
+                    self.smoothing_lane_id,
+                    self.smoothing_start_idx,
+                    self.smoothing_end_idx
+                )
+                if preview_points is not None and self.smoothing_preview_line:
+                    self.smoothing_preview_line.remove()
+                    self.smoothing_preview_line = self.plot_manager.ax.plot(
+                        preview_points[:, 0], preview_points[:, 1], 'b--', alpha=0.5, label='Preview')[0]
+                    self.plot_manager.ax.legend()
+                    self.plot_manager.fig.canvas.draw_idle()
+
     def toggle_grid(self, event):
         self.plot_manager.grid_visible = not self.plot_manager.grid_visible
         self.plot_manager.ax.grid(self.plot_manager.grid_visible)
