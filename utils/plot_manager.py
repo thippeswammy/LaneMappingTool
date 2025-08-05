@@ -11,7 +11,8 @@ class PlotManager:
         self.file_names = file_names
         self.D = D
         self.event_handler = event_handler
-        self.fig, self.ax = plt.subplots(figsize=(12, 8))
+        self.fig, self.ax = plt.subplots(figsize=(14, 8))  # Increased width for controls
+        self.ax.set_position([0.1, 0.1, 0.74, 0.8])  # [left, bottom, width, height] relative to figure
         self.lane_scatter_plots = []
         self.start_point_plots = []
         self.extra_scatter_plots = []
@@ -22,26 +23,44 @@ class PlotManager:
         self.tooltip = self.ax.text(0, 0, '', bbox=dict(facecolor='white', alpha=0.8), visible=False)
         self.nearest_point = None
         self.rs = RectangleSelector(self.ax, self.event_handler.on_select, useblit=True, button=[1])
+        self.setup_navigation()
         self.text_point_size = None
         self.text_smoothness = None
         self.text_weight = None
         self.setup_widgets()
         self.setup_navigation()
+        self.fig.canvas.mpl_connect('resize_event', self.on_resize)
         self.update_plot(data)
 
+    def on_resize(self, event):
+        fig_width, fig_height = self.fig.get_size_inches()
+        # Adjust axes positions dynamically
+        self.ax.set_position([0.1, 0.1, 0.74, 0.8])  # Maintain proportions
+        self.fig.canvas.draw_idle()
+
     def setup_widgets(self):
-        ax_point_size = plt.axes([0.15, 0.02, 0.65, 0.03])
-        self.text_point_size = TextBox(ax_point_size, 'Point Size', initial='10')
-        self.text_point_size.on_submit(lambda val: self.event_handler.update_point_sizes(float(val) if val else 10))
-
-        ax_smoothness = plt.axes([0.15, 0.06, 0.65, 0.03])
-        self.text_smoothness = TextBox(ax_smoothness, 'Smoothness', initial='1.0')
-        self.text_smoothness.on_submit(lambda val: self.event_handler.update_smoothness(float(val) if val else 1.0))
-
-        ax_weight = plt.axes([0.15, 0.10, 0.65, 0.03])
-        self.text_weight = TextBox(ax_weight, 'Smoothing Weight', initial='20')
-        self.text_weight.on_submit(lambda val: self.event_handler.update_smoothing_weight(float(val) if val else 20))
-
+        # Create a control panel on the right
+        ax_control = plt.axes([0.85, 0.1, 0.14, 0.8])  # [left, bottom, width, height]
+        widgets = [
+            ('Point Size', '10', lambda val: self.event_handler.update_point_sizes(float(val) if val else 10)),
+            ('Smoothness', '1.0', lambda val: self.event_handler.update_smoothness(float(val) if val else 1.0)),
+            (
+                'Smoothing Weight', '20',
+                lambda val: self.event_handler.update_smoothing_weight(float(val) if val else 20))
+        ]
+        self.text_point_size = None
+        self.text_smoothness = None
+        self.text_weight = None
+        for i, (label, initial, callback) in enumerate(widgets):
+            ax = plt.axes([0.1, 0.75 - i * 0.25, 0.8, 0.2], facecolor='lightgray', transform=ax_control.transAxes)
+            text_box = TextBox(ax, label, initial=initial)
+            text_box.on_submit(callback)
+            if label == 'Point Size':
+                self.text_point_size = text_box
+            elif label == 'Smoothness':
+                self.text_smoothness = text_box
+            elif label == 'Smoothing Weight':
+                self.text_weight = text_box
         self.fig.canvas.draw()
 
     def setup_navigation(self):
@@ -91,7 +110,8 @@ class PlotManager:
                 point = self.data_manager.data[closest_idx]
                 self.tooltip.set_text(
                     f'X: {point[0]:.2f}\nY: {point[1]:.2f}\nLane: {int(point[-1])}\nIndex: {int(point[4])}')
-                self.tooltip.set_position((point[0], point[1]))
+                # Position tooltip above the point to avoid overlap
+                self.tooltip.set_position((point[0], point[1] + self.D / 50))
                 self.tooltip.set_visible(True)
                 if self.nearest_point:
                     self.nearest_point.remove()
@@ -196,7 +216,7 @@ class PlotManager:
             self.ax.set_ylabel('Y')
             self.ax.set_title('Lane Data Visualization')
             self.ax.grid(self.grid_visible)
-            self.ax.legend()
+            self.ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)  # Move legend outside
             self.setup_legend_handler()
             self.fig.canvas.draw_idle()
 

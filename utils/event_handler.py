@@ -52,94 +52,121 @@ class EventHandler:
         self.fig.canvas.mpl_connect('pick_event', self.on_pick)
         self.plot_manager.rs.onselect = self.on_select
 
+    def on_select_mode(self, event):
+        self.toggle_mode(event)
+        self.update_status("Switched to Select Mode" if self.selection_mode else "Switched to Draw Mode")
+
     def setup_buttons(self):
-        ax_toggle = plt.axes([0.01, 0.95, 0.1, 0.04])
-        self.buttons['toggle'] = Button(ax_toggle, 'Select Mode')
-        self.buttons['toggle'].on_clicked(self.on_toggle_mode)
-
-        ax_draw = plt.axes([0.01, 0.90, 0.1, 0.04])
-        self.buttons['draw'] = Button(ax_draw, 'Draw')
-        self.buttons['draw'].on_clicked(self.on_toggle_draw_mode)
-
-        ax_linecurve = plt.axes([0.01, 0.85, 0.1, 0.04])
-        self.buttons['linecurve'] = Button(ax_linecurve, 'Line')
-        self.buttons['linecurve'].on_clicked(self.on_toggle_linecurve)
-
-        ax_straighten = plt.axes([0.01, 0.80, 0.1, 0.04])
-        self.buttons['straighten'] = Button(ax_straighten, 'Smooth')
-        self.buttons['straighten'].on_clicked(self.on_straighten)
-
-        ax_confirm_start = plt.axes([0.01, 0.75, 0.1, 0.04])
-        self.buttons['confirm_start'] = Button(ax_confirm_start, 'Confirm Start')
-        self.buttons['confirm_start'].on_clicked(self.on_confirm_start)
-
-        ax_confirm_end = plt.axes([0.01, 0.70, 0.1, 0.04])
-        self.buttons['confirm_end'] = Button(ax_confirm_end, 'Confirm End')
-        self.buttons['confirm_end'].on_clicked(self.on_confirm_end)
-
-        ax_cancel = plt.axes([0.01, 0.65, 0.1, 0.04])
-        self.buttons['cancel'] = Button(ax_cancel, 'Cancel Operation')
-        self.buttons['cancel'].on_clicked(self.on_cancel_operation)
-
-        ax_clear = plt.axes([0.01, 0.60, 0.1, 0.04])
-        self.buttons['clear'] = Button(ax_clear, 'Clear Selection')
-        self.buttons['clear'].on_clicked(self.on_clear_selection)
-
-        ax_save = plt.axes([0.01, 0.55, 0.1, 0.04])
-        self.buttons['save'] = Button(ax_save, 'Save')
-        self.buttons['save'].on_clicked(self.save_data)
-
-        ax_merge = plt.axes([0.01, 0.50, 0.1, 0.04])
-        self.buttons['merge'] = Button(ax_merge, 'Merge Lanes')
-        self.buttons['merge'].on_clicked(self.merge_lanes)
-
-        ax_export = plt.axes([0.01, 0.45, 0.1, 0.04])
-        self.buttons['export'] = Button(ax_export, 'Export Selected')
-        self.buttons['export'].on_clicked(self.export_selected)
-
-        ax_grid = plt.axes([0.01, 0.40, 0.1, 0.04])
-        self.buttons['grid'] = Button(ax_grid, 'Toggle Grid')
-        self.buttons['grid'].on_clicked(self.toggle_grid)
-
-        ax_remove_above = plt.axes([0.01, 0.35, 0.1, 0.04])
-        self.buttons['remove_above'] = Button(ax_remove_above, 'Remove Above')
-        self.buttons['remove_above'].on_clicked(self.on_remove_above)
-
-        ax_remove_below = plt.axes([0.01, 0.30, 0.1, 0.04])
-        self.buttons['remove_below'] = Button(ax_remove_below, 'Remove Below')
-        self.buttons['remove_below'].on_clicked(self.on_remove_below)
-
+        ax_toolbar = plt.axes([0.01, 0.95, 0.98, 0.05])
+        button_labels = [
+            'Select Mode', 'Draw', 'Line', 'Smooth', 'Confirm Start', 'Confirm End',
+            'Cancel', 'Clear Selection', 'Save', 'Merge Lanes', 'Export', 'Toggle Grid',
+            'Remove Above', 'Remove Below'
+        ]
+        self.buttons = {}
+        for i, label in enumerate(button_labels):
+            btn_ax = plt.axes([0.01 + i * 0.07, 0.06, 0.06, 0.04], facecolor='lightgray',
+                              transform=ax_toolbar.transAxes)
+            self.buttons[label] = Button(btn_ax, label)
+            method_name = f'on_{label.lower().replace(" ", "_")}'
+            if hasattr(self, method_name):
+                self.buttons[label].on_clicked(getattr(self, method_name))
+            else:
+                print(f"Warning: No method '{method_name}' found for button '{label}'. Skipping callback.")
+                self.buttons[label].on_clicked(
+                    lambda x, l=label: print(f"Button '{l}' clicked, but no action defined."))
         self.fig.canvas.draw()
 
     def update_button_states(self):
-        self.buttons['linecurve'].eventson = self.draw_mode
-        self.buttons['linecurve'].ax.set_facecolor('white' if self.draw_mode else 'lightgray')
-        self.buttons['linecurve'].label.set_color('black' if self.draw_mode else 'gray')
-        self.buttons['straighten'].eventson = self.selection_mode
-        self.buttons['straighten'].ax.set_facecolor('white' if self.selection_mode else 'lightgray')
-        self.buttons['straighten'].label.set_color('black' if self.selection_mode else 'gray')
-        self.buttons['confirm_start'].eventson = self.smoothing_point_selection
-        self.buttons['confirm_start'].ax.set_facecolor('white' if self.smoothing_point_selection else 'lightgray')
-        self.buttons['confirm_start'].label.set_color('black' if self.smoothing_point_selection else 'gray')
-        self.buttons['confirm_end'].eventson = self.smoothing_point_selection
-        self.buttons['confirm_end'].ax.set_facecolor('white' if self.smoothing_point_selection else 'lightgray')
-        self.buttons['confirm_end'].label.set_color('black' if self.smoothing_point_selection else 'gray')
-        self.buttons['cancel'].eventson = any([self.smoothing_point_selection, self.merge_mode, self.draw_mode,
+        # Enable/Disable buttons based on current mode
+        self.buttons['Draw'].eventson = not self.selection_mode
+        self.buttons['Draw'].ax.set_facecolor('white' if not self.selection_mode else 'lightgray')
+        self.buttons['Draw'].label.set_color('black' if not self.selection_mode else 'gray')
+
+        self.buttons['Line'].eventson = self.draw_mode
+        self.buttons['Line'].ax.set_facecolor('white' if self.draw_mode else 'lightgray')
+        self.buttons['Line'].label.set_color('black' if self.draw_mode else 'gray')
+
+        self.buttons['Smooth'].eventson = self.selection_mode and self.plot_manager.selected_indices
+        self.buttons['Smooth'].ax.set_facecolor(
+            'white' if self.selection_mode and self.plot_manager.selected_indices else 'lightgray')
+        self.buttons['Smooth'].label.set_color(
+            'black' if self.selection_mode and self.plot_manager.selected_indices else 'gray')
+
+        self.buttons['Confirm Start'].eventson = self.smoothing_point_selection
+        self.buttons['Confirm Start'].ax.set_facecolor('white' if self.smoothing_point_selection else 'lightgray')
+        self.buttons['Confirm Start'].label.set_color('black' if self.smoothing_point_selection else 'gray')
+
+        self.buttons['Confirm End'].eventson = self.smoothing_point_selection and self.smoothing_start_idx is not None
+        self.buttons['Confirm End'].ax.set_facecolor(
+            'white' if self.smoothing_point_selection and self.smoothing_start_idx is not None else 'lightgray')
+        self.buttons['Confirm End'].label.set_color(
+            'black' if self.smoothing_point_selection and self.smoothing_start_idx is not None else 'gray')
+
+        self.buttons['Cancel'].eventson = any([self.smoothing_point_selection, self.merge_mode, self.draw_mode,
                                                self.remove_above_mode, self.remove_below_mode])
-        self.buttons['cancel'].ax.set_facecolor('white' if self.buttons['cancel'].eventson else 'lightgray')
-        self.buttons['cancel'].label.set_color('black' if self.buttons['cancel'].eventson else 'gray')
-        self.buttons['export'].eventson = bool(self.plot_manager.selected_indices)
-        self.buttons['export'].ax.set_facecolor('white' if self.plot_manager.selected_indices else 'lightgray')
-        self.buttons['export'].label.set_color('black' if self.plot_manager.selected_indices else 'gray')
-        self.buttons['remove_above'].eventson = not (
-                self.remove_below_mode or self.smoothing_point_selection or self.merge_mode)
-        self.buttons['remove_above'].ax.set_facecolor('white' if self.buttons['remove_above'].eventson else 'lightgray')
-        self.buttons['remove_above'].label.set_color('black' if self.buttons['remove_above'].eventson else 'gray')
-        self.buttons['remove_below'].eventson = not (
-                self.remove_above_mode or self.smoothing_point_selection or self.merge_mode)
-        self.buttons['remove_below'].ax.set_facecolor('white' if self.buttons['remove_below'].eventson else 'lightgray')
-        self.buttons['remove_below'].label.set_color('black' if self.buttons['remove_below'].eventson else 'gray')
+        self.buttons['Cancel'].ax.set_facecolor('white' if self.buttons['Cancel'].eventson else 'lightgray')
+        self.buttons['Cancel'].label.set_color('black' if self.buttons['Cancel'].eventson else 'gray')
+
+        self.buttons['Export'].eventson = bool(self.plot_manager.selected_indices)
+        self.buttons['Export'].ax.set_facecolor('white' if self.plot_manager.selected_indices else 'lightgray')
+        self.buttons['Export'].label.set_color('black' if self.plot_manager.selected_indices else 'gray')
+
+        self.buttons['Remove Above'].eventson = not (
+                    self.remove_below_mode or self.smoothing_point_selection or self.merge_mode)
+        self.buttons['Remove Above'].ax.set_facecolor('white' if self.buttons['Remove Above'].eventson else 'lightgray')
+        self.buttons['Remove Above'].label.set_color('black' if self.buttons['Remove Above'].eventson else 'gray')
+
+        self.buttons['Remove Below'].eventson = not (
+                    self.remove_above_mode or self.smoothing_point_selection or self.merge_mode)
+        self.buttons['Remove Below'].ax.set_facecolor('white' if self.buttons['Remove Below'].eventson else 'lightgray')
+        self.buttons['Remove Below'].label.set_color('black' if self.buttons['Remove Below'].eventson else 'gray')
+
         self.fig.canvas.draw_idle()
+
+    # Add missing callback methods
+    def on_draw(self, event):
+        self.selection_mode = False
+        self.draw_mode = True
+        self.plot_manager.rs.set_active(False)
+        self.update_status("Entered Draw Mode")
+        self.update_button_states()
+
+    def on_line(self, event):
+        if not self.draw_mode:
+            self.update_status("Enter Draw Mode first")
+            return
+        self.curve_manager.is_curve = False
+        self.update_status("Drawing Line")
+        self.update_draw_line()
+
+    def on_smooth(self, event):
+        if not self.selection_mode or not self.plot_manager.selected_indices:
+            self.update_status("Select points in Selection Mode")
+            return
+        self.smoothing_selected_indices = self.plot_manager.selected_indices
+        self.smoothing_lane_id = int(self.data_manager.data[self.plot_manager.selected_indices[0], -1])
+        self.smoothing_point_selection = True
+        self.smoothing_start_idx = None
+        self.smoothing_end_idx = None
+        self.update_point_sizes()
+        self.update_button_states()
+        self.update_status("Click to select smoothing start point")
+
+    def on_cancel(self, event):
+        self.on_cancel_operation(event)
+
+    def on_save(self, event):
+        self.save_data(event)
+
+    def on_merge_lanes(self, event):
+        self.merge_lanes(event)
+
+    def on_export(self, event):
+        self.export_selected(event)
+
+    def on_toggle_grid(self, event):
+        self.toggle_grid(event)
 
     def update_point_sizes(self, val=None):
         if self.plot_manager is None or val is None:
@@ -194,9 +221,8 @@ class EventHandler:
             elif val > 100:
                 val = 100
             self.curve_manager.smoothing_weight = val
-            self.plot_manager.text_weight.set_val(str(val))
+            self.plot_manager.text_weight.set_text(str(val))
             self.update_status(f"Smoothing weight set to {val}")
-            # Update preview if smoothing is active
             if self.smoothing_point_selection and self.smoothing_start_idx and self.smoothing_end_idx:
                 preview_points = self.curve_manager.preview_smooth(
                     self.smoothing_selected_indices,
@@ -212,7 +238,7 @@ class EventHandler:
                     self.plot_manager.fig.canvas.draw_idle()
         except ValueError:
             self.update_status("Invalid weight, using 20")
-            self.plot_manager.text_weight.set_val('20')
+            self.plot_manager.text_weight.set_text('20')
             self.update_smoothing_weight(20)
 
     def update_smoothness(self, val=None):
@@ -737,11 +763,22 @@ class EventHandler:
             self.plot_manager.update_status(message)
             self.last_status_time = time.time()
             if message:
-                def clear_status():
-                    if time.time() - self.last_status_time >= self.status_timeout:
-                        self.plot_manager.update_status("")
-                        self.fig.canvas.draw_idle()
-
-                self.fig.canvas.manager.window.after(int(self.status_timeout * 1000), clear_status)
+                # Use Tkinter's after method if available, otherwise update immediately
+                try:
+                    self.fig.canvas.manager.window.after(
+                        int(self.status_timeout * 1000),
+                        lambda: self._clear_status_if_timeout()
+                    )
+                except AttributeError:
+                    # Fallback for non-Tkinter backends or environments without after
+                    self.fig.canvas.draw_idle()
         except Exception as e:
             print(f"Error updating status: {e}")
+
+    def _clear_status_if_timeout(self):
+        try:
+            if time.time() - self.last_status_time >= self.status_timeout:
+                self.plot_manager.update_status("")
+                self.fig.canvas.draw_idle()
+        except Exception as e:
+            print(f"Error clearing status: {e}")
