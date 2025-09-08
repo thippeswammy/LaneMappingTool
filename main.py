@@ -1,7 +1,5 @@
 import os
 
-import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,6 +7,7 @@ from DataVisualizationEditingTool.utils.data_loader import DataLoader
 from DataVisualizationEditingTool.utils.data_manager import DataManager
 from DataVisualizationEditingTool.utils.event_handler import EventHandler
 from DataVisualizationEditingTool.utils.plot_manager import PlotManager
+
 
 def main():
     # Get path where the user is running the .exe from
@@ -21,7 +20,8 @@ def main():
         raise ValueError(f"Directory does not exist: {lanes_path}")
 
     # Load data
-    loader = DataLoader(lanes_path)
+    custom_order = ["lane-0.npy", "lane-3.npy", "lane-2.npy", "lane-1.npy"]
+    loader = DataLoader("lanes", file_order=custom_order)
     merged_data, file_names = loader.load_data()
     D = loader.D
 

@@ -1,25 +1,36 @@
 import os
-
 import numpy as np
 
 
 class DataLoader:
-    def __init__(self, directory):
+    def __init__(self, directory, file_order=None):
+        """
+        directory   : folder containing .npy files
+        file_order  : optional list of filenames (or partial names) to enforce order
+        """
         if not os.path.isdir(directory):
             raise ValueError(f"Directory does not exist: {directory}")
         self.directory = directory
         self.D = None
+        self.file_order = file_order  # custom order provided by user
 
     def load_data(self):
-        files = [f for f in os.listdir(self.directory) if f.endswith('.npy')]
-        if not files:
+        all_files = [f for f in os.listdir(self.directory) if f.endswith('.npy')]
+        if not all_files:
             print(f"No .npy files found in directory: {self.directory}")
             return np.array([]), []
+
+        # If user gave a custom file order → respect it
+        if self.file_order:
+            files = [f for f in self.file_order if f in all_files]
+            files += [f for f in all_files if f not in files]
+        else:
+            files = sorted(all_files)
 
         data_list = []
         file_names = []
 
-        for i, file in enumerate(files):
+        for lane_idx, file in enumerate(files):
             file_path = os.path.join(self.directory, file)
             try:
                 points = np.load(file_path)
@@ -51,8 +62,8 @@ class DataLoader:
                 else:
                     data[:, 3] = np.arange(N)
 
-                data[:, 4] = np.arange(N)
-                data[:, 5] = i
+                data[:, 4] = np.arange(N)       # index within file
+                data[:, 5] = lane_idx           # lane index = order chosen
 
                 data_list.append(data)
                 file_names.append(file)
@@ -69,6 +80,7 @@ class DataLoader:
         merged_data[:, 3] = np.arange(N_total)
         merged_data[:, 4] = np.arange(N_total)
 
+        # compute max distance for scaling
         if merged_data.size > 0:
             points_2d = merged_data[:, :2]
             distances = np.sqrt(((points_2d[:, None] - points_2d[None, :]) ** 2).sum(axis=-1))
@@ -76,5 +88,6 @@ class DataLoader:
         else:
             self.D = 1.0
 
+        self.file_order = file_names  # store final order used
         print(f"Loaded {len(file_names)} files, total points: {N_total}")
         return merged_data, file_names

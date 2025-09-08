@@ -158,6 +158,9 @@ class DataManager:
 
     def merge_lanes(self, lane_id_1, lane_id_2, point_1, point_2, point_1_type, point_2_type):
         """Merge lane_id_2 into lane_id_1, ensuring continuous index sequence with correct start/end connections."""
+        if point_1 > point_2:
+            lane_id_1, point_1, point_1_type, lane_id_2, point_2, point_2_type = (
+                lane_id_2, point_2, point_2_type, lane_id_1, point_1, point_1_type)
         # lane_1_mask = self.data[:, -1] == lane_id_1
         # lane_2_mask = self.data[:, -1] == lane_id_2
         # if not np.any(lane_1_mask) or not np.any(lane_2_mask):
@@ -295,7 +298,7 @@ class DataManager:
             self.redo_stack = []
             self._auto_save_backup()
             print(f"Merged lane {lane_id_2} into lane {lane_id_1}")
-            return point_1, point_1 + 1
+            return point_1, point_1 + 1, point_1_type, point_2_type
         except Exception as e:
             print(f"Error merging lanes: {e}")
 
