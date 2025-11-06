@@ -35,6 +35,11 @@ class EventHandler:
         self.remove_point_idx = None
         self.remove_lane_id = None
 
+        # --- MODIFIED: Remove Between state ---
+        self.remove_between_mode = False
+        self.remove_start_id = None
+        self.remove_end_id = None
+
         self.buttons = {}
         self.status_timeout = 5
         self.last_status_time = 0
@@ -118,12 +123,13 @@ class EventHandler:
         self.buttons['grid'].on_clicked(self.toggle_grid)
 
         ax_remove_above = plt.axes([0.01, 0.35, 0.1, 0.04])
-        self.buttons['remove_above'] = Button(ax_remove_above, 'Remove Above')
-        self.buttons['remove_above'].on_clicked(self.on_remove_above)
+        self.buttons['remove_between'] = Button(ax_remove_above, 'Remove Between')
+        self.buttons['remove_between'].on_clicked(self.on_remove_between)
 
         ax_remove_below = plt.axes([0.01, 0.30, 0.1, 0.04])
         self.buttons['remove_below'] = Button(ax_remove_below, 'Remove Below')
         self.buttons['remove_below'].on_clicked(self.on_remove_below)
+        self.buttons['remove_below'].ax.set_visible(False)
 
         self.fig.canvas.draw()
 
@@ -144,21 +150,27 @@ class EventHandler:
             self.buttons['straighten'].label.set_text('Smooth')
             self.buttons['straighten'].ax.set_facecolor('white')
 
-        # Cancel Button
-        is_in_operation = self.draw_mode or self.smoothing_point_selection or self.merge_mode or self.remove_above_mode or self.remove_below_mode
-        self.buttons['cancel'].eventson = is_in_operation
-        self.buttons['cancel'].ax.set_facecolor('white' if is_in_operation else 'lightgray')
-        self.buttons['cancel'].label.set_color('black' if is_in_operation else 'gray')
+            # Cancel Button
+            is_in_operation = self.draw_mode or self.smoothing_point_selection or self.merge_mode or self.remove_between_mode
+            self.buttons['cancel'].eventson = is_in_operation
+            self.buttons['cancel'].ax.set_facecolor('white' if is_in_operation else 'lightgray')
+            self.buttons['cancel'].label.set_color('black' if is_in_operation else 'gray')
 
         # Export Button
         self.buttons['export'].eventson = bool(self.plot_manager.selected_indices)
         self.buttons['export'].ax.set_facecolor('white' if self.plot_manager.selected_indices else 'lightgray')
         self.buttons['export'].label.set_color('black' if self.plot_manager.selected_indices else 'gray')
 
+        # Remove Between
+        self.buttons['remove_between'].eventson = True
+        self.buttons['remove_between'].ax.set_facecolor('white')
+        self.buttons['remove_between'].label.set_color('black')
+
         # Remove Buttons (Deferred)
-        self.buttons['remove_above'].eventson = False
-        self.buttons['remove_above'].ax.set_facecolor('lightgray')
-        self.buttons['remove_above'].label.set_color('gray')
+        # self.buttons['remove_above'].eventson = False
+        # self.buttons['remove_above'].ax.set_facecolor('lightgray')
+        # self.buttons['remove_above'].label.set_color('gray')
+
         self.buttons['remove_below'].eventson = False
         self.buttons['remove_below'].ax.set_facecolor('lightgray')
         self.buttons['remove_below'].label.set_color('gray')
@@ -216,6 +228,13 @@ class EventHandler:
         # and we will return to Add/Delete mode (since back_to_select=False)
 
         print(f"Entered {'draw' if self.draw_mode else 'add/delete'} mode")
+        self.update_button_states()
+
+    def on_remove_between(self, event):
+        self.clear_operation_modes(back_to_select=False)
+        self.remove_between_mode = True
+        print("Entered Remove Between mode.")
+        self.update_status("Remove Between: Click to select START node.")
         self.update_button_states()
 
     def clear_operation_modes(self, back_to_select=True):
@@ -314,10 +333,54 @@ class EventHandler:
         self.merge_point_2_id = None
 
     def clear_remove_state(self):
-        self.remove_above_mode = False
-        self.remove_below_mode = False
-        self.remove_point_idx = None
-        self.remove_lane_id = None
+        self.remove_between_mode = False
+        self.remove_start_id = None
+        self.remove_end_id = None
+
+    def finalize_remove_between(self):
+        if self.remove_start_id is None or self.remove_end_id is None:
+            self.update_status("Error: Start or end node not set.")
+            self.clear_operation_modes(back_to_select=True)
+            self.update_button_states()
+            return
+
+        if not self.curve_manager:
+            self.update_status("Error: CurveManager not found.")
+            self.clear_operation_modes(back_to_select=True)
+            self.update_button_states()
+            return
+
+        print(f"Finding path from {self.remove_start_id} to {self.remove_end_id} for removal...")
+        path_ids = self.curve_manager._find_path(self.remove_start_id, self.remove_end_id)
+
+        if not path_ids or len(path_ids) < 2:
+            self.update_status("No forward path found between nodes.")
+            self.clear_operation_modes(back_to_select=True)
+            self.update_button_states()
+            return
+
+        # Get all nodes *between* the start and end
+        points_to_delete = path_ids[1:-1]
+
+        if not points_to_delete:
+            self.update_status("No nodes to remove between start and end.")
+            self.clear_operation_modes(back_to_select=True)
+            self.update_button_states()
+            return
+
+        # Delete the nodes
+        self.data_manager.delete_points(points_to_delete)
+
+        # Re-create the direct edge
+        self.data_manager.add_edge(self.remove_start_id, self.remove_end_id)
+
+        # Redraw
+        self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
+        print(f"Deleted {len(points_to_delete)} nodes and connected edge.")
+        self.update_status(f"Deleted {len(points_to_delete)} nodes.")
+
+        self.clear_operation_modes(back_to_select=True)
+        self.update_button_states()
 
     def on_connect_nodes(self, event):
         self.clear_operation_modes(back_to_select=False)
@@ -419,8 +482,21 @@ class EventHandler:
                 self.update_button_states()
             return
 
-        if self.remove_above_mode: return
-        if self.remove_below_mode: return
+        if self.remove_between_mode:
+            if self.remove_start_id is None:
+                self.remove_start_id = closest_point_id
+                print(f"Selected remove START node (ID {closest_point_id})")
+                self.update_status(f"Start: {closest_point_id}. Click to select END node.")
+                self.plot_manager.selected_indices = [closest_row_idx]
+                self.update_point_sizes()
+            else:
+                if closest_point_id == self.remove_start_id:
+                    self.update_status("Cannot select same node. Select END node.")
+                    return
+                self.remove_end_id = closest_point_id
+                print(f"Selected remove END node (ID {closest_point_id})")
+                self.finalize_remove_between()  # Call the function to do the work
+            return
 
         if self.merge_mode:
             if self.merge_point_1_id is None:
@@ -479,6 +555,10 @@ class EventHandler:
                         sizes[id_to_local_idx[self.merge_point_1_id]] = 100
                     if self.merge_point_2_id in id_to_local_idx:
                         sizes[id_to_local_idx[self.merge_point_2_id]] = 80
+
+                if self.remove_between_mode:
+                    if self.remove_start_id in id_to_local_idx:
+                        sizes[id_to_local_idx[self.remove_start_id]] = 100
 
                 for local_idx, global_row_idx in enumerate(row_indices):
                     if global_row_idx in selected_row_set:
