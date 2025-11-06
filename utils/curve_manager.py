@@ -1,17 +1,18 @@
-import matplotlib.pyplot as plt
+from collections import deque
+
 import numpy as np
 from scipy.interpolate import splprep, splev
-from scipy.signal import savgol_filter
 
 
 class CurveManager:
-    def __init__(self, data_manager, plot_manager):
+    def __init__(self, data_manager, plot_manager, event_handler):
         self.data_manager = data_manager
         self.plot_manager = plot_manager
+        self.event_handler = event_handler
         self.draw_points = []
         self.is_curve = False
         self.current_line = None
-        self.show_debug_plot = False  # Disabled by default
+        self.show_debug_plot = False
         self.smoothing_weight = 20
 
     def add_draw_point(self, x, y):
@@ -30,53 +31,160 @@ class CurveManager:
         points = np.array(self.draw_points)
         x, y = points[:, 0], points[:, 1]
         try:
-            if self.is_curve and len(points) >= 5:
-                window_length = min(5, len(y) // 2 * 2 + 1)
-                polyorder = 2
-                y_smooth = savgol_filter(y, window_length, polyorder)
-                y_smooth[0], y_smooth[-1] = y[0], y[-1]
-                smooth_points = np.stack((x, y_smooth), axis=1)
-                self.current_line = self.plot_manager.ax.plot(
-                    smooth_points[:, 0], smooth_points[:, 1], 'k-', alpha=0.5)[0]
-            else:
-                self.current_line = self.plot_manager.ax.plot(x, y, 'k-', alpha=0.5)[0]
+            self.current_line = self.plot_manager.ax.plot(x, y, 'k-', alpha=0.5)[0]
             self.plot_manager.fig.canvas.draw_idle()
         except Exception as e:
             print(f"Error updating draw line: {e}")
 
-    def finalize_draw(self, file_id):
+    def finalize_draw(self, original_lane_id):
         if len(self.draw_points) < 2:
-            self.draw_points = []
-            if self.current_line:
-                self.current_line.remove()
-                self.current_line = None
+            self.clear_draw()
             return
         points = np.array(self.draw_points)
-        x, y = points[:, 0], points[:, 1]
         try:
-            if self.is_curve and len(points) >= 5:
-                window_length = min(5, len(y) // 2 * 2 + 1)
-                polyorder = 2
-                y_smooth = savgol_filter(y, window_length, polyorder)
-                y_smooth[0], y_smooth[-1] = y[0], y[-1]
-                points = np.stack((x, y_smooth), axis=1)
+            previous_node_id = None
+            new_node_ids = []
             for x, y in points:
-                self.data_manager.add_point(x, y, file_id)
-            self.draw_points = []
-            if self.current_line:
-                self.current_line.remove()
-                self.current_line = None
-            self.plot_manager.update_plot(self.data_manager.data)
+                new_node_id = self.data_manager.add_node(x, y, original_lane_id)
+                new_node_ids.append(new_node_id)
+                if previous_node_id is not None:
+                    self.data_manager.add_edge(previous_node_id, new_node_id)
+                previous_node_id = new_node_id
+            print(f"Finalized draw: Added {len(new_node_ids)} nodes and {len(new_node_ids) - 1} edges.")
         except Exception as e:
             print(f"Error finalizing draw: {e}")
+        finally:
+            self.clear_draw()
+            self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
 
-    def preview_smooth(self, selected_indices, lane_id, start_idx, end_idx):
-        try:
-            new_points = self._smooth_segment(selected_indices, lane_id, start_idx, end_idx, preview=True)
-            return new_points
-        except Exception as e:
-            print(f"Error previewing smooth: {e}")
+    def clear_draw(self):
+        self.draw_points = []
+        if self.current_line:
+            try:
+                self.current_line.remove()
+            except ValueError:
+                pass
+            self.current_line = None
+        self.plot_manager.fig.canvas.draw_idle()
+
+    def _get_node_coords(self, point_id):
+        """Helper to get (x, y) for a point_id."""
+        node_mask = (self.data_manager.nodes[:, 0] == point_id)
+        if np.any(node_mask):
+            return self.data_manager.nodes[node_mask][0, 1:3]  # [x, y]
+        return None
+
+    def _find_path(self, start_id, end_id):
+        """
+        Finds a path from start_id to end_id using BFS, searching
+        only in the forward direction.
+        Returns a list of point_ids [start_id, ..., end_id] or None.
+        """
+        if self.data_manager.edges.size == 0:
             return None
+
+        # Create an adjacency list for forward-only traversal
+        adj = {int(from_id): [] for from_id in self.data_manager.edges[:, 0]}
+        for from_id, to_id in self.data_manager.edges:
+            adj.setdefault(int(from_id), []).append(int(to_id))
+
+        if start_id not in adj:
+            return None  # Start node has no outgoing edges
+
+        queue = deque([(start_id, [start_id])])  # (current_node, path_to_node)
+        visited = {start_id}
+
+        while queue:
+            current_id, path = queue.popleft()
+
+            if current_id == end_id:
+                return path  # Found the path
+
+            for neighbor_id in adj.get(current_id, []):
+                if neighbor_id not in visited:
+                    visited.add(neighbor_id)
+                    new_path = path + [neighbor_id]
+                    queue.append((neighbor_id, new_path))
+
+        return None
+
+    def clear_preview(self):
+        """Removes the smoothing preview line."""
+        if self.event_handler.smoothing_preview_line:
+            try:
+                self.event_handler.smoothing_preview_line.remove()
+            except ValueError:
+                pass
+            self.event_handler.smoothing_preview_line = None
+            self.plot_manager.fig.canvas.draw_idle()
+
+    def preview_smooth(self, start_id, end_id):
+        """Generates and draws a preview of the smoothed path."""
+        self.clear_preview()
+
+        path_ids = self._find_path(start_id, end_id)
+        if not path_ids:
+            self.event_handler.update_status("No forward path found between nodes.")
+            print(f"No forward path found from {start_id} to {end_id}")
+            return
+
+        self.event_handler.smoothing_path_ids = path_ids  # Store for apply_smooth
+
+        new_points_xy = self._smooth_segment(path_ids, preview=True)
+        if new_points_xy is None:
+            self.event_handler.update_status("Smoothing failed.")
+            return
+
+        # Draw the preview line
+        self.event_handler.smoothing_preview_line = self.plot_manager.ax.plot(
+            new_points_xy[:, 0], new_points_xy[:, 1], 'b--', alpha=0.7, zorder=5
+        )[0]
+        self.plot_manager.fig.canvas.draw_idle()
+        self.event_handler.update_status("Preview generated. Adjust sliders or 'Confirm Smooth'.")
+
+    def apply_smooth(self):
+        """Applies the smoothing to the data_manager.nodes array."""
+        path_ids = self.event_handler.smoothing_path_ids
+        if not path_ids:
+            print("No path to apply smoothing to.")
+            return
+
+        # Get the final smoothed points
+        new_points_xy = self._smooth_segment(path_ids, preview=False)
+        if new_points_xy is None:
+            self.event_handler.update_status("Smoothing failed to apply.")
+            return
+
+        if len(new_points_xy) != len(path_ids):
+            print(f"Error: Point count mismatch. Path: {len(path_ids)}, Smoothed: {len(new_points_xy)}")
+            return
+
+        # Update nodes in data_manager
+        nodes = self.data_manager.nodes
+        for i, point_id in enumerate(path_ids):
+            node_mask = (nodes[:, 0] == point_id)
+            if np.any(node_mask):
+                # Update x, y (cols 1, 2)
+                nodes[node_mask, 1:3] = new_points_xy[i]
+
+                # Update yaw (col 3)
+                if i < len(new_points_xy) - 1:  # Not the last point
+                    dx = new_points_xy[i + 1, 0] - new_points_xy[i, 0]
+                    dy = new_points_xy[i + 1, 1] - new_points_xy[i, 1]
+                    nodes[node_mask, 3] = np.arctan2(dy, dx)
+                else:
+                    # Last point: copy yaw from previous point
+                    if i > 0:
+                        prev_mask = (nodes[:, 0] == path_ids[i - 1])
+                        nodes[node_mask, 3] = nodes[prev_mask, 3]
+
+        # Save to history
+        self.data_manager.history.append((self.data_manager.nodes.copy(), self.data_manager.edges.copy()))
+        self.data_manager.redo_stack = []
+
+        # Redraw the main plot
+        self.plot_manager.selected_indices = []
+        self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
 
     def straighten_segment(self, selected_indices, lane_id, start_idx, end_idx):
         try:
@@ -120,70 +228,68 @@ class CurveManager:
             print(f"Error straightening segment: {e}")
             return []
 
-    def _smooth_segment(self, selected_indices, lane_id, start_idx, end_idx, preview=False):
-        if len(selected_indices) < 2:
+    def _smooth_segment(self, path_ids, preview=False):
+        """
+        Internal function to calculate smoothed points for a given path of IDs.
+        This re-implements the logic from your old _smooth_segment.
+        """
+        if len(path_ids) < 2:
             print("Need at least 2 points to smooth")
             return None
 
-        selected_indices = sorted(selected_indices)
-
-        if start_idx not in selected_indices or end_idx not in selected_indices:
-            print("Start or end index not in selected indices")
+        # 1. Get (x, y) coordinates for the path
+        points_xy = []
+        for pid in path_ids:
+            coords = self._get_node_coords(pid)
+            if coords is not None:
+                points_xy.append(coords)
+        points = np.array(points_xy)
+        if len(points) < 2:
             return None
 
-        start_pos = selected_indices.index(start_idx)
-        end_pos = selected_indices.index(end_idx)
-        if start_pos > end_pos:
-            start_idx, end_idx = end_idx, start_idx
-            start_pos, end_pos = end_pos, start_pos
+        original_start_point = points[0]
+        original_end_point = points[-1]
 
-        segment_indices = selected_indices[start_pos:end_pos + 1]
-        points = self.data_manager.data[segment_indices, :2]
-
-        # Original start and end points of the selected segment (for final assignment)
-        original_start_point = self.data_manager.data[start_idx, :2]
-        original_end_point = self.data_manager.data[end_idx, :2]
-
-        all_indices = np.arange(len(self.data_manager.data))
-        selected_set = set(segment_indices)
+        # 2. Find adjacent points (prev and next)
         prev_point, next_point = None, None
 
-        # Find the adjacent points outside the selected segment
-        for idx in reversed(all_indices):
-            if idx < start_idx and idx not in selected_set:
-                prev_point = self.data_manager.data[idx, :2]
-                break
+        # Find 'prev_point' (a node that has an edge *to* start_id)
+        start_id = path_ids[0]
+        prev_candidates = self.data_manager.edges[self.data_manager.edges[:, 1] == start_id, 0]
+        if prev_candidates.size > 0:
+            # Just take the first one, and make sure it's not part of the path
+            if prev_candidates[0] not in path_ids:
+                prev_point = self._get_node_coords(prev_candidates[0])
 
-        for idx in all_indices:
-            if idx > end_idx and idx not in selected_set:
-                next_point = self.data_manager.data[idx, :2]
-                break
+        # Find 'next_point' (a node that has an edge *from* end_id)
+        end_id = path_ids[-1]
+        next_candidates = self.data_manager.edges[self.data_manager.edges[:, 0] == end_id, 1]
+        if next_candidates.size > 0:
+            if next_candidates[0] not in path_ids:
+                next_point = self._get_node_coords(next_candidates[0])
 
+        # 3. Build fitting_points and weights (same logic as)
         fitting_points = points.copy()
-        weights = np.ones(len(fitting_points)) * self.smoothing_weight  # Default weight for segment points
+        weights = np.ones(len(fitting_points)) * self.smoothing_weight
 
         segment_start_in_fitting = 0
         segment_end_in_fitting = len(fitting_points) - 1
-
-        # High weight for the segment's true start and end points
         HIGH_WEIGHT = 100
 
         if prev_point is not None:
             fitting_points = np.vstack([prev_point, fitting_points])
-            weights = np.concatenate(([1], weights))  # Low weight for the distant prev_point
-            segment_start_in_fitting += 1  # Shift index due to prev_point
-            segment_end_in_fitting += 1  # Shift index due to prev_point
+            weights = np.concatenate(([1], weights))
+            segment_start_in_fitting += 1
+            segment_end_in_fitting += 1
 
         if next_point is not None:
             fitting_points = np.vstack([fitting_points, next_point])
-            weights = np.concatenate((weights, [1]))  # Low weight for the distant next_point
+            weights = np.concatenate((weights, [1]))
 
-        # Apply high weights to the actual start and end points of the *selected segment*
-        # within the now potentially expanded `fitting_points` and `weights` arrays.
         weights[segment_start_in_fitting] = HIGH_WEIGHT
         weights[segment_end_in_fitting] = HIGH_WEIGHT
-        # --- MODIFICATION END ---
 
+        # 4. Run spline math (same logic as)
         try:
             x, y = fitting_points[:, 0], fitting_points[:, 1]
             distances = np.sqrt(np.sum(np.diff(fitting_points, axis=0) ** 2, axis=1))
@@ -192,61 +298,25 @@ class CurveManager:
             u = u / u[-1] if u[-1] > 0 else np.linspace(0, 1, len(fitting_points))
 
             smoothing_factor = len(points) * self.plot_manager.slider_smooth.val
+            if smoothing_factor < 0.1: smoothing_factor = 0.1
 
-            if smoothing_factor < 0.1:
-                smoothing_factor = 0.1
             tck, u_fitted = splprep([x, y], u=u, s=smoothing_factor, k=3, w=weights)
 
-            # Determine the range of 'u' values corresponding to the selected segment
-            # This is tricky because u_fitted corresponds to the entire fitting_points array.
-            # We need to find the u values for the *original* start and end points of the segment.
-            # Using original start/end points' u-values from the initial 'u' array.
-
-            # Find the u-values corresponding to the original start and end points of the segment.
-            # These are the u-values at indices `segment_start_in_fitting` and `segment_end_in_fitting`
-            # in the `u` array that was passed to splprep.
             u_start_segment = u[segment_start_in_fitting]
             u_end_segment = u[segment_end_in_fitting]
 
-            num_new_points = len(segment_indices)
-            # Generate new u values that span only the segment, distributing points evenly.
+            num_new_points = len(path_ids)  # Use original path length
             u_fine = np.linspace(u_start_segment, u_end_segment, num_new_points)
 
             x_smooth, y_smooth = splev(u_fine, tck)
-
             new_points = np.stack((x_smooth, y_smooth), axis=1)
 
-            # Re-assert the exact start and end points to counter any residual deviation
+            # Re-assert exact start/end points
             new_points[0] = original_start_point
             new_points[-1] = original_end_point
 
-            if self.show_debug_plot and not preview:
-                plt.figure(figsize=(8, 6))
-                plt.plot(points[:, 0], points[:, 1], 'ro-', label='Original Segment')
-                plt.plot(new_points[:, 0], new_points[:, 1], 'g.-', label='Smoothed Segment')
-                plt.plot(fitting_points[:, 0], fitting_points[:, 1], 'bx', markersize=10,
-                         label='Fitting Points (incl. adjacent)')
-
-                # Highlight the points that were given high weights in fitting_points
-                plt.plot(fitting_points[segment_start_in_fitting, 0], fitting_points[segment_start_in_fitting, 1], 'ko',
-                         markersize=12, fillstyle='none', label='High Weight Start')
-                plt.plot(fitting_points[segment_end_in_fitting, 0], fitting_points[segment_end_in_fitting, 1], 'ko',
-                         markersize=12, fillstyle='none', label='High Weight End')
-
-                if prev_point is not None:
-                    plt.plot([prev_point[0], points[0, 0]], [prev_point[1], points[0, 1]], 'c--',
-                             label='Prev Adjacent Link')
-                if next_point is not None:
-                    plt.plot([points[-1, 0], next_point[0]], [points[-1, 1], next_point[1]], 'm--',
-                             label='Next Adjacent Link')
-                plt.legend()
-                plt.title("Smoothing Segment with High Endpoint Weights")
-                plt.xlabel("x")
-                plt.ylabel("y")
-                plt.grid(True)
-                plt.show()
-
             return new_points
+
         except ValueError as e:
             print(f"Spline fitting failed: {e}")
             return None

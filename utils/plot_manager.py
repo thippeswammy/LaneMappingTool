@@ -1,12 +1,11 @@
 import time
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Slider, RectangleSelector
 
 
 class PlotManager:
-    def __init__(self, data, file_names, D, data_manager, event_handler):
+    def __init__(self, nodes, edges, file_names, D, data_manager, event_handler):
         self.data_manager = data_manager
         self.file_names = file_names
         self.D = D
@@ -15,8 +14,12 @@ class PlotManager:
         self.lane_scatter_plots = []
         self.start_point_plots = []
         self.extra_scatter_plots = []
+        self.edge_plots = []  # To hold lines for edges
         self.indices = []
+
+        # This will store the ROW INDICES of selected nodes in self.data_manager.nodes
         self.selected_indices = []
+
         self.highlighted_lane = None
         self.grid_visible = False
         self.tooltip = self.ax.text(0, 0, '', bbox=dict(facecolor='white', alpha=0.8), visible=False)
@@ -27,19 +30,21 @@ class PlotManager:
         self.slider_weight = None
         self.setup_widgets()
         self.setup_navigation()
-        self.update_plot(data)
+
+        # Call update_plot with the new graph data
+        self.update_plot(nodes, edges)
 
     def setup_widgets(self):
         ax_size = plt.axes([0.6, 0.02, 0.3, 0.03])
         self.slider_size = Slider(ax_size, 'Point Size', 1, 100, valinit=10)
-        self.slider_size.on_changed(self.event_handler.update_point_sizes)
+        # self.slider_size.on_changed(self.event_handler.update_point_sizes) # Re-enable later
 
         ax_smooth = plt.axes([0.1, 0.06, 0.8, 0.03])
         self.slider_smooth = Slider(ax_smooth, 'Smoothness', 0.1, 30.0, valinit=1.0)
 
         ax_weight = plt.axes([0.1, 0.02, 0.3, 0.03])
-        self.slider_weight = Slider(ax_weight, 'Smoothing Weight', 1, 100, valinit=20)  # Default value 20
-        self.slider_weight.on_changed(lambda val: self.event_handler.update_smoothing_weight(val))
+        self.slider_weight = Slider(ax_weight, 'Smoothing Weight', 1, 100, valinit=20)
+        # self.slider_weight.on_changed(lambda val: self.event_handler.update_smoothing_weight(val)) # Re-enable later
 
         self.fig.canvas.draw()
 
@@ -75,7 +80,8 @@ class PlotManager:
             print(f"Error during scroll: {e}")
 
     def on_motion(self, event):
-        if event.inaxes != self.ax or self.data_manager.data.size == 0:
+        # Use self.data_manager.nodes instead of .data
+        if event.inaxes != self.ax or self.data_manager.nodes.size == 0:
             self.tooltip.set_visible(False)
             if self.nearest_point:
                 self.nearest_point.remove()
@@ -84,17 +90,29 @@ class PlotManager:
             return
         try:
             x, y = event.xdata, event.ydata
-            distances = np.sqrt((self.data_manager.data[:, 0] - x) ** 2 + (self.data_manager.data[:, 1] - y) ** 2)
-            closest_idx = np.argmin(distances)
+
+            # --- UPDATED ---
+            # Compare distances against node x, y (cols 1, 2)
+            nodes = self.data_manager.nodes
+            distances = np.sqrt((nodes[:, 1] - x) ** 2 + (nodes[:, 2] - y) ** 2)
+            closest_idx = np.argmin(distances)  # This is the ROW index
+
             if distances[closest_idx] < self.D / 100:
-                point = self.data_manager.data[closest_idx]
+                point = nodes[closest_idx]
+
+                # Update tooltip to show new info
+                # [point_id, x, y, yaw, original_lane_id]
                 self.tooltip.set_text(
-                    f'X: {point[0]:.2f}\nY: {point[1]:.2f}\nLane: {int(point[-1])}\nIndex: {int(point[4])}')
-                self.tooltip.set_position((point[0], point[1]))
+                    f'X: {point[1]:.2f}\nY: {point[2]:.2f}\n'
+                    f'Lane: {int(point[4])}\nPointID: {int(point[0])}'
+                )
+                self.tooltip.set_position((point[1], point[2]))
+                # --- END UPDATED ---
+
                 self.tooltip.set_visible(True)
                 if self.nearest_point:
                     self.nearest_point.remove()
-                self.nearest_point = self.ax.scatter(point[0], point[1], s=30, color='cyan', marker='o', alpha=0.5)
+                self.nearest_point = self.ax.scatter(point[1], point[2], s=30, color='cyan', marker='o', alpha=0.5)
             else:
                 self.tooltip.set_visible(False)
                 if self.nearest_point:
@@ -109,7 +127,12 @@ class PlotManager:
             try:
                 idx = self.ax.legend_.get_lines().index(event.artist)
                 if idx < len(self.lane_scatter_plots):
-                    lane_id = int(np.unique(self.data_manager.data[self.indices[idx], -1])[0])
+
+                    # --- UPDATED ---
+                    # Get lane_id (col 4) from self.nodes
+                    lane_id = int(np.unique(self.data_manager.nodes[self.indices[idx], 4])[0])
+                    # --- END UPDATED ---
+
                     if self.highlighted_lane == lane_id:
                         self.highlighted_lane = None
                     else:
@@ -127,14 +150,15 @@ class PlotManager:
             legend_line.set_picker(True)
             legend_line.set_pickradius(5)
 
-    def update_plot(self, data, selected_indices=None):
+    def update_plot(self, nodes, edges, selected_indices=None):
         if selected_indices is None:
             selected_indices = self.selected_indices
-        self.selected_indices = selected_indices
+        self.selected_indices = selected_indices  # row indices of nodes
 
         start_time = time.time()
         try:
-            for plot in self.lane_scatter_plots + self.start_point_plots + self.extra_scatter_plots:
+            # Clear all plot elements
+            for plot in self.lane_scatter_plots + self.start_point_plots + self.extra_scatter_plots + self.edge_plots:
                 plot.remove()
             if self.event_handler.smoothing_preview_line is not None:
                 try:
@@ -142,55 +166,78 @@ class PlotManager:
                 except ValueError:
                     pass
                 self.event_handler.smoothing_preview_line = None
+
             self.lane_scatter_plots = []
             self.start_point_plots = []
             self.extra_scatter_plots = []
+            self.edge_plots = []  # Clear edges
             self.indices = []
 
-            if data.size == 0:
+            if nodes.size == 0:
                 self.ax.set_title("No Data")
                 self.fig.canvas.draw_idle()
                 return
 
-            unique_lane_ids = np.unique(data[:, -1])
+            # --- 1. PLOT EDGES ---
+            if edges.size > 0:
+                # Create a lookup dictionary for node coordinates by point_id
+                # Node: [point_id, x, y, yaw, original_lane_id]
+                node_coords = {int(node[0]): (node[1], node[2]) for node in nodes}
+
+                edge_lines = []  # Store (x_pairs, y_pairs) for plotting
+                for from_id, to_id in edges:
+                    if from_id in node_coords and to_id in node_coords:
+                        p1 = node_coords[from_id]
+                        p2 = node_coords[to_id]
+                        edge_lines.append(([p1[0], p2[0]], [p1[1], p2[1]]))
+
+                for x_pair, y_pair in edge_lines:
+                    # Plot all edges as thin black lines
+                    line = self.ax.plot(x_pair, y_pair, 'k-', alpha=0.3, zorder=1)[0]
+                    self.edge_plots.append(line)
+
+            # --- 2. PLOT NODES (POINTS) ---
+            # Node: [point_id, x, y, yaw, original_lane_id]
+            unique_lane_ids = np.unique(nodes[:, 4])
             colors = plt.cm.get_cmap('tab10')(np.linspace(0, 1, max(len(unique_lane_ids), 10)))
 
             for lane_id in unique_lane_ids:
-                mask = data[:, -1] == lane_id
-                lane_data = data[mask]
-                if len(lane_data) > 0:
-                    label = self.file_names[int(lane_id)] if int(lane_id) < len(self.file_names) else f"Lane {lane_id}"
-                    sc = self.ax.scatter(lane_data[:, 0], lane_data[:, 1], s=10, label=label,
-                                         color=colors[int(lane_id)], marker='o', picker=True)
-                    self.lane_scatter_plots.append(sc)
-                    self.indices.append(np.where(mask)[0])
+                mask = nodes[:, 4] == lane_id
+                lane_nodes = nodes[mask]
 
-                    start_idx = lane_data[:, 4].argmin()
-                    start_point = lane_data[start_idx]
-                    start_sc = self.ax.scatter(start_point[0], start_point[1], s=50, color=colors[int(lane_id)],
-                                               marker='s', label=f'Lane {lane_id} Start')
+                if len(lane_nodes) > 0:
+                    label = self.file_names[int(lane_id)] if int(lane_id) < len(self.file_names) else f"Lane {lane_id}"
+                    sc = self.ax.scatter(lane_nodes[:, 1], lane_nodes[:, 2], s=10, label=label,
+                                         color=colors[int(lane_id)], marker='o', picker=True, zorder=2)
+                    self.lane_scatter_plots.append(sc)
+                    self.indices.append(np.where(mask)[0])  # Store row indices
+
+            # --- 3. PLOT START POINTS ---
+            if edges.size > 0:
+                # Find all nodes that are "to" nodes (i.e., have an incoming edge)
+                to_ids = set(edges[:, 1])
+                # A start node is any node that is not a "to" node
+                start_nodes = [node for node in nodes if int(node[0]) not in to_ids]
+
+                for node in start_nodes:
+                    lane_id = int(node[4])
+                    start_sc = self.ax.scatter(node[1], node[2], s=50, color=colors[lane_id],
+                                               marker='s', label=f'Lane {lane_id} Start', zorder=3)
                     self.start_point_plots.append(start_sc)
 
-            # if selected_indices:
-            #     selected_points = data[np.array(selected_indices, dtype=int)]
-            #     sc = self.ax.scatter(selected_points[:, 0], selected_points[:, 1], s=10, color='red', marker='o',
-            #                          label='Selected')
-            #     self.extra_scatter_plots.append(sc)
+            # --- 4. PLOT SELECTED POINTS ---
+            if self.selected_indices:
+                selected_nodes = nodes[np.array(self.selected_indices, dtype=int)]
+                sc = self.ax.scatter(selected_nodes[:, 1], selected_nodes[:, 2], s=30, color='red', marker='x',
+                                     label='Selected', zorder=4)
+                self.extra_scatter_plots.append(sc)
 
+            # --- 5. PLOT MERGE/SMOOTHING POINTS (from event_handler) ---
             if self.event_handler.merge_mode:
-                if self.event_handler.merge_point_1 is not None:
-                    point_1 = data[self.event_handler.merge_point_1]
-                    marker = '>' if self.event_handler.merge_point_1_type == 'end' else '<'
-                    sc = self.ax.scatter(point_1[0], point_1[1], s=100, color='purple', marker=marker,
-                                         label=f'Lane {self.event_handler.merge_lane_1} {self.event_handler.merge_point_1_type}')
-                    self.extra_scatter_plots.append(sc)
-                if self.event_handler.merge_point_2 is not None:
-                    point_2 = data[self.event_handler.merge_point_2]
-                    marker = '>' if self.event_handler.merge_point_2_type == 'end' else '<'
-                    sc = self.ax.scatter(point_2[0], point_2[1], s=100, color='orange', marker=marker,
-                                         label=f'Lane {self.event_handler.merge_lane_2} {self.event_handler.merge_point_2_type}')
-                    self.extra_scatter_plots.append(sc)
+                # This logic will need to be updated in event_handler.py
+                pass
 
+            # --- 6. FINALIZE PLOT ---
             self.ax.set_xlabel('X')
             self.ax.set_ylabel('Y')
             self.ax.set_title('Lane Data Visualization')
