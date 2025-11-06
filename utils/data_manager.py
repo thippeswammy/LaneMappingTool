@@ -1,306 +1,158 @@
 import os
 import shutil
 import time
-
 import numpy as np
-
-from DataVisualizationEditingTool.utils.network_ import pickerGenerateViewer
+import pickle
+import networkx as nx
 
 
 class DataManager:
-    def __init__(self, data, file_names):
-        if data.size > 0:
-            if len(data.shape) != 2 or data.shape[1] != 6:
-                raise ValueError(
-                    f"Expected data to be a 2D array with 6 columns (x, y, yaw, frame_idx, index, lane_id), "
-                    f"got shape {data.shape}"
-                )
-            if not np.issubdtype(data[:, -1].dtype, np.integer):
-                data[:, -1] = data[:, -1].astype(int)
-            if not np.issubdtype(data[:, 3].dtype, np.integer) or not np.issubdtype(data[:, 4].dtype, np.integer):
-                data[:, 3] = data[:, 3].astype(int)
-                data[:, 4] = data[:, 4].astype(int)
-            if not np.array_equal(data[:, 3], data[:, 4]):
-                raise ValueError("frame_idx and index columns must be identical")
-            self.data = data.copy()
-        else:
-            self.data = np.array([])
-
+    def __init__(self, nodes, edges, file_names):
+        self.nodes = nodes
+        self.edges = edges
         self.file_names = file_names
-        self.total_cols = data.shape[1] if data.size > 0 else 0
-        self.history = [self.data.copy()] if self.data.size > 0 else [np.array([])]
+
+        if self.nodes.size > 0:
+            self._next_point_id = int(np.max(self.nodes[:, 0])) + 1
+        else:
+            self._next_point_id = 0
+
+        self.history = [(self.nodes.copy(), self.edges.copy())]
         self.redo_stack = []
+
         self.last_backup = time.time()
         self.backup_interval = 300  # 5 minutes
 
-        print(f"DataManager initialized with {len(self.data)} points")
+        print(f"DataManager initialized with {len(self.nodes)} nodes and {len(self.edges)} edges.")
 
-    def add_point(self, x, y, lane_id):
+    def _get_new_point_id(self):
+        new_id = self._next_point_id
+        self._next_point_id += 1
+        return new_id
+
+    def add_node(self, x, y, original_lane_id):
         try:
-            new_point = np.zeros((1, self.total_cols))
-            new_point[0, 0] = x
-            new_point[0, 1] = y
-            new_point[0, -1] = lane_id
-            new_index = len(self.data)
-            new_point[0, 3] = new_index
-            new_point[0, 4] = new_index
-            self.data = np.vstack([self.data, new_point]) if self.data.size > 0 else new_point
-            self.history.append(self.data.copy())
+            new_point_id = self._get_new_point_id()
+            new_node = np.array([[new_point_id, x, y, 0.0, original_lane_id]])
+
+            if self.nodes.size > 0:
+                self.nodes = np.vstack([self.nodes, new_node])
+            else:
+                self.nodes = new_node
+
+            self.history.append((self.nodes.copy(), self.edges.copy()))
             self.redo_stack = []
             self._auto_save_backup()
-            print(f"Added point: ({x:.2f}, {y:.2f}, lane_id={lane_id})")
-        except Exception as e:
-            print(f"Error adding point: {e}")
+            print(f"Added node {new_point_id}: ({x:.2f}, {y:.2f}, lane_id={original_lane_id})")
+            return new_point_id
 
-    def delete_points(self, indices):
-        """Delete points at specified indices from the data array."""
-        if not indices:
+        except Exception as e:
+            print(f"Error adding node: {e}")
+            return None
+
+    def add_edge(self, from_point_id, to_point_id):
+        try:
+            if np.any((self.edges[:, 0] == from_point_id) & (self.edges[:, 1] == to_point_id)):
+                print(f"Edge from {from_point_id} to {to_point_id} already exists.")
+                return
+
+            new_edge = np.array([[from_point_id, to_point_id]], dtype=int)
+
+            if self.edges.size > 0:
+                self.edges = np.vstack([self.edges, new_edge])
+            else:
+                self.edges = new_edge
+
+            from_node_mask = self.nodes[:, 0] == from_point_id
+            to_node_mask = self.nodes[:, 0] == to_point_id
+
+            if np.any(from_node_mask) and np.any(to_node_mask):
+                from_node = self.nodes[from_node_mask][0]
+                to_node = self.nodes[to_node_mask][0]
+
+                dx = to_node[1] - from_node[1]  # x_to - x_from
+                dy = to_node[2] - from_node[2]  # y_to - y_from
+                yaw = np.arctan2(dy, dx)
+                self.nodes[from_node_mask, 3] = yaw
+
+            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.redo_stack = []
+            self._auto_save_backup()
+            print(f"Added edge from {from_point_id} to {to_point_id}")
+
+        except Exception as e:
+            print(f"Error adding edge: {e}")
+
+    def delete_points(self, point_ids_to_delete):
+        if not point_ids_to_delete:
             return
         try:
-            # Validate indices
-            indices = np.asarray(indices, dtype=int)
-            if np.any(indices < 0) or np.any(indices >= len(self.data)):
-                print(f"Error: Indices {indices} out of bounds for data of length {len(self.data)}")
-                return
-            mask = np.ones(len(self.data), dtype=bool)
-            mask[indices] = False
-            self.data = self.data[mask]
-            # Handle empty data case
-            if self.data.size == 0:
-                self.data = np.array([], dtype=self.data.dtype).reshape(0, self.total_cols)
-            else:
-                new_indices = np.arange(len(self.data))
-                self.data[:, 3] = new_indices
-                self.data[:, 4] = new_indices
-            self.history.append(self.data.copy())
+            point_ids = np.asarray(point_ids_to_delete, dtype=int)
+
+            node_mask = ~np.isin(self.nodes[:, 0], point_ids)
+            self.nodes = self.nodes[node_mask]
+
+            if self.edges.size > 0:
+                edge_mask_from = ~np.isin(self.edges[:, 0], point_ids)
+                edge_mask_to = ~np.isin(self.edges[:, 1], point_ids)
+                edge_mask_combined = edge_mask_from & edge_mask_to
+                self.edges = self.edges[edge_mask_combined]
+
+            self.history.append((self.nodes.copy(), self.edges.copy()))
             self.redo_stack = []
             self._auto_save_backup()
-            print(f"Deleted {len(indices)} points")
+            print(f"Deleted {len(point_ids)} nodes and associated edges")
+
         except Exception as e:
             print(f"Error deleting points: {e}")
 
-    def change_ids(self, indices, new_id):
-        if not indices:
+    def change_ids(self, point_ids, new_original_lane_id):
+        if not point_ids:
             return
         try:
-            self.data[indices, -1] = new_id
-            self.history.append(self.data.copy())
-            self.redo_stack = []
-            self._auto_save_backup()
-            print(f"Changed lane IDs for {len(indices)} points to {new_id}")
+            point_ids = np.asarray(point_ids, dtype=int)
+            node_mask = np.isin(self.nodes[:, 0], point_ids)
+
+            if np.any(node_mask):
+                self.nodes[node_mask, 4] = new_original_lane_id
+                self.history.append((self.nodes.copy(), self.edges.copy()))
+                self.redo_stack = []
+                self._auto_save_backup()
+                print(f"Changed original lane ID for {np.sum(node_mask)} nodes to {new_original_lane_id}")
+            else:
+                print("No matching nodes found to change ID.")
+
         except Exception as e:
             print(f"Error changing IDs: {e}")
 
     def remove_points_above(self, index, lane_id):
-        """Remove points in the specified lane with local indices >= the local index of the given global index."""
-        try:
-            # Validate index and lane
-            if index < 0 or index >= len(self.data) or int(self.data[index, -1]) != lane_id:
-                print(f"Invalid index {index} or lane mismatch for lane {lane_id}")
-                return
-            lane_mask = self.data[:, -1] == lane_id
-            lane_indices = np.where(lane_mask)[0]
-            if len(lane_indices) == 0:
-                print(f"No points found in lane {lane_id}")
-                return
-            lane_data = self.data[lane_mask]
-            # Check for duplicate indices
-            indices = lane_data[:, 4]
-            if len(indices) != len(np.unique(indices)):
-                print(f"Warning: Duplicate indices found in lane {lane_id}: {indices}")
-            # Sort by index column (data[:, 4])
-            sorted_indices = lane_data[:, 4].argsort()
-            sorted_global_indices = lane_indices[sorted_indices]
-            # Find the local index of the clicked point
-            target_global_idx = np.where(sorted_global_indices == index)[0]
-            if len(target_global_idx) == 0:
-                print(f"Global index {index} not found in lane {lane_id}")
-                return
-            if len(target_global_idx) > 1:
-                print(f"Warning: Multiple matches for global index {index} in lane {lane_id}, using first match")
-            local_index = target_global_idx[0]
-            indices_to_remove = sorted_global_indices[:local_index]
-            list_ = []
-            for i in indices_to_remove:
-                list_.append(i)
-            self.delete_points(list_)
-            print(
-                f"Removed {len(indices_to_remove)} points above local index {local_index} (global index {index}) in lane {lane_id}")
-        except Exception as e:
-            print(f"Error removing points above: {e}")
+        print("Function 'remove_points_above' is not implemented for graph model.")
+        pass
 
     def remove_points_below(self, index, lane_id):
-        """Remove points in the specified lane with global indices <= the given index."""
-        try:
-            # Validate index
-            if index < 0 or index >= len(self.data):
-                print(f"Invalid index {index}")
-                return
-            # Filter points by lane_id
-            lane_mask = self.data[:, -1] == lane_id
-            lane_indices = np.where(lane_mask)[0]
-            if len(lane_indices) == 0:
-                print(f"No points found in lane {lane_id}")
-                return
-            # Select points with global indices <= index
-            indices_to_remove = lane_indices[lane_indices >= index]
-            # print('indices_to_remove=>', indices_to_remove)
-            if len(indices_to_remove) == 0:
-                print(f"No points with global indices <= {index} in lane {lane_id}")
-                return
-            list_ = []
-            for i in indices_to_remove:
-                list_.append(i)
-            self.delete_points(list_)
-            print(f"Removed {len(indices_to_remove)} points below index {index} in lane {lane_id}")
-        except Exception as e:
-            print(f"Error removing points below: {e}")
+        print("Function 'remove_points_below' is not implemented for graph model.")
+        pass
 
-    def merge_lanes(self, lane_id_1, lane_id_2, point_1, point_2, point_1_type, point_2_type):
-        """Merge lane_id_2 into lane_id_1, ensuring continuous index sequence with correct start/end connections."""
-        if point_1 > point_2:
-            lane_id_1, point_1, point_1_type, lane_id_2, point_2, point_2_type = (
-                lane_id_2, point_2, point_2_type, lane_id_1, point_1, point_1_type)
-        # lane_1_mask = self.data[:, -1] == lane_id_1
-        # lane_2_mask = self.data[:, -1] == lane_id_2
-        # if not np.any(lane_1_mask) or not np.any(lane_2_mask):
-        #     print(f"One or both lanes ({lane_id_1}, {lane_id_2}) are empty")
-        #     return
-        #
-        # lane_1_indices = np.where(lane_1_mask)[0]
-        # lane_2_indices = np.where(lane_2_mask)[0]
-        # print('lane_1_indices=>', lane_1_indices)
-        # print('lane_2_indices=>', lane_2_indices)
-        # print('-' * 50)
-        # print(lane_2_indices[-1] > lane_1_indices[0], ' ||', point_1 > point_2)
-        # print('point_1=>', point_1, 'point_2=>', point_2)
-        # print('==>', lane_2_indices[-1], lane_1_indices[0])
-        # if point_1 > point_2:
-        #     lane_id_1, point_1, point_1_type, lane_id_2, point_2, point_2_type = (
-        #         lane_id_2, point_2, point_2_type, lane_id_1, point_1, point_1_type)
+    def merge_lanes(self, *args):
+        print("Function 'merge_lanes' is obsolete. Use 'add_edge(from_id, to_id)' instead.")
+        pass
 
-        if self.data.size == 0:
-            print("No data to merge")
-            return
-        try:
-            lane_1_mask = self.data[:, -1] == lane_id_1
-            lane_2_mask = self.data[:, -1] == lane_id_2
-            if not np.any(lane_1_mask) or not np.any(lane_2_mask):
-                print(f"One or both lanes ({lane_id_1}, {lane_id_2}) are empty")
-                return
-
-            lane_1_data = self.data[lane_1_mask]
-            lane_2_data = self.data[lane_2_mask]
-            lane_1_indices = np.where(lane_1_mask)[0]
-            lane_2_indices = np.where(lane_2_mask)[0]
-
-            # Find local indices of selected points
-            point_1_local = np.where(lane_1_indices == point_1)[0]
-            point_2_local = np.where(lane_2_indices == point_2)[0]
-            if len(point_1_local) == 0 or len(point_2_local) == 0:
-                print(f"Invalid points: point_1={point_1}, point_2={point_2}")
-                return
-            point_1_local = point_1_local[0]
-            point_2_local = point_2_local[0]
-
-            # Sort lanes by index column (data[:, 4]) for consistent ordering
-            lane_1_sorted = lane_1_data[np.argsort(lane_1_data[:, 4])]
-            lane_2_sorted = lane_2_data[np.argsort(lane_2_data[:, 4])]
-
-            # Debug: Print input points and their coordinates
-            print(
-                f"Point 1 ({point_1_type}): index={point_1}, local={point_1_local}, coords=({lane_1_sorted[point_1_local, 0]}, {lane_1_sorted[point_1_local, 1]})")
-            print(
-                f"Point 2 ({point_2_type}): index={point_2}, local={point_2_local}, coords=({lane_2_sorted[point_2_local, 0]}, {lane_2_sorted[point_2_local, 1]})")
-
-            # Select parts based on start/end
-            if point_1_type == 'end':
-                lane_1_part = lane_1_sorted[:point_1_local + 1]
-            else:  # start
-                lane_1_part = lane_1_sorted[point_1_local:]
-            print(f"Lane 1 part indices: {lane_1_part[:, 4]}")
-
-            # Determine lane_2_part direction based on connection
-            if point_2_type == 'start' and point_1_type == 'end':
-                lane_2_part = lane_2_sorted
-            elif point_2_type == 'end' and point_1_type == 'start':
-                lane_2_part = lane_2_sorted
-            elif point_2_type == 'start' and point_1_type == 'start':
-                lane_2_part = lane_2_sorted[::-1]  # Reverse for start-to-start
-            elif point_2_type == 'end' and point_1_type == 'end':
-                lane_2_part = lane_2_sorted[::-1]  # Reverse for end-to-end
-            print(f"Lane 2 part indices: {lane_2_part[:, 4]}")
-
-            # Check connection point proximity
-            connection_x1 = lane_1_part[-1, 0]
-            connection_y1 = lane_1_part[-1, 1]
-            connection_x2 = lane_2_part[0, 0]
-            connection_y2 = lane_2_part[0, 1]
-            distance = np.sqrt((connection_x2 - connection_x1) ** 2 + (connection_y2 - connection_y1) ** 2)
-            print(f"Connection distance between lanes: {distance}")
-
-            # Combine parts, preserving original index order
-            merged_data = np.vstack([lane_1_part, lane_2_part])
-            merged_data[:, -1] = lane_id_1
-
-            # Debug: Print merged data before indexing
-            print(f"Merged data x-coordinates: {merged_data[:, 0]}")
-            print(f"Merged data original indices: {merged_data[:, 4]}")
-
-            # Recalculate yaw based on new order
-            N = len(merged_data)
-            if N > 1:
-                dx = np.diff(merged_data[:, 0])
-                dy = np.diff(merged_data[:, 1])
-                merged_data[:-1, 2] = np.arctan2(dy, dx)
-                merged_data[-1, 2] = merged_data[-2, 2]
-            else:
-                merged_data[:, 2] = 0.0 if N > 0 else 0.0
-
-            # Assign indices for merged lane (0 to N-1, +1 increments)
-            merged_data[:, 3] = np.arange(N)
-            merged_data[:, 4] = np.arange(N)
-
-            # Check for duplicate indices
-            if len(np.unique(merged_data[:, 4])) != len(merged_data):
-                print(f"Warning: Duplicate indices in merged lane {lane_id_1}: {merged_data[:, 4]}")
-
-            # Collect other lanes' data
-            other_lanes_mask = ~np.logical_or(lane_1_mask, lane_2_mask)
-            other_data = self.data[other_lanes_mask].copy() if np.any(other_lanes_mask) else np.array([])
-
-            # Reindex other lanes starting from N
-            if other_data.size > 0:
-                unique_lanes = np.unique(other_data[:, -1])
-                offset = N
-                for lane_id in unique_lanes:
-                    lane_mask = other_data[:, -1] == lane_id
-                    lane_size = np.sum(lane_mask)
-                    other_data[lane_mask, 3] = np.arange(offset, offset + lane_size)
-                    other_data[lane_mask, 4] = np.arange(offset, offset + lane_size)
-                    offset += lane_size
-                # Check for duplicates in other lanes
-                if len(np.unique(other_data[:, 4])) != len(other_data):
-                    print(f"Warning: Duplicate indices in other lanes: {other_data[:, 4]}")
-
-            # Combine merged and other lanes
-            self.data = np.vstack([merged_data, other_data]) if other_data.size > 0 else merged_data
-
-            # Debug: Print final indices
-            print(f"Merged lane {lane_id_1} indices: {self.data[self.data[:, -1] == lane_id_1][:, 4]}")
-            if other_data.size > 0:
-                print(f"Other lanes indices: {self.data[self.data[:, -1] != lane_id_1][:, 4]}")
-
-            # Update file names
-            self.file_names = [self.file_names[i] if i < len(self.file_names) else f"Lane_{i}" for i in
-                               range(max(np.unique(self.data[:, -1]).astype(int)) + 1)]
-            self.history.append(self.data.copy())
-            self.redo_stack = []
-            self._auto_save_backup()
-            print(f"Merged lane {lane_id_2} into lane {lane_id_1}")
-            return point_1, point_1 + 1, point_1_type, point_2_type
-        except Exception as e:
-            print(f"Error merging lanes: {e}")
+    def _create_networkx_graph(self):
+        G = nx.DiGraph()
+        if self.nodes.size > 0:
+            for node_data in self.nodes:
+                point_id = int(node_data[0])
+                G.add_node(
+                    point_id,
+                    x=node_data[1],
+                    y=node_data[2],
+                    yaw=node_data[3],
+                    original_lane_id=int(node_data[4])
+                )
+        if self.edges.size > 0:
+            for edge_data in self.edges:
+                G.add_edge(int(edge_data[0]), int(edge_data[1]))
+        return G
 
     def save_all_lanes(self):
         folder = "workspace-Temp"
@@ -315,27 +167,35 @@ class DataManager:
                         shutil.rmtree(file_path)
                 except Exception as e:
                     print(f"Failed to delete {file_path}: {e}")
-            unique_lane_ids = np.unique(self.data[:, -1])
-            for lane_id in unique_lane_ids:
-                mask = self.data[:, -1] == lane_id
-                lane_data = self.data[mask]
-                if lane_data.size > 0:
-                    filename = os.path.join(folder, f"Lane_{int(lane_id)}.npy")
-                    np.save(filename, lane_data[:, :3])
-                    print(f"Saved lane {lane_id} to {filename}")
-                else:
-                    print(f"No data for lane {lane_id}, skipping save")
+
+            nodes_filename = os.path.join(folder, "graph_nodes.npy")
+            edges_filename = os.path.join(folder, "graph_edges.npy")
+            np.save(nodes_filename, self.nodes)
+            np.save(edges_filename, self.edges)
+            print(f"Saved graph nodes to {nodes_filename}")
+            print(f"Saved graph edges to {edges_filename}")
+
+            G = self._create_networkx_graph()
+            pickle_file_path = os.path.join(folder, "output.pickle")
+            with open(pickle_file_path, "wb") as f:
+                pickle.dump(G, f)
+            print(f"Saved NetworkX graph to {pickle_file_path}")
+
         except Exception as e:
-            print(f"Error saving lanes: {e}")
+            print(f"Error saving graph data to temp: {e}")
+
+    # --- FUNCTIONS BELOW WERE MISSING ---
 
     def clear_data(self):
         try:
-            self.data = np.array([])
-            self.history = [np.array([])]
+            self.nodes = np.array([])
+            self.edges = np.array([])
+            self.history = [(np.array([]), np.array([]))]
             self.redo_stack = []
             self.file_names = []
+            self._next_point_id = 0
             self._auto_save_backup()
-            print("Cleared all data")
+            print("Cleared all nodes and edges")
         except Exception as e:
             print(f"Error clearing data: {e}")
 
@@ -343,39 +203,66 @@ class DataManager:
         try:
             if len(self.history) <= 1:
                 print("Nothing to undo")
-                return self.data, False
+                return self.nodes, self.edges, False
+
             self.redo_stack.append(self.history.pop())
-            self.data = self.history[-1].copy()
+
+            nodes_copy, edges_copy = self.history[-1]
+            self.nodes = nodes_copy.copy()
+            self.edges = edges_copy.copy()
+
             self._auto_save_backup()
-            return self.data, True
+            print("Undo performed")  # Added print statement for confirmation
+            return self.nodes, self.edges, True
+
         except Exception as e:
             print(f"Error during undo: {e}")
-            return self.data, False
+            return self.nodes, self.edges, False
 
     def redo(self):
         try:
             if not self.redo_stack:
                 print("Nothing to redo")
-                return self.data, False
-            self.data = self.redo_stack.pop()
-            self.history.append(self.data.copy())
+                return self.nodes, self.edges, False
+
+            nodes_copy, edges_copy = self.redo_stack.pop()
+            self.nodes = nodes_copy.copy()
+            self.edges = edges_copy.copy()
+
+            self.history.append((self.nodes.copy(), self.edges.copy()))
+
             self._auto_save_backup()
-            return self.data, True
+            print("Redo performed")  # Added print statement for confirmation
+            return self.nodes, self.edges, True
+
         except Exception as e:
             print(f"Error during redo: {e}")
-            return self.data, False
+            return self.nodes, self.edges, False
+
+    # --- END OF MISSING FUNCTIONS ---
 
     def save(self):
         try:
-            filename = "./files/WorkingLane.npy"
-            if self.data.size > 0:
-                np.save(filename, self.data[:, :3])
-            else:
-                np.save(filename, np.array([]))
-            print(f"Saved x, y, yaw to {filename}")
+            os.makedirs("./files", exist_ok=True)
+            nodes_filename = "./files/WorkingNodes.npy"
+            edges_filename = "./files/WorkingEdges.npy"
+
+            np.save(nodes_filename, self.nodes)
+            np.save(edges_filename, self.edges)
+
+            print(f"Saved nodes to {nodes_filename}")
+            print(f"Saved edges to {edges_filename}")
             self._auto_save_backup()
-            pickerGenerateViewer()
-            return filename
+
+            G = self._create_networkx_graph()
+            pickle_file_path = r"./files/output.pickle"
+            with open(pickle_file_path, "wb") as f:
+                pickle.dump(G, f)
+
+            print(f"Saved NetworkX graph to {pickle_file_path}")
+
+            return nodes_filename
+
         except Exception as e:
             print(f"Error saving data: {e}")
             return None
@@ -384,12 +271,17 @@ class DataManager:
         try:
             if time.time() - self.last_backup < self.backup_interval:
                 return
+
             os.makedirs("workspace-Backup", exist_ok=True)
             timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = os.path.join("workspace-Backup", f"backup_{timestamp}.npy")
-            if self.data.size > 0:
-                np.save(filename, self.data[:, :3])
-                print(f"Auto-saved backup to {filename}")
+            nodes_filename = os.path.join("workspace-Backup", f"backup_nodes_{timestamp}.npy")
+            edges_filename = os.path.join("workspace-Backup", f"backup_edges_{timestamp}.npy")
+
+            if self.nodes.size > 0:
+                np.save(nodes_filename, self.nodes)
+                np.save(edges_filename, self.edges)
+                print(f"Auto-saved backup nodes and edges to {timestamp}")
+
             self.last_backup = time.time()
         except Exception as e:
             print(f"Backup failed: {e}")
