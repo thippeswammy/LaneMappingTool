@@ -75,10 +75,12 @@ class CurveManager:
         return None
 
     def _find_path(self, start_id, end_id):
-        """
-        Finds a path from start_id to end_id using BFS, searching
-        bidirectionally (forward and backward).
-        Returns a list of point_ids [start_id, ..., end_id] or None.
+        """Finds a path from start_id to end_id using bidirectional BFS.
+        
+        This function constructs a bidirectional adjacency list from the edges in
+        self.data_manager. It then performs a breadth-first search (BFS) to find a path
+        from start_id to end_id. If a path is found, it returns a list of point_ids
+        representing the path; otherwise, it returns None.
         """
         if self.data_manager.edges.size == 0:
             return None
