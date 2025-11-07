@@ -248,6 +248,18 @@ class EventHandler:
         self.update_button_states()
 
     def clear_operation_modes(self, back_to_select=True):
+        """Clear various operation modes and reset selections.
+        
+        This method resets the states of smoothing, merging, removing, and reversing
+        paths.  It also clears the drawing mode and manages the selection indices based
+        on the  current mode. If not in smoothing mode, it clears the selected indices
+        and updates  the point sizes. The selection mode is set based on the
+        back_to_select parameter,  which determines whether to activate or deactivate
+        the selection mode.
+        
+        Args:
+            back_to_select (bool): Indicates whether to return to selection mode.
+        """
         self.clear_smoothing_state()
         self.clear_merge_state()
         self.clear_remove_state()
@@ -286,6 +298,7 @@ class EventHandler:
         self.update_status()
 
     def on_straighten(self, event):
+        """Handles the straightening operation based on the current state."""
         if not self.curve_manager:
             self.update_status("Error: CurveManager not available.")
             return
@@ -422,12 +435,12 @@ class EventHandler:
     def finalize_reverse_path(self):
         """Finalize the reversal path between two nodes.
         
-        This method checks if the start and end nodes for the reversal are set.  If
-        either is not set, it updates the status and clears operation modes.  It then
-        verifies the existence of a CurveManager and attempts to find a  path between
-        the specified nodes. If a valid path is found, it calls  the data_manager to
-        reverse the path and updates the plot accordingly.  Finally, it clears
-        operation modes and updates button states.
+        This method checks if the start and end nodes for the reversal are set. If
+        either  is not set, it updates the status and clears operation modes. It
+        verifies the  existence of a CurveManager and attempts to find a path between
+        the specified  nodes. If a valid path is found, it calls the data_manager to
+        reverse the path  and updates the plot accordingly. Finally, it clears
+        operation modes and updates  button states.
         """
         if self.reverse_start_id is None or self.reverse_end_id is None:
             self.update_status("Error: Start or end node not set.")
@@ -705,6 +718,14 @@ class EventHandler:
         self.update_button_states()
 
     def on_pick(self, event):
+        """Handles the picking event for scatter plot interactions.
+        
+        This method processes mouse click events on scatter plot artists.  It checks if
+        the right mouse button was clicked and if the plot manager  is active.
+        Depending on whether the control key is pressed, it either  breaks connections
+        for a selected node or deletes the node from the  data manager. The plot is
+        then updated to reflect these changes,  and the status is updated accordingly.
+        """
         if self.plot_manager is None or event.mouseevent.button != 3 or self.plot_manager.rs.active:
             return
 
@@ -826,6 +847,7 @@ class EventHandler:
             self.update_status("Nothing to redo")
 
     def on_finalize_draw(self, event):
+        """Finalizes the drawing operation and updates the UI."""
         if not self.draw_mode or not self.curve_manager:
             return
         self.curve_manager.finalize_draw(self.selected_id)
