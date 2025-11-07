@@ -78,9 +78,9 @@ class CurveManager:
         """Finds a path from start_id to end_id using bidirectional BFS.
         
         This function constructs a bidirectional adjacency list from the edges in
-        self.data_manager. It then performs a breadth-first search (BFS) to find a path
-        from start_id to end_id. If a path is found, it returns a list of point_ids
-        representing the path; otherwise, it returns None.
+        self.data_manager. It performs a breadth-first search (BFS) to explore possible
+        paths from start_id to end_id. If a valid path is found, it returns a list of
+        point_ids representing the path; otherwise, it returns None.
         """
         if self.data_manager.edges.size == 0:
             return None
@@ -230,9 +230,21 @@ class CurveManager:
             return []
 
     def _smooth_segment(self, path_ids, preview=False):
-        """
-        Internal function to calculate smoothed points for a given path of IDs.
-        This re-implements the logic from your old _smooth_segment.
+        """Calculate smoothed points for a given path of IDs.
+        
+        This function retrieves the (x, y) coordinates for the specified path IDs and
+        identifies adjacent points that are not part of the path. It constructs a
+        fitting points array and applies spline interpolation to generate smoothed
+        coordinates, ensuring the original start and end points are preserved. The
+        function also handles cases where there are insufficient points or identical
+        coordinates.
+        
+        Args:
+            path_ids (list): A list of IDs representing the path to be smoothed.
+            preview (bool): A flag indicating whether to preview the smoothing process.
+        
+        Returns:
+            np.ndarray: An array of smoothed points, or None if smoothing cannot be performed.
         """
         if len(path_ids) < 2:
             print("Need at least 2 points to smooth")
