@@ -82,6 +82,7 @@ class EventHandler:
 
     def setup_buttons(self):
         # Button layout
+        """Sets up the buttons for the user interface."""
         ax_draw = plt.axes([0.01, 0.90, 0.1, 0.04])
         self.buttons['draw'] = Button(ax_draw, 'Draw')
         self.buttons['draw'].on_clicked(self.on_toggle_draw_mode)
@@ -145,6 +146,18 @@ class EventHandler:
 
     def update_button_states(self):
         # Draw Buttons
+        """Update the states of various buttons based on the current modes.
+        
+        This function manages the enabled states and visual appearances of buttons in
+        the user interface. It checks the current drawing and smoothing modes, updating
+        the 'draw', 'linecurve', 'cancel', 'straighten', 'export', 'remove_between',
+        and 'reverse_path' buttons accordingly. The function also adjusts button labels
+        and colors based on the active modes and selections, ensuring that the
+        interface reflects the current operational context.
+        
+        Args:
+            self: The instance of the class containing the button states and modes.
+        """
         self.buttons['draw'].eventson = True
         self.buttons['linecurve'].eventson = self.draw_mode
         self.buttons['linecurve'].ax.set_facecolor('white' if self.draw_mode else 'lightgray')
@@ -253,6 +266,7 @@ class EventHandler:
 
     #  New button handler
     def on_reverse_path(self, event):
+        """Enters reverse path mode and updates the UI accordingly."""
         self.clear_operation_modes(back_to_select=False)
         self.reverse_path_mode = True
         print("Entered Reverse Path mode.")
@@ -260,6 +274,7 @@ class EventHandler:
         self.update_button_states()
 
     def on_toggle_linecurve(self, event):
+        """Toggle the drawing mode between line and curve."""
         if not self.draw_mode or not self.curve_manager:
             self.update_status("Enter Draw Mode first")
             return
@@ -302,6 +317,7 @@ class EventHandler:
         print("Remove Above is disabled for now.")
 
     def on_remove_below(self, event):
+        """Handles the removal of items below a certain threshold."""
         self.update_status("Remove Below is disabled for now.")
         self.on_reverse_path(event)
         print("Remove Below is disabled for now.")
@@ -344,11 +360,20 @@ class EventHandler:
 
     #  New state clear function
     def clear_reverse_path_state(self):
+        """Clears the reverse path state."""
         self.reverse_path_mode = False
         self.reverse_start_id = None
         self.reverse_end_id = None
 
     def finalize_remove_between(self):
+        """Finalize the removal of nodes between two specified IDs.
+        
+        This function checks if the start and end node IDs are set, and if a
+        CurveManager is available. It then finds the path between the specified  nodes
+        and identifies any nodes that need to be removed. If valid nodes  are found, it
+        deletes them and updates the plot accordingly. The function  also manages the
+        operation modes and button states throughout the process.
+        """
         if self.remove_start_id is None or self.remove_end_id is None:
             self.update_status("Error: Start or end node not set.")
             self.clear_operation_modes(back_to_select=True)
@@ -394,6 +419,15 @@ class EventHandler:
         self.update_button_states()
 
     def finalize_reverse_path(self):
+        """Finalize the reversal path between two nodes.
+        
+        This method checks if the start and end nodes for the reversal are set.  If
+        either is not set, it updates the status and clears operation modes.  It then
+        verifies the existence of a CurveManager and attempts to find a  path between
+        the specified nodes. If a valid path is found, it calls  the data_manager to
+        reverse the path and updates the plot accordingly.  Finally, it clears
+        operation modes and updates button states.
+        """
         if self.reverse_start_id is None or self.reverse_end_id is None:
             self.update_status("Error: Start or end node not set.")
             self.clear_operation_modes(back_to_select=True)
@@ -427,6 +461,7 @@ class EventHandler:
         self.update_button_states()
 
     def on_connect_nodes(self, event):
+        """Initiates the process to connect nodes."""
         self.clear_operation_modes(back_to_select=False)
         self.merge_mode = True
         print("Please select first node to connect")
@@ -471,6 +506,18 @@ class EventHandler:
             self.update_status("Export failed")
 
     def on_click(self, event):
+        """Handle click events for various modes in the plot manager.
+        
+        This function processes mouse click events to manage different drawing and
+        selection modes. It checks the current state of the plot manager and the data
+        manager to determine the appropriate action, such as adding nodes, selecting
+        points, or initiating smoothing and merging operations. The function also
+        updates the plot and status messages based on user interactions and the current
+        mode.
+        
+        Args:
+            event: The mouse event containing information about the click position and state.
+        """
         if self.plot_manager is None or event.inaxes != self.plot_manager.ax or event.button != 1:
             return
 
@@ -583,6 +630,17 @@ class EventHandler:
             self.update_status(f"Selected node {closest_point_id}")
 
     def update_point_sizes(self):
+        """Update the sizes of points in scatter plots based on various conditions.
+        
+        This function adjusts the sizes of points in the lane scatter plots managed by
+        the plot_manager. It first checks if there are any nodes to process and
+        retrieves the selected indices. For each plot, it determines the base size of
+        the points and modifies sizes based on merge, removal, and reverse path modes.
+        Finally, it updates the scatter plot sizes and refreshes the canvas.
+        
+        Args:
+            self: The instance of the class containing the plot_manager and data_manager.
+        """
         if self.plot_manager is None:
             return
         try:
