@@ -85,7 +85,7 @@ class DataManager:
             print(f"Error adding edge: {e}")
 
     def _update_yaws(self, edge_pairs):
-        """Helper function to update yaws for a list of (from_id, to_id) pairs."""
+        """Update yaws for a list of (from_id, to_id) pairs."""
         for from_id, to_id in edge_pairs:
             from_node_mask = self.nodes[:, 0] == from_id
             to_node_mask = self.nodes[:, 0] == to_id
@@ -100,7 +100,17 @@ class DataManager:
                 self.nodes[from_node_mask, 3] = yaw
 
     def reverse_path(self, path_ids):
-        """Reverses the direction of all edges along a given path of node IDs."""
+        """def reverse_path(self, path_ids):
+        
+        Reverses the direction of all edges along a given path of node IDs.  This
+        function takes a list of node IDs and reverses the edges between them.  It
+        first checks if the path contains at least two nodes, then identifies  the
+        edges to be deleted and the corresponding edges to be added in reverse.  A mask
+        is created to filter out the edges that need to be deleted, and the  new edges
+        are added to the existing edges. Finally, it updates the yaws for  the new
+        "from" nodes and saves the current state to history for potential  undo
+        operations.
+        """
         if not path_ids or len(path_ids) < 2:
             print("Path with at least 2 nodes is required to reverse.")
             return
@@ -148,6 +158,7 @@ class DataManager:
             print(f"Error reversing path: {e}")
 
     def delete_points(self, point_ids_to_delete):
+        """Delete specified points and their associated edges from the graph."""
         if not point_ids_to_delete:
             return
         try:
@@ -302,6 +313,7 @@ class DataManager:
             return self.nodes, self.edges, False
 
     def save(self):
+        """Save nodes and edges to files and create a backup."""
         try:
             os.makedirs("./files", exist_ok=True)
             nodes_filename = "./files/WorkingNodes.npy"
