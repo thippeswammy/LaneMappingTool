@@ -1,4 +1,5 @@
 import time
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Slider, RectangleSelector
@@ -25,6 +26,7 @@ class PlotManager:
         self.tooltip = self.ax.text(0, 0, '', bbox=dict(facecolor='white', alpha=0.8), visible=False)
         self.nearest_point = None
         self.rs = RectangleSelector(self.ax, self.event_handler.on_select, useblit=True, button=[1])
+        self.rs.set_active(False)
         self.slider_smooth = None
         self.slider_size = None
         self.slider_weight = None

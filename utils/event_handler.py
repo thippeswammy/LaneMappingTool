@@ -12,10 +12,13 @@ class EventHandler:
         self.data_manager = data_manager
         self.plot_manager = None
         self.curve_manager = None
-        self.selection_mode = True
         self.draw_mode = False
         self.selected_id = 0
         self.id_set = True
+
+        # press state ---
+        self.ctrl_pressed = False
+        self.s_pressed = False
 
         # Smoothing state
         self.smoothing_point_selection = False
@@ -34,6 +37,8 @@ class EventHandler:
         self.remove_below_mode = False
         self.remove_point_idx = None
         self.remove_lane_id = None
+        self.merge_point_1_id = None
+        self.merge_point_2_id = None
 
         # --- MODIFIED: Remove Between state ---
         self.remove_between_mode = False
@@ -62,21 +67,17 @@ class EventHandler:
         self.setup_event_handlers()
         self.setup_buttons()
         # Set initial state
-        self.plot_manager.rs.set_active(self.selection_mode)
         self.update_button_states()
 
     def setup_event_handlers(self):
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
         self.fig.canvas.mpl_connect('key_press_event', self.on_key)
+        self.fig.canvas.mpl_connect('key_release_event', self.on_key_release)
         self.fig.canvas.mpl_connect('pick_event', self.on_pick)
         self.plot_manager.rs.onselect = self.on_select
 
     def setup_buttons(self):
-        # ... (Button layout is the same as your file) ...
-        ax_toggle = plt.axes([0.01, 0.95, 0.1, 0.04])
-        self.buttons['toggle'] = Button(ax_toggle, 'Select Mode')
-        self.buttons['toggle'].on_clicked(self.on_toggle_mode)
-
+        # Button layout
         ax_draw = plt.axes([0.01, 0.90, 0.1, 0.04])
         self.buttons['draw'] = Button(ax_draw, 'Draw')
         self.buttons['draw'].on_clicked(self.on_toggle_draw_mode)
@@ -175,10 +176,6 @@ class EventHandler:
         self.buttons['remove_below'].ax.set_facecolor('lightgray')
         self.buttons['remove_below'].label.set_color('gray')
 
-        # Toggle Button
-        self.buttons['toggle'].label.set_text('Select Mode' if self.selection_mode else 'Add/Delete Mode')
-        self.buttons['toggle'].ax.set_facecolor('lightcoral' if self.selection_mode else 'lightgreen')
-
         self.fig.canvas.draw_idle()
 
     def on_slider_update(self, val):
@@ -201,22 +198,6 @@ class EventHandler:
         self.update_status(f"Grid {'enabled' if self.plot_manager.grid_visible else 'disabled'}")
         self.fig.canvas.draw()
 
-    def on_toggle_mode(self, event):
-        """Toggles between Select and Add/Delete modes."""
-        self.clear_smoothing_state()
-        self.clear_merge_state()
-        self.clear_remove_state()
-        self.draw_mode = False
-        if self.curve_manager:
-            self.curve_manager.clear_draw()
-
-        self.selection_mode = not self.selection_mode
-        self.plot_manager.rs.set_active(self.selection_mode)
-
-        print(f"Entered {'selection' if self.selection_mode else 'add/delete'} mode")
-        self.update_button_states()
-        self.update_status()
-
     def on_toggle_draw_mode(self, event):
         was_already_draw = self.draw_mode
         self.clear_operation_modes(back_to_select=False)
@@ -224,10 +205,8 @@ class EventHandler:
         if not was_already_draw:
             self.draw_mode = True
             self.update_status("Draw Mode: Click to add points, 'Enter' to finalize.")
-        # If it was already draw mode, clear_operation_modes() turned it off
-        # and we will return to Add/Delete mode (since back_to_select=False)
 
-        print(f"Entered {'draw' if self.draw_mode else 'add/delete'} mode")
+        print(f"Entered {'draw' if self.draw_mode else 'navigation'} mode")
         self.update_button_states()
 
     def on_remove_between(self, event):
@@ -250,8 +229,8 @@ class EventHandler:
             self.plot_manager.selected_indices = []
             self.update_point_sizes()
 
-        self.selection_mode = back_to_select
-        self.plot_manager.rs.set_active(back_to_select)
+        # self.selection_mode = back_to_select
+        # self.plot_manager.rs.set_active(back_to_select)
 
     def on_toggle_linecurve(self, event):
         if not self.draw_mode or not self.curve_manager:
@@ -268,13 +247,11 @@ class EventHandler:
             self.update_status("Error: CurveManager not available.")
             return
 
-        # Case 1: We are confirming an existing smooth
         if self.smoothing_point_selection and self.smoothing_preview_line is not None:
             print("Confirming smooth...")
             self.curve_manager.apply_smooth()
-            self.clear_operation_modes(back_to_select=True)  # Go back to select mode
+            self.clear_operation_modes(back_to_select=True)
             self.update_status("Path smoothed.")
-        # Case 2: We are starting a new smooth operation
         else:
             self.clear_operation_modes(back_to_select=False)
             self.smoothing_point_selection = True
@@ -303,13 +280,13 @@ class EventHandler:
 
     def on_cancel_operation(self, event):
         print("Operation canceled")
-        self.clear_operation_modes(back_to_select=True)  # Default back to select mode
+        self.clear_operation_modes(back_to_select=True)
         self.update_button_states()
         self.update_status("Operation canceled")
 
     def on_clear_selection(self, event):
         print("Cleared selection")
-        self.clear_operation_modes(back_to_select=True)  # Default back to select mode
+        self.clear_operation_modes(back_to_select=True)
         self.update_button_states()
         self.update_status("Selection cleared")
 
@@ -372,7 +349,7 @@ class EventHandler:
         self.data_manager.delete_points(points_to_delete)
 
         # Re-create the direct edge
-        self.data_manager.add_edge(self.remove_start_id, self.remove_end_id)
+        # self.data_manager.add_edge(self.remove_start_id, self.remove_end_id)
 
         # Redraw
         self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
@@ -385,7 +362,6 @@ class EventHandler:
     def on_connect_nodes(self, event):
         self.clear_operation_modes(back_to_select=False)
         self.merge_mode = True
-
         print("Please select first node to connect")
         self.update_status("Select first node")
         self.update_point_sizes()
@@ -395,8 +371,6 @@ class EventHandler:
         if self.merge_point_1_id is None or self.merge_point_2_id is None:
             self.update_status("Select two nodes")
             self.clear_merge_state()
-            self.selection_mode = True  # Go back to select mode
-            self.plot_manager.rs.set_active(True)
             self.update_button_states()
             return
 
@@ -441,12 +415,14 @@ class EventHandler:
                 self.update_status()
             return
 
-        if self.data_manager.nodes.size == 0:
-            if not self.selection_mode:
-                new_id = self.data_manager.add_node(event.xdata, event.ydata, self.selected_id)
-                self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
-                self.update_status("Added first node")
+        if self.data_manager.nodes.size == 0 and self.ctrl_pressed:
+            # Add first node if Ctrl is pressed
+            new_id = self.data_manager.add_node(event.xdata, event.ydata, self.selected_id)
+            self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
+            self.update_status("Added first node")
             return
+        elif self.data_manager.nodes.size == 0:
+            return  # Do nothing if no nodes and Ctrl not pressed
 
         click_x, click_y = event.xdata, event.ydata
         nodes = self.data_manager.nodes
@@ -487,7 +463,7 @@ class EventHandler:
                 self.remove_start_id = closest_point_id
                 print(f"Selected remove START node (ID {closest_point_id})")
                 self.update_status(f"Start: {closest_point_id}. Click to select END node.")
-                self.plot_manager.selected_indices = [closest_row_idx]
+                self.plot_manager.selected_indices = []
                 self.update_point_sizes()
             else:
                 if closest_point_id == self.remove_start_id:
@@ -495,7 +471,7 @@ class EventHandler:
                     return
                 self.remove_end_id = closest_point_id
                 print(f"Selected remove END node (ID {closest_point_id})")
-                self.finalize_remove_between()  # Call the function to do the work
+                self.finalize_remove_between()
             return
 
         if self.merge_mode:
@@ -511,23 +487,18 @@ class EventHandler:
                 self.finalize_connection()
             return
 
-        if self.selection_mode:
+        if self.ctrl_pressed:
+            # ADD POINT (Ctrl + Left Click)
+            lane_id_to_use = int(nodes[closest_row_idx, 4])
+            new_point_id = self.data_manager.add_node(event.xdata, event.ydata, lane_id_to_use)
+            self.data_manager.add_edge(closest_point_id, new_point_id)
+            self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
+            self.update_status(f"Added node {new_point_id} (Lane {lane_id_to_use})")
+        else:
+            # SELECT POINT (Simple Left Click)
             self.plot_manager.selected_indices = [closest_row_idx]
             self.update_point_sizes()
             self.update_status(f"Selected node {closest_point_id}")
-            return
-
-        # --- If we are here, we are in "Add/Delete Mode" ---
-        # --- FIX: Get lane_id from closest node ---
-        lane_id_to_use = int(nodes[closest_row_idx, 4])
-
-        new_point_id = self.data_manager.add_node(event.xdata, event.ydata, lane_id_to_use)
-        self.data_manager.add_edge(closest_point_id, new_point_id)
-
-        self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
-
-        print(f"Added node {new_point_id} (Lane {lane_id_to_use}), connected from {closest_point_id}")
-        self.update_status(f"Added node {new_point_id} (Lane {lane_id_to_use})")
 
     def update_point_sizes(self):
         if self.plot_manager is None:
@@ -601,13 +572,11 @@ class EventHandler:
         point_id_to_delete = int(self.data_manager.nodes[global_row_ind, 0])
 
         self.data_manager.delete_points([point_id_to_delete])
-        self.plot_manager.selected_indices = [i for i in self.plot_manager.selected_indices if i != global_row_ind]
+        self.plot_manager.selected_indices = []
         self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
         self.update_status(f"Deleted node {point_id_to_delete}")
 
     def on_select(self, eclick, erelease):
-        if not self.selection_mode:
-            return
         try:
             x1, y1 = eclick.xdata, eclick.ydata
             x2, y2 = erelease.xdata, erelease.ydata
@@ -620,21 +589,26 @@ class EventHandler:
             combined_mask = x_mask & y_mask
 
             self.plot_manager.selected_indices = np.where(combined_mask)[0].tolist()
-
             print(f"Selected {len(self.plot_manager.selected_indices)} nodes")
             self.update_point_sizes()
             self.update_status(f"Selected {len(self.plot_manager.selected_indices)} nodes")
         except Exception as e:
             print(f"Error during selection: {e}")
+        finally:
+            # --- ADDED: Deactivate selector after use ---
+            self.plot_manager.rs.set_active(False)
+            self.update_status("Selection complete.")
 
     def on_key(self, event):
         key = event.key.lower()
+        if 'control' in key:
+            self.ctrl_pressed = True
+        if key == 's':
+            self.s_pressed = True
         if key == 'ctrl+z':
             self.on_undo(event)
         elif key in ('ctrl+shift+z', 'ctrl+y'):
             self.on_redo(event)
-        elif key == 'tab':
-            self.on_toggle_mode(event)
         elif key == 'd':
             self.on_toggle_draw_mode(event)
         elif key == 'escape':
@@ -651,6 +625,17 @@ class EventHandler:
                 self.update_status(f"New point ID set to {new_id}")
             else:
                 self.update_status(f"Invalid lane ID {new_id}")
+        if self.ctrl_pressed and self.s_pressed:
+            if not (self.draw_mode or self.smoothing_point_selection or self.merge_mode or self.remove_between_mode):
+                self.plot_manager.rs.set_active(True)
+                self.update_status("Rectangle Select: Click and drag to select points.")
+
+    def on_key_release(self, event):
+        key = event.key.lower()
+        if 'control' in key:
+            self.ctrl_pressed = False
+        if key == 's':
+            self.s_pressed = False
 
     def on_escape(self, event):
         self.on_cancel_operation(event)
