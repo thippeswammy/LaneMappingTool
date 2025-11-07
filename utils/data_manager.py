@@ -100,16 +100,18 @@ class DataManager:
                 self.nodes[from_node_mask, 3] = yaw
 
     def reverse_path(self, path_ids):
-        """def reverse_path(self, path_ids):
+        """Reverse the direction of all edges along a given path of node IDs.
         
-        Reverses the direction of all edges along a given path of node IDs.  This
-        function takes a list of node IDs and reverses the edges between them.  It
-        first checks if the path contains at least two nodes, then identifies  the
-        edges to be deleted and the corresponding edges to be added in reverse.  A mask
-        is created to filter out the edges that need to be deleted, and the  new edges
-        are added to the existing edges. Finally, it updates the yaws for  the new
-        "from" nodes and saves the current state to history for potential  undo
+        This function takes a list of node IDs and reverses the edges between them.  It
+        first checks if the path contains at least two nodes, then identifies the
+        edges to be deleted and the corresponding edges to be added in reverse. A  mask
+        is created to filter out the edges that need to be deleted, and the new  edges
+        are added to the existing edges. Finally, it updates the yaws for the  new
+        "from" nodes and saves the current state to history for potential undo
         operations.
+        
+        Args:
+            path_ids (list): A list of node IDs representing the path.
         """
         try:
             edges_to_delete = []
