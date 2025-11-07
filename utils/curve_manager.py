@@ -90,7 +90,7 @@ class CurveManager:
         for from_id, to_id in self.data_manager.edges:
             from_id, to_id = int(from_id), int(to_id)
             adj.setdefault(from_id, []).append(to_id)
-            adj.setdefault(to_id, []).append(from_id)  # Add the reverse edge
+            adj.setdefault(to_id, []).append(from_id) # Add the reverse edge
 
         if start_id not in adj:
             return None  # Start node has no connections
@@ -238,7 +238,7 @@ class CurveManager:
             print("Need at least 2 points to smooth")
             return None
 
-        # 1. Get (x, y) coordinates for the path
+            # 1. Get (x, y) coordinates for the path
         points_xy = []
         for pid in path_ids:
             coords = self._get_node_coords(pid)
@@ -252,24 +252,34 @@ class CurveManager:
         original_end_point = points[-1]
 
         # 2. Find adjacent points (prev and next)
+        #    This looks for nodes connected to the path's ends,
+        #    but are not part of the path itself.
         prev_point, next_point = None, None
-
-        # Find 'prev_point' (a node that has an edge *to* start_id)
         start_id = path_ids[0]
-        prev_candidates = self.data_manager.edges[self.data_manager.edges[:, 1] == start_id, 0]
-        if prev_candidates.size > 0:
-            # Just take the first one, and make sure it's not part of the path
-            if prev_candidates[0] not in path_ids:
-                prev_point = self._get_node_coords(prev_candidates[0])
-
-        # Find 'next_point' (a node that has an edge *from* end_id)
         end_id = path_ids[-1]
-        next_candidates = self.data_manager.edges[self.data_manager.edges[:, 0] == end_id, 1]
-        if next_candidates.size > 0:
-            if next_candidates[0] not in path_ids:
-                next_point = self._get_node_coords(next_candidates[0])
 
-        # 3. Build fitting_points and weights (same logic as)
+        # Build bidirectional adjacency list
+        adj = {}
+        for from_id, to_id in self.data_manager.edges:
+            from_id, to_id = int(from_id), int(to_id)
+            adj.setdefault(from_id, []).append(to_id)
+            adj.setdefault(to_id, []).append(from_id)
+
+        # Find 'prev_point'
+        if start_id in adj:
+            for neighbor_id in adj[start_id]:
+                if neighbor_id != path_ids[1]:  # Not the next point in the path
+                    prev_point = self._get_node_coords(neighbor_id)
+                    break
+
+        # Find 'next_point'
+        if end_id in adj:
+            for neighbor_id in adj[end_id]:
+                if neighbor_id != path_ids[-2]:  # Not the previous point in the path
+                    next_point = self._get_node_coords(neighbor_id)
+                    break
+
+        # 3. Build fitting_points and weights
         fitting_points = points.copy()
         weights = np.ones(len(fitting_points)) * self.smoothing_weight
 
@@ -290,9 +300,14 @@ class CurveManager:
         weights[segment_start_in_fitting] = HIGH_WEIGHT
         weights[segment_end_in_fitting] = HIGH_WEIGHT
 
-        # 4. Run spline math (same logic as)
+        # 4. Run spline math
         try:
             x, y = fitting_points[:, 0], fitting_points[:, 1]
+
+            if len(np.unique(x)) < 2 and len(np.unique(y)) < 2:
+                print("Cannot smooth a path of identical points.")
+                return points  # Return original points
+
             distances = np.sqrt(np.sum(np.diff(fitting_points, axis=0) ** 2, axis=1))
             u = np.zeros(len(fitting_points))
             u[1:] = np.cumsum(distances)

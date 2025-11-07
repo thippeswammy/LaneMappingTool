@@ -261,8 +261,9 @@ class EventHandler:
             self.plot_manager.selected_indices = []
             self.update_point_sizes()
 
-        # self.selection_mode = back_to_select
-        # self.plot_manager.rs.set_active(back_to_select)
+        self.selection_mode = back_to_select
+        if not back_to_select:
+            self.plot_manager.rs.set_active(False)
 
     #  New button handler
     def on_reverse_path(self, event):
@@ -292,7 +293,7 @@ class EventHandler:
         if self.smoothing_point_selection and self.smoothing_preview_line is not None:
             print("Confirming smooth...")
             self.curve_manager.apply_smooth()
-            self.clear_operation_modes(back_to_select=True)
+            self.clear_operation_modes(back_to_select=False)
             self.update_status("Path smoothed.")
         else:
             self.clear_operation_modes(back_to_select=False)
@@ -430,13 +431,13 @@ class EventHandler:
         """
         if self.reverse_start_id is None or self.reverse_end_id is None:
             self.update_status("Error: Start or end node not set.")
-            self.clear_operation_modes(back_to_select=True)
+            self.clear_operation_modes(back_to_select=False)
             self.update_button_states()
             return
 
         if not self.curve_manager:
             self.update_status("Error: CurveManager not found.")
-            self.clear_operation_modes(back_to_select=True)
+            self.clear_operation_modes(back_to_select=False)
             self.update_button_states()
             return
 
@@ -482,7 +483,7 @@ class EventHandler:
         self.update_status(f"Connected {self.merge_point_1_id} -> {self.merge_point_2_id}")
 
         # Go back to select mode after connection
-        self.clear_operation_modes(back_to_select=True)
+        self.clear_operation_modes(back_to_select=False)
         self.update_button_states()
 
     def save_data(self, event):
@@ -547,8 +548,8 @@ class EventHandler:
         if self.smoothing_point_selection:
             if self.smoothing_start_id is None:
                 self.smoothing_start_id = closest_point_id
-                print(f"Selected smooth START node (ID {closest_point_id})")
-                self.update_status(f"Start: {closest_point_id}. Click to select END node.")
+                print(f"Selected smooth START node #{closest_row_idx} (ID {closest_point_id})")
+                self.update_status(f"Start Node: {closest_row_idx}. Click to select END node.")
                 self.plot_manager.selected_indices = [closest_row_idx]
                 self.update_point_sizes()
             elif self.smoothing_end_id is None:
@@ -556,42 +557,26 @@ class EventHandler:
                     self.update_status("Cannot select same node. Select END node.")
                     return
                 self.smoothing_end_id = closest_point_id
-                print(f"Selected smooth END node (ID {closest_point_id})")
+                print(f"Selected smooth END node #{closest_row_idx} (ID {closest_point_id})")
                 if self.curve_manager:
                     self.curve_manager.preview_smooth(self.smoothing_start_id, self.smoothing_end_id)
                 self.update_button_states()  # Update 'Smooth' button to 'Confirm'
             else:
                 # Both are set, reset by selecting a new start point
                 self.clear_smoothing_state()
-                self.smoothing_point_selection = True
                 self.smoothing_start_id = closest_point_id
-                print(f"Reset smooth START node (ID {closest_point_id})")
-                self.update_status(f"Start: {closest_point_id}. Click to select END node.")
+                print(f"Reset smooth START node #{closest_row_idx} (ID {closest_point_id})")
+                self.update_status(f"Start Node: {closest_row_idx}. Click to select END node.")
                 self.plot_manager.selected_indices = [closest_row_idx]
                 self.update_point_sizes()
                 self.update_button_states()
             return
 
-        if self.reverse_path_mode:  # Click logic for "Reverse Path"
-            if self.reverse_start_id is None:
-                self.reverse_start_id = closest_point_id
-                print(f"Selected reverse START node (ID {closest_point_id})")
-                self.update_status(f"Start: {closest_point_id}. Click to select END node.")
-                self.plot_manager.selected_indices = [closest_row_idx]
-                self.update_point_sizes()
-            else:
-                if closest_point_id == self.reverse_start_id:
-                    self.update_status("Cannot select same node. Select END node.")
-                    return
-                self.reverse_end_id = closest_point_id
-                print(f"Selected reverse END node (ID {closest_point_id})")
-                self.finalize_reverse_path()
-            return
         if self.remove_between_mode:
             if self.remove_start_id is None:
                 self.remove_start_id = closest_point_id
-                print(f"Selected remove START node (ID {closest_point_id})")
-                self.update_status(f"Start: {closest_point_id}. Click to select END node.")
+                print(f"Selected remove START node #{closest_row_idx} (ID {closest_point_id})")
+                self.update_status(f"Start Node: {closest_row_idx}. Click to select END node.")
                 self.plot_manager.selected_indices = []
                 self.update_point_sizes()
             else:
@@ -599,20 +584,36 @@ class EventHandler:
                     self.update_status("Cannot select same node. Select END node.")
                     return
                 self.remove_end_id = closest_point_id
-                print(f"Selected remove END node (ID {closest_point_id})")
+                print(f"Selected remove END node #{closest_row_idx} (ID {closest_point_id})")
                 self.finalize_remove_between()
+            return
+
+        if self.reverse_path_mode:  # Click logic for "Reverse Path"
+            if self.reverse_start_id is None:
+                self.reverse_start_id = closest_point_id
+                print(f"Selected reverse START node #{closest_row_idx} (ID {closest_point_id})")
+                self.update_status(f"Start Node: {closest_row_idx}. Click to select END node.")
+                self.plot_manager.selected_indices = []
+                self.update_point_sizes()
+            else:
+                if closest_point_id == self.reverse_start_id:
+                    self.update_status("Cannot select same node. Select END node.")
+                    return
+                self.reverse_end_id = closest_point_id
+                print(f"Selected reverse END node #{closest_row_idx} (ID {closest_point_id})")
+                self.finalize_reverse_path()
             return
 
         if self.merge_mode:
             if self.merge_point_1_id is None:
                 self.merge_point_1_id = closest_point_id
-                print(f"Selected first node (ID {closest_point_id})")
-                self.update_status(f"Node 1: {closest_point_id}. Select second node.")
+                print(f"Selected first node #{closest_row_idx} (ID {closest_point_id})")
+                self.update_status(f"Node 1: {closest_row_idx}. Select second node.")
                 self.update_point_sizes()
                 self.plot_manager.fig.canvas.draw_idle()
             elif self.merge_point_2_id is None and closest_point_id != self.merge_point_1_id:
                 self.merge_point_2_id = closest_point_id
-                print(f"Selected second node (ID {closest_point_id})")
+                print(f"Selected second node #{closest_row_idx} (ID {closest_point_id})")
                 self.finalize_connection()
             return
 
@@ -622,12 +623,14 @@ class EventHandler:
             new_point_id = self.data_manager.add_node(event.xdata, event.ydata, lane_id_to_use)
             self.data_manager.add_edge(closest_point_id, new_point_id)
             self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
+            print(
+                f"Added node {new_point_id} (Lane {lane_id_to_use}), connected from node #{closest_row_idx} (ID {closest_point_id})")
             self.update_status(f"Added node {new_point_id} (Lane {lane_id_to_use})")
         else:
             # SELECT POINT (Simple Left Click)
             self.plot_manager.selected_indices = []
             self.update_point_sizes()
-            self.update_status(f"Selected node {closest_point_id}")
+            self.update_status(f"Selected node #{closest_row_idx} (ID: {closest_point_id})")
 
     def update_point_sizes(self):
         """Update the sizes of points in scatter plots based on various conditions.
@@ -715,15 +718,15 @@ class EventHandler:
         point_id_to_use = int(self.data_manager.nodes[global_row_ind, 0])
 
         if self.ctrl_pressed:
-            print(f"Breaking connections for node {point_id_to_use}")
+            print(f"Breaking connections for node #{global_row_ind} (ID {point_id_to_use})")
             self.data_manager.delete_edges_for_node(point_id_to_use)
             self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
-            self.update_status(f"Broke connections for node {point_id_to_use}")
+            self.update_status(f"Broke connections for node #{global_row_ind}")
         else:
             self.data_manager.delete_points([point_id_to_use])
             self.plot_manager.selected_indices = []
             self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
-            self.update_status(f"Deleted node {point_id_to_use}")
+            self.update_status(f"Deleted node #{global_row_ind} (ID: {point_id_to_use})")
 
     def on_select(self, eclick, erelease):
         try:
@@ -831,7 +834,7 @@ class EventHandler:
         print(f"Finalized {'curve' if self.curve_manager.is_curve else 'line'} with ID {self.selected_id}")
         self.update_status("Drawing finalized")
         # Go back to select mode
-        self.clear_operation_modes(back_to_select=True)
+        self.clear_operation_modes(back_to_select=False)
         self.update_button_states()
 
     def update_status(self, message=""):

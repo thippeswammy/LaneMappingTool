@@ -111,28 +111,40 @@ class DataManager:
         "from" nodes and saves the current state to history for potential  undo
         operations.
         """
-        if not path_ids or len(path_ids) < 2:
-            print("Path with at least 2 nodes is required to reverse.")
-            return
-
         try:
             edges_to_delete = []
             edges_to_add = []
 
-            # Create lists of edges to swap
+            # Create a fast lookup set of all existing edges
+            existing_edges = set()
+            for edge in self.edges:
+                existing_edges.add((edge[0], edge[1]))
+
             for i in range(len(path_ids) - 1):
-                from_id = path_ids[i]
-                to_id = path_ids[i + 1]
-                edges_to_delete.append((from_id, to_id))
-                edges_to_add.append((to_id, from_id))
+                A = path_ids[i]
+                B = path_ids[i + 1]
+
+                # Check which direction the edge currently exists in
+                if (A, B) in existing_edges:
+                    # Forward edge exists (A -> B), reverse it
+                    edges_to_delete.append((A, B))
+                    edges_to_add.append((B, A))
+                elif (B, A) in existing_edges:
+                    # Backward edge exists (B -> A), reverse it
+                    edges_to_delete.append((B, A))
+                    edges_to_add.append((A, B))
+                else:
+                    print(f"Warning: No edge found between {A} and {B} in either direction. Path is broken.")
+
+            if not edges_to_delete:
+                print("No matching edges found to reverse.")
+                return
 
             # Build a mask to keep all edges *except* the ones we're deleting
             keep_mask = np.ones(len(self.edges), dtype=bool)
 
-            # This is a faster way to find the edges to delete
             edges_to_delete_set = set(edges_to_delete)
             for i in range(len(self.edges)):
-                # Tuples are hashable and fast
                 if (self.edges[i, 0], self.edges[i, 1]) in edges_to_delete_set:
                     keep_mask[i] = False
 

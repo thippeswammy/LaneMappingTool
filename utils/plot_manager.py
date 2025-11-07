@@ -105,7 +105,7 @@ class PlotManager:
                 # [point_id, x, y, yaw, original_lane_id]
                 self.tooltip.set_text(
                     f'X: {point[1]:.2f}\nY: {point[2]:.2f}\n'
-                    f'Lane: {int(point[4])}\nPointID: {int(point[0])}'
+                    f'Lane: {int(point[4])}\nPoint #: {closest_idx} (ID: {int(point[0])})'
                 )
                 self.tooltip.set_position((point[1], point[2]))
 
