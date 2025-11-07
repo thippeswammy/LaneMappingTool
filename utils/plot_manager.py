@@ -83,6 +83,18 @@ class PlotManager:
 
     def on_motion(self, event):
         # Use self.data_manager.nodes instead of .data
+        """Handle motion events to update tooltip and nearest point.
+        
+        This method checks if the mouse event is within the axes and if there are any
+        nodes available.  If the conditions are met, it calculates the distance from
+        the mouse position to each node,  identifies the closest node, and updates the
+        tooltip with relevant information.  If the closest node is within a specified
+        distance, it displays the tooltip and highlights the  nearest point; otherwise,
+        it hides the tooltip and removes any existing highlights.
+        
+        Args:
+            event: The motion event containing mouse position data.
+        """
         if event.inaxes != self.ax or self.data_manager.nodes.size == 0:
             self.tooltip.set_visible(False)
             if self.nearest_point:
