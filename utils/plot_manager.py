@@ -93,7 +93,6 @@ class PlotManager:
         try:
             x, y = event.xdata, event.ydata
 
-            # --- UPDATED ---
             # Compare distances against node x, y (cols 1, 2)
             nodes = self.data_manager.nodes
             distances = np.sqrt((nodes[:, 1] - x) ** 2 + (nodes[:, 2] - y) ** 2)
@@ -109,7 +108,6 @@ class PlotManager:
                     f'Lane: {int(point[4])}\nPointID: {int(point[0])}'
                 )
                 self.tooltip.set_position((point[1], point[2]))
-                # --- END UPDATED ---
 
                 self.tooltip.set_visible(True)
                 if self.nearest_point:
@@ -130,10 +128,8 @@ class PlotManager:
                 idx = self.ax.legend_.get_lines().index(event.artist)
                 if idx < len(self.lane_scatter_plots):
 
-                    # --- UPDATED ---
                     # Get lane_id (col 4) from self.nodes
                     lane_id = int(np.unique(self.data_manager.nodes[self.indices[idx], 4])[0])
-                    # --- END UPDATED ---
 
                     if self.highlighted_lane == lane_id:
                         self.highlighted_lane = None
@@ -172,7 +168,7 @@ class PlotManager:
             self.lane_scatter_plots = []
             self.start_point_plots = []
             self.extra_scatter_plots = []
-            self.edge_plots = []  # Clear edges
+            self.edge_plots = []
             self.indices = []
 
             if nodes.size == 0:
@@ -180,7 +176,7 @@ class PlotManager:
                 self.fig.canvas.draw_idle()
                 return
 
-            # --- 1. PLOT EDGES ---
+            #  1. PLOT EDGES 
             if edges.size > 0:
                 # Create a lookup dictionary for node coordinates by point_id
                 # Node: [point_id, x, y, yaw, original_lane_id]
@@ -198,7 +194,7 @@ class PlotManager:
                     line = self.ax.plot(x_pair, y_pair, 'k-', alpha=0.3, zorder=1)[0]
                     self.edge_plots.append(line)
 
-            # --- 2. PLOT NODES (POINTS) ---
+            #  2. PLOT NODES (POINTS) 
             # Node: [point_id, x, y, yaw, original_lane_id]
             unique_lane_ids = np.unique(nodes[:, 4])
             colors = plt.cm.get_cmap('tab10')(np.linspace(0, 1, max(len(unique_lane_ids), 10)))
@@ -214,7 +210,7 @@ class PlotManager:
                     self.lane_scatter_plots.append(sc)
                     self.indices.append(np.where(mask)[0])  # Store row indices
 
-            # --- 3. PLOT START POINTS ---
+            #  3. PLOT START POINTS 
             if edges.size > 0:
                 # Find all nodes that are "to" nodes (i.e., have an incoming edge)
                 to_ids = set(edges[:, 1])
@@ -227,19 +223,19 @@ class PlotManager:
                                                marker='s', label=f'Lane {lane_id} Start', zorder=3)
                     self.start_point_plots.append(start_sc)
 
-            # --- 4. PLOT SELECTED POINTS ---
+            #  4. PLOT SELECTED POINTS 
             if self.selected_indices:
                 selected_nodes = nodes[np.array(self.selected_indices, dtype=int)]
                 sc = self.ax.scatter(selected_nodes[:, 1], selected_nodes[:, 2], s=30, color='red', marker='x',
                                      label='Selected', zorder=4)
                 self.extra_scatter_plots.append(sc)
 
-            # --- 5. PLOT MERGE/SMOOTHING POINTS (from event_handler) ---
+            #  5. PLOT MERGE/SMOOTHING POINTS (from event_handler) 
             if self.event_handler.merge_mode:
                 # This logic will need to be updated in event_handler.py
                 pass
 
-            # --- 6. FINALIZE PLOT ---
+            #  6. FINALIZE PLOT 
             self.ax.set_xlabel('X')
             self.ax.set_ylabel('Y')
             self.ax.set_title('Lane Data Visualization')

@@ -184,8 +184,6 @@ class DataManager:
         except Exception as e:
             print(f"Error saving graph data to temp: {e}")
 
-    # --- FUNCTIONS BELOW WERE MISSING ---
-
     def clear_data(self):
         try:
             self.nodes = np.array([])
@@ -212,7 +210,7 @@ class DataManager:
             self.edges = edges_copy.copy()
 
             self._auto_save_backup()
-            print("Undo performed")  # Added print statement for confirmation
+            print("Undo performed")
             return self.nodes, self.edges, True
 
         except Exception as e:
@@ -232,14 +230,13 @@ class DataManager:
             self.history.append((self.nodes.copy(), self.edges.copy()))
 
             self._auto_save_backup()
-            print("Redo performed")  # Added print statement for confirmation
+            print("Redo performed")
             return self.nodes, self.edges, True
 
         except Exception as e:
             print(f"Error during redo: {e}")
             return self.nodes, self.edges, False
 
-    # --- END OF MISSING FUNCTIONS ---
 
     def save(self):
         try:
@@ -285,3 +282,26 @@ class DataManager:
             self.last_backup = time.time()
         except Exception as e:
             print(f"Backup failed: {e}")
+
+    def delete_edges_for_node(self, point_id):
+        if self.edges.size == 0:
+            return
+
+        try:
+            # Create a mask for edges to *delete*
+            # delete_mask = (self.edges[:, 0] == point_id) | (self.edges[:, 1] == point_id)
+            delete_mask = (self.edges[:, 1] == point_id)
+            # Mask for edges to *keep* is the inverse
+            keep_mask = ~delete_mask
+            deleted_count = np.sum(delete_mask)
+            if deleted_count > 0:
+                self.edges = self.edges[keep_mask]
+                self.history.append((self.nodes.copy(), self.edges.copy()))
+                self.redo_stack = []
+                self._auto_save_backup()
+                print(f"Deleted {deleted_count} edges for node {point_id}")
+            else:
+                print(f"No edges found for node {point_id}")
+
+        except Exception as e:
+            print(f"Error deleting edges: {e}")

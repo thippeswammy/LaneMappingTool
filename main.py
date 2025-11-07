@@ -25,13 +25,12 @@ def main():
     custom_order = ["lane-0.npy", "lane-3.npy", "lane-2.npy", "lane-1.npy"]
     loader = DataLoader(lanes_path, file_order=custom_order)
 
-    # --- FIX 1: Unpack 3 values (nodes, edges, file_names) ---
+    # Unpack 3 values (nodes, edges, file_names) 
     nodes, edges, file_names = loader.load_data()
     D = loader.D
 
     # Debug: Verify the data loaded
     if nodes.size > 0:
-        # --- FIX 2: Update print statements for nodes/edges ---
         print(f"Loaded {len(file_names)} files, total nodes: {nodes.shape[0]}, total edges: {edges.shape[0]}")
         # Column 4 is 'original_lane_id'
         print(f"Unique lane IDs: {np.unique(nodes[:, 4])}")
@@ -39,11 +38,10 @@ def main():
         print("No data loaded")
         return
 
-    # --- FIX 3: Initialize managers with nodes and edges ---
+    # Initialize managers with nodes and edges 
     data_manager = DataManager(nodes, edges, file_names)
     event_handler = EventHandler(data_manager)
 
-    # --- FIX 4: Update PlotManager instantiation ---
     # Pass nodes and edges instead of merged_data
     plot_manager = PlotManager(nodes, edges, file_names, D, data_manager, event_handler)
 

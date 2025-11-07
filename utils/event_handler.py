@@ -16,7 +16,7 @@ class EventHandler:
         self.selected_id = 0
         self.id_set = True
 
-        # press state ---
+        # press state 
         self.ctrl_pressed = False
         self.s_pressed = False
 
@@ -40,7 +40,7 @@ class EventHandler:
         self.merge_point_1_id = None
         self.merge_point_2_id = None
 
-        # --- MODIFIED: Remove Between state ---
+        #  Remove Between state 
         self.remove_between_mode = False
         self.remove_start_id = None
         self.remove_end_id = None
@@ -66,7 +66,6 @@ class EventHandler:
 
         self.setup_event_handlers()
         self.setup_buttons()
-        # Set initial state
         self.update_button_states()
 
     def setup_event_handlers(self):
@@ -301,7 +300,7 @@ class EventHandler:
             except ValueError:
                 pass
             self.smoothing_preview_line = None
-        if self.plot_manager:  # Redraw if plot manager exists
+        if self.plot_manager:  # Redraw if plot manager
             self.plot_manager.fig.canvas.draw_idle()
 
     def clear_merge_state(self):
@@ -407,7 +406,7 @@ class EventHandler:
         if self.plot_manager is None or event.inaxes != self.plot_manager.ax or event.button != 1:
             return
 
-        # --- Mode-based Event Handling ---
+        #  Mode-based Event Handling 
         if self.draw_mode:
             if self.curve_manager:
                 self.curve_manager.add_draw_point(event.xdata, event.ydata)
@@ -449,7 +448,7 @@ class EventHandler:
             else:
                 # Both are set, reset by selecting a new start point
                 self.clear_smoothing_state()
-                self.smoothing_point_selection = True  # Stay in this mode
+                self.smoothing_point_selection = True
                 self.smoothing_start_id = closest_point_id
                 print(f"Reset smooth START node (ID {closest_point_id})")
                 self.update_status(f"Start: {closest_point_id}. Click to select END node.")
@@ -496,7 +495,7 @@ class EventHandler:
             self.update_status(f"Added node {new_point_id} (Lane {lane_id_to_use})")
         else:
             # SELECT POINT (Simple Left Click)
-            self.plot_manager.selected_indices = [closest_row_idx]
+            self.plot_manager.selected_indices = []
             self.update_point_sizes()
             self.update_status(f"Selected node {closest_point_id}")
 
@@ -549,7 +548,6 @@ class EventHandler:
         self.clear_merge_state()
         self.clear_remove_state()
         self.draw_mode = False
-        # self.selection_mode = False
         self.plot_manager.rs.set_active(False)
         if self.curve_manager:
             self.curve_manager.clear_draw()
@@ -569,12 +567,18 @@ class EventHandler:
         local_ind = event.ind[0]
         file_index = self.plot_manager.lane_scatter_plots.index(artist)
         global_row_ind = self.plot_manager.indices[file_index][local_ind]
-        point_id_to_delete = int(self.data_manager.nodes[global_row_ind, 0])
+        point_id_to_use = int(self.data_manager.nodes[global_row_ind, 0])
 
-        self.data_manager.delete_points([point_id_to_delete])
-        self.plot_manager.selected_indices = []
-        self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
-        self.update_status(f"Deleted node {point_id_to_delete}")
+        if self.ctrl_pressed:
+            print(f"Breaking connections for node {point_id_to_use}")
+            self.data_manager.delete_edges_for_node(point_id_to_use)
+            self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
+            self.update_status(f"Broke connections for node {point_id_to_use}")
+        else:
+            self.data_manager.delete_points([point_id_to_use])
+            self.plot_manager.selected_indices = []
+            self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
+            self.update_status(f"Deleted node {point_id_to_use}")
 
     def on_select(self, eclick, erelease):
         try:
@@ -595,7 +599,7 @@ class EventHandler:
         except Exception as e:
             print(f"Error during selection: {e}")
         finally:
-            # --- ADDED: Deactivate selector after use ---
+            #  Deactivate selector after use 
             self.plot_manager.rs.set_active(False)
             self.update_status("Selection complete.")
 

@@ -216,12 +216,9 @@ class CurveManager:
                         segment_indices) > 1 else 0.0
 
             self.data_manager.data[segment_indices, -1] = lane_id
-
             self.data_manager.history.append(self.data_manager.data.copy())
             self.data_manager.redo_stack = []
-
             self.plot_manager.selected_indices = []
-
             self.plot_manager.update_plot(self.data_manager.data)
             return segment_indices
         except Exception as e:
