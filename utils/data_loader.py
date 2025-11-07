@@ -15,6 +15,24 @@ class DataLoader:
         self.file_order = file_order
 
     def load_data(self):
+        """Load and process .npy files from the specified directory.
+        
+        This function retrieves all .npy files from the directory specified by
+        `self.directory`.  It processes each file to extract points, constructs nodes
+        and edges, and handles various  data integrity checks, such as ensuring the
+        presence of at least two columns in the data.  The function also maintains a
+        unique point ID for each node and calculates the maximum  distance between
+        points if valid data is loaded.
+        
+        Args:
+            self: The instance of the class containing the directory and file order attributes.
+        
+        Returns:
+            tuple: A tuple containing:
+                - np.ndarray: An array of nodes.
+                - np.ndarray: An array of edges.
+                - list: A list of file names processed.
+        """
         all_files = [f for f in os.listdir(self.directory) if f.endswith('.npy')]
         if not all_files:
             print(f"No .npy files found in directory: {self.directory}")
