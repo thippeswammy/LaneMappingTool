@@ -77,19 +77,21 @@ class CurveManager:
     def _find_path(self, start_id, end_id):
         """
         Finds a path from start_id to end_id using BFS, searching
-        only in the forward direction.
+        bidirectionally (forward and backward).
         Returns a list of point_ids [start_id, ..., end_id] or None.
         """
         if self.data_manager.edges.size == 0:
             return None
 
-        # Create an adjacency list for forward-only traversal
-        adj = {int(from_id): [] for from_id in self.data_manager.edges[:, 0]}
+        # Create a bidirectional adjacency list
+        adj = {}
         for from_id, to_id in self.data_manager.edges:
-            adj.setdefault(int(from_id), []).append(int(to_id))
+            from_id, to_id = int(from_id), int(to_id)
+            adj.setdefault(from_id, []).append(to_id)
+            adj.setdefault(to_id, []).append(from_id)  # Add the reverse edge
 
         if start_id not in adj:
-            return None  # Start node has no outgoing edges
+            return None  # Start node has no connections
 
         queue = deque([(start_id, [start_id])])  # (current_node, path_to_node)
         visited = {start_id}
@@ -124,7 +126,7 @@ class CurveManager:
 
         path_ids = self._find_path(start_id, end_id)
         if not path_ids:
-            self.event_handler.update_status("No forward path found between nodes.")
+            self.event_handler.update_status("No forward/backward path found between nodes.")
             print(f"No forward path found from {start_id} to {end_id}")
             return
 

@@ -45,6 +45,11 @@ class EventHandler:
         self.remove_start_id = None
         self.remove_end_id = None
 
+        #  Reverse Path state
+        self.reverse_path_mode = False
+        self.reverse_start_id = None
+        self.reverse_end_id = None
+
         self.buttons = {}
         self.status_timeout = 5
         self.last_status_time = 0
@@ -122,14 +127,19 @@ class EventHandler:
         self.buttons['grid'] = Button(ax_grid, 'Toggle Grid')
         self.buttons['grid'].on_clicked(self.toggle_grid)
 
-        ax_remove_above = plt.axes([0.01, 0.35, 0.1, 0.04])
-        self.buttons['remove_between'] = Button(ax_remove_above, 'Remove Between')
+        ax_remove_between = plt.axes([0.01, 0.35, 0.1, 0.04])
+        self.buttons['remove_between'] = Button(ax_remove_between, 'Remove Between')
         self.buttons['remove_between'].on_clicked(self.on_remove_between)
 
         ax_remove_below = plt.axes([0.01, 0.30, 0.1, 0.04])
         self.buttons['remove_below'] = Button(ax_remove_below, 'Remove Below')
         self.buttons['remove_below'].on_clicked(self.on_remove_below)
         self.buttons['remove_below'].ax.set_visible(False)
+
+        ax_reverse_path = plt.axes([0.01, 0.30, 0.1, 0.04])
+        self.buttons['reverse_path'] = Button(ax_reverse_path, 'Reverse Path')
+        self.buttons['reverse_path'].on_clicked(self.on_reverse_path)
+        self.buttons['reverse_path'].ax.set_visible(True)
 
         self.fig.canvas.draw()
 
@@ -139,6 +149,10 @@ class EventHandler:
         self.buttons['linecurve'].eventson = self.draw_mode
         self.buttons['linecurve'].ax.set_facecolor('white' if self.draw_mode else 'lightgray')
         self.buttons['linecurve'].label.set_color('black' if self.draw_mode else 'gray')
+
+        # Added reverse_path_mode to "Cancel" logi
+        is_in_operation = self.draw_mode or self.smoothing_point_selection or self.merge_mode or self.remove_between_mode or self.reverse_path_mode
+        self.buttons['cancel'].eventson = is_in_operation
 
         # Smoothing Buttons
         self.buttons['straighten'].eventson = True
@@ -166,14 +180,19 @@ class EventHandler:
         self.buttons['remove_between'].ax.set_facecolor('white')
         self.buttons['remove_between'].label.set_color('black')
 
+        # reverse_path
+        self.buttons['reverse_path'].eventson = True
+        self.buttons['reverse_path'].ax.set_facecolor('white')
+        self.buttons['reverse_path'].label.set_color('black')
+
         # Remove Buttons (Deferred)
         # self.buttons['remove_above'].eventson = False
         # self.buttons['remove_above'].ax.set_facecolor('lightgray')
         # self.buttons['remove_above'].label.set_color('gray')
 
-        self.buttons['remove_below'].eventson = False
-        self.buttons['remove_below'].ax.set_facecolor('lightgray')
-        self.buttons['remove_below'].label.set_color('gray')
+        # self.buttons['remove_below'].eventson = False
+        # self.buttons['remove_below'].ax.set_facecolor('lightgray')
+        # self.buttons['remove_below'].label.set_color('gray')
 
         self.fig.canvas.draw_idle()
 
@@ -219,6 +238,7 @@ class EventHandler:
         self.clear_smoothing_state()
         self.clear_merge_state()
         self.clear_remove_state()
+        self.clear_reverse_path_state()
         self.draw_mode = False
         if self.curve_manager:
             self.curve_manager.clear_draw()
@@ -230,6 +250,14 @@ class EventHandler:
 
         # self.selection_mode = back_to_select
         # self.plot_manager.rs.set_active(back_to_select)
+
+    #  New button handler
+    def on_reverse_path(self, event):
+        self.clear_operation_modes(back_to_select=False)
+        self.reverse_path_mode = True
+        print("Entered Reverse Path mode.")
+        self.update_status("Reverse Path: Click to select START node.")
+        self.update_button_states()
 
     def on_toggle_linecurve(self, event):
         if not self.draw_mode or not self.curve_manager:
@@ -275,6 +303,7 @@ class EventHandler:
 
     def on_remove_below(self, event):
         self.update_status("Remove Below is disabled for now.")
+        self.on_reverse_path(event)
         print("Remove Below is disabled for now.")
 
     def on_cancel_operation(self, event):
@@ -313,6 +342,12 @@ class EventHandler:
         self.remove_start_id = None
         self.remove_end_id = None
 
+    #  New state clear function
+    def clear_reverse_path_state(self):
+        self.reverse_path_mode = False
+        self.reverse_start_id = None
+        self.reverse_end_id = None
+
     def finalize_remove_between(self):
         if self.remove_start_id is None or self.remove_end_id is None:
             self.update_status("Error: Start or end node not set.")
@@ -330,7 +365,7 @@ class EventHandler:
         path_ids = self.curve_manager._find_path(self.remove_start_id, self.remove_end_id)
 
         if not path_ids or len(path_ids) < 2:
-            self.update_status("No forward path found between nodes.")
+            self.update_status("No forward/backward path found between nodes.")
             self.clear_operation_modes(back_to_select=True)
             self.update_button_states()
             return
@@ -354,6 +389,39 @@ class EventHandler:
         self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
         print(f"Deleted {len(points_to_delete)} nodes and connected edge.")
         self.update_status(f"Deleted {len(points_to_delete)} nodes.")
+
+        self.clear_operation_modes(back_to_select=True)
+        self.update_button_states()
+
+    def finalize_reverse_path(self):
+        if self.reverse_start_id is None or self.reverse_end_id is None:
+            self.update_status("Error: Start or end node not set.")
+            self.clear_operation_modes(back_to_select=True)
+            self.update_button_states()
+            return
+
+        if not self.curve_manager:
+            self.update_status("Error: CurveManager not found.")
+            self.clear_operation_modes(back_to_select=True)
+            self.update_button_states()
+            return
+
+        print(f"Finding path from {self.reverse_start_id} to {self.reverse_end_id} for reversal...")
+        path_ids = self.curve_manager._find_path(self.reverse_start_id, self.reverse_end_id)
+
+        if not path_ids or len(path_ids) < 2:
+            self.update_status("No forward path found between nodes.")
+            self.clear_operation_modes(back_to_select=True)
+            self.update_button_states()
+            return
+
+        # Call the new data_manager function
+        self.data_manager.reverse_path(path_ids)
+
+        # Redraw
+        self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
+        print(f"Reversed {len(path_ids) - 1} edges.")
+        self.update_status(f"Reversed {len(path_ids) - 1} edges.")
 
         self.clear_operation_modes(back_to_select=True)
         self.update_button_states()
@@ -457,6 +525,21 @@ class EventHandler:
                 self.update_button_states()
             return
 
+        if self.reverse_path_mode:  # Click logic for "Reverse Path"
+            if self.reverse_start_id is None:
+                self.reverse_start_id = closest_point_id
+                print(f"Selected reverse START node (ID {closest_point_id})")
+                self.update_status(f"Start: {closest_point_id}. Click to select END node.")
+                self.plot_manager.selected_indices = [closest_row_idx]
+                self.update_point_sizes()
+            else:
+                if closest_point_id == self.reverse_start_id:
+                    self.update_status("Cannot select same node. Select END node.")
+                    return
+                self.reverse_end_id = closest_point_id
+                print(f"Selected reverse END node (ID {closest_point_id})")
+                self.finalize_reverse_path()
+            return
         if self.remove_between_mode:
             if self.remove_start_id is None:
                 self.remove_start_id = closest_point_id
@@ -529,6 +612,10 @@ class EventHandler:
                 if self.remove_between_mode:
                     if self.remove_start_id in id_to_local_idx:
                         sizes[id_to_local_idx[self.remove_start_id]] = 100
+
+                if self.reverse_path_mode:
+                    if self.reverse_start_id in id_to_local_idx:
+                        sizes[id_to_local_idx[self.reverse_start_id]] = 100
 
                 for local_idx, global_row_idx in enumerate(row_indices):
                     if global_row_idx in selected_row_set:

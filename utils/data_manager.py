@@ -1,9 +1,10 @@
 import os
+import pickle
 import shutil
 import time
-import numpy as np
-import pickle
+
 import networkx as nx
+import numpy as np
 
 
 class DataManager:
@@ -82,6 +83,69 @@ class DataManager:
 
         except Exception as e:
             print(f"Error adding edge: {e}")
+
+    def _update_yaws(self, edge_pairs):
+        """Helper function to update yaws for a list of (from_id, to_id) pairs."""
+        for from_id, to_id in edge_pairs:
+            from_node_mask = self.nodes[:, 0] == from_id
+            to_node_mask = self.nodes[:, 0] == to_id
+
+            if np.any(from_node_mask) and np.any(to_node_mask):
+                from_node = self.nodes[from_node_mask][0]
+                to_node = self.nodes[to_node_mask][0]
+
+                dx = to_node[1] - from_node[1]  # x_to - x_from
+                dy = to_node[2] - from_node[2]  # y_to - y_from
+                yaw = np.arctan2(dy, dx)
+                self.nodes[from_node_mask, 3] = yaw
+
+    def reverse_path(self, path_ids):
+        """Reverses the direction of all edges along a given path of node IDs."""
+        if not path_ids or len(path_ids) < 2:
+            print("Path with at least 2 nodes is required to reverse.")
+            return
+
+        try:
+            edges_to_delete = []
+            edges_to_add = []
+
+            # Create lists of edges to swap
+            for i in range(len(path_ids) - 1):
+                from_id = path_ids[i]
+                to_id = path_ids[i + 1]
+                edges_to_delete.append((from_id, to_id))
+                edges_to_add.append((to_id, from_id))
+
+            # Build a mask to keep all edges *except* the ones we're deleting
+            keep_mask = np.ones(len(self.edges), dtype=bool)
+
+            # This is a faster way to find the edges to delete
+            edges_to_delete_set = set(edges_to_delete)
+            for i in range(len(self.edges)):
+                # Tuples are hashable and fast
+                if (self.edges[i, 0], self.edges[i, 1]) in edges_to_delete_set:
+                    keep_mask[i] = False
+
+            # Apply the mask
+            self.edges = self.edges[keep_mask]
+
+            # Add the new reversed edges
+            if edges_to_add:
+                edges_to_add_np = np.array(edges_to_add, dtype=int)
+                self.edges = np.vstack([self.edges, edges_to_add_np])
+
+            # Update the yaws for the new "from" nodes
+            self._update_yaws(edges_to_add)
+
+            # Save to history
+            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.redo_stack = []
+            self._auto_save_backup()
+
+            print(f"Reversed {len(edges_to_add)} edges in path.")
+
+        except Exception as e:
+            print(f"Error reversing path: {e}")
 
     def delete_points(self, point_ids_to_delete):
         if not point_ids_to_delete:
@@ -236,7 +300,6 @@ class DataManager:
         except Exception as e:
             print(f"Error during redo: {e}")
             return self.nodes, self.edges, False
-
 
     def save(self):
         try:
