@@ -34,7 +34,7 @@ def network_view2():
         print("No 'x' and 'y' attributes, using spring_layout.")
         pos = nx.spring_layout(G1)
 
-    # ✅ Fix for matplotlib >=3.8: Create figure before drawing
+    #  Fix for matplotlib >=3.8: Create figure before drawing
     fig, ax = plt.subplots(figsize=(12, 8))
     nx.draw(G1, pos, with_labels=True, node_size=50, font_size=8, ax=ax)
     plt.title("Visualized Graph")

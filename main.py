@@ -8,7 +8,6 @@ from DataVisualizationEditingTool.utils.data_loader import DataLoader
 from DataVisualizationEditingTool.utils.data_manager import DataManager
 from DataVisualizationEditingTool.utils.event_handler import EventHandler
 from DataVisualizationEditingTool.utils.plot_manager import PlotManager
-from DataVisualizationEditingTool.utils.curve_manager import CurveManager
 
 
 def main():
@@ -16,7 +15,7 @@ def main():
     base_path = os.getcwd()  # Not sys._MEIPASS
 
     # Use that to find the 'lanes' folder
-    lanes_path = os.path.join(base_path, 'lanes/New_tests')
+    lanes_path = os.path.join(base_path, 'backup_lanes')
 
     if not os.path.isdir(lanes_path):
         raise ValueError(f"Directory does not exist: {lanes_path}")
@@ -31,7 +30,7 @@ def main():
 
     # Debug: Verify the data loaded
     if nodes.size > 0:
-        print(f"Loaded {len(file_names)} files, total nodes: {nodes.shape[0]}, total edges: {edges.shape[0]}")
+        print(f"Loaded {len(file_names)} files,  total nodes: {nodes.shape[0]}, total edges: {edges.shape[0]}")
         # Column 4 is 'original_lane_id'
         print(f"Unique lane IDs: {np.unique(nodes[:, 4])}")
     else:

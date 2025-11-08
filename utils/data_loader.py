@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 
 
@@ -61,13 +62,11 @@ class DataLoader:
                 if len(points.shape) == 1:
                     points = points.reshape(-1, points.shape[0])
 
-                #  MODIFICATION 
                 # We now only require 2 columns (x, y).
                 # The error was caused by trying to access columns that don't exist.
                 if points.shape[1] < 2:
                     print(f"File {file} must have at least 2 columns (x, y), got shape {points.shape}")
                     continue
-                #  END MODIFICATION 
 
                 N = points.shape[0]
 
@@ -82,11 +81,9 @@ class DataLoader:
                 # We only read columns 0 and 1 (x, y)
                 nodes[:, 1:3] = points[:, 0:2]
 
-                #  YAW LOADING REMOVED 
                 # As requested ("keep the 3 axit to zero"), we will
                 # leave nodes[:, 3] (yaw) as 0.0.
                 # We are no longer accessing points[:, 2] or points[:, 3].
-                #  END REMOVAL 
 
                 nodes[:, 4] = lane_idx  # original_lane_id
 
