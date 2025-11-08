@@ -15,7 +15,7 @@ def main():
     base_path = os.getcwd()  # Not sys._MEIPASS
 
     # Use that to find the 'lanes' folder
-    lanes_path = os.path.join(base_path, 'backup_lanes')
+    lanes_path = os.path.join(base_path, 'lanes/TEMP')
 
     if not os.path.isdir(lanes_path):
         raise ValueError(f"Directory does not exist: {lanes_path}")
