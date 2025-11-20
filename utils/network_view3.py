@@ -1,12 +1,19 @@
+import os
 import pickle
+
 import matplotlib.pyplot as plt
 import networkx as nx
 # Import the Button widget
 from matplotlib.widgets import Button
 
-# Define the path to your graph file
-# Note: You might need to adjust this path depending on where you run the script.
-graph_file_path = r"F:\RunningProjects\AutoSegmentor\DataVisualizationEditingTool\files\output.pickle"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Adjust this join if your folder structure is different
+graph_file_path = os.path.join(BASE_DIR, "files", "output.pickle")
+
+# Fallback to the absolute path if the relative one fails (based on your snippet)
+if not os.path.exists(graph_file_path):
+    graph_file_path = r"F:\RunningProjects\AutoSegmentor\DataVisualizationEditingTool\files\output.pickle"
 
 
 class GraphViewer:
@@ -19,16 +26,16 @@ class GraphViewer:
         self.G1 = None
         self.pos = None
 
-        # 1. Setup the figure and axes
+        # Setup the figure and axes
         self.fig, self.ax = plt.subplots(figsize=(12, 8))
         plt.subplots_adjust(bottom=0.15)  # Make space for the button
 
-        # 2. Add the refresh button
+        # Add the refresh button
         # Define the location [left, bottom, width, height] of the button axis
         ax_button = self.fig.add_axes([0.8, 0.02, 0.15, 0.05])
         self.refresh_button = Button(ax_button, 'Refresh Data')
 
-        # 3. Connect the button click event to the plot function
+        # Connect the button click event to the plot function
         self.refresh_button.on_clicked(self.plot_graph)
 
         # Initial plot
@@ -42,9 +49,11 @@ class GraphViewer:
                 data = pickle.load(f, encoding='latin1')
 
             # Extract graph
+            # The updated data_manager saves the Graph object directly
             if isinstance(data, (nx.Graph, nx.DiGraph)):
                 self.G1 = data
             elif isinstance(data, dict):
+                # Fallback for older formats wrapping the graph in a dict
                 for k in data:
                     if isinstance(data[k], (nx.Graph, nx.DiGraph)):
                         self.G1 = data[k]
@@ -53,9 +62,9 @@ class GraphViewer:
                 else:
                     raise ValueError("No NetworkX graph found in pickle data.")
             else:
-                raise ValueError("Pickle file does not contain a NetworkX graph.")
+                raise ValueError(f"Pickle file contains unexpected data type: {type(data)}")
 
-            print(f"Graph loaded: {self.G1}")
+            print(f"Graph loaded successfully. Nodes: {self.G1.number_of_nodes()}, Edges: {self.G1.number_of_edges()}")
             return True
 
         except FileNotFoundError:
@@ -74,11 +83,11 @@ class GraphViewer:
             return
 
         try:
-            # Try to use stored 'x' and 'y' attributes
+            # Try to use stored 'x' and 'y' attributes from the graph nodes
             self.pos = {i: (attr['x'], attr['y']) for i, attr in self.G1.nodes(data=True)}
             print("Using 'x' and 'y' attributes for layout.")
         except KeyError:
-            # Fallback to spring layout
+            # Fallback to spring layout if x/y are missing
             print("No 'x' and 'y' attributes, using spring_layout.")
             self.pos = nx.spring_layout(self.G1)
 
@@ -87,31 +96,39 @@ class GraphViewer:
         Reloads data, clears the old plot, and draws the new graph.
         The 'event' parameter is required by the button widget callback.
         """
-        # 1. Reload the data
+        # Reload the data
         if not self.load_graph_data():
             return  # Stop if loading failed
 
-        # 2. Calculate/Recalculate positions
+        # Calculate/Recalculate positions
         self.calculate_positions()
 
-        # 3. Clear the previous plot (important for refresh)
+        # Clear the previous plot (important for refresh)
         self.ax.clear()
 
         if self.G1 and self.pos:
-            # 4. Draw the new graph
+            # Draw the new graph
+            # Explicitly drawing with arrows to verify directions
             nx.draw(
                 self.G1,
                 self.pos,
                 with_labels=True,
                 node_size=50,
                 font_size=8,
-                ax=self.ax
+                ax=self.ax,
+                arrows=True,  #
+                arrowstyle='-|>',
+                arrowsize=10
             )
             self.ax.set_title("Visualized Graph (Refreshed)")
+            self.ax.set_xlabel("X Coordinate")
+            self.ax.set_ylabel("Y Coordinate")
+            self.ax.grid(True)
+            # self.ax.axis('equal')
         else:
             self.ax.set_title("No Graph Data Available")
 
-        # 5. Redraw the canvas
+        # Redraw the canvas
         self.fig.canvas.draw_idle()
 
 

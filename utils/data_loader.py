@@ -34,70 +34,66 @@ class DataLoader:
                 - np.ndarray: An array of edges.
                 - list: A list of file names processed.
         """
-        all_files = [f for f in os.listdir(self.directory) if f.endswith('.npy')]
-        if not all_files:
-            print(f"No .npy files found in directory: {self.directory}")
-            return np.array([]), np.array([]), []
-
-        if self.file_order:
-            files = [f for f in self.file_order if f in all_files]
-            files += [f for f in all_files if f not in files]
+        if specific_files:
+            # Use the list provided by the user
+            files = [f for f in specific_files if os.path.exists(os.path.join(self.directory, f))]
+            if len(files) != len(specific_files):
+                print("Warning: Some specified files were not found.")
         else:
-            files = sorted(all_files)
+            all_files = [f for f in os.listdir(self.directory) if f.endswith('.npy')]
+            if not all_files:
+                print(f"No .npy files found in directory: {self.directory}")
+                return np.array([]), np.array([]), []
+
+            if self.file_order:
+                files = [f for f in self.file_order if f in all_files]
+                files += [f for f in all_files if f not in files]
+            else:
+                files = sorted(all_files)
 
         nodes_list = []
         edges_list = []
         file_names = []
 
-        point_id_counter = 0
+        # Initialize counter with the provided start_id
+        point_id_counter = start_id
 
         for lane_idx, file in enumerate(files):
             file_path = os.path.join(self.directory, file)
             try:
                 points = np.load(file_path)
                 if points.size == 0:
-                    print(f"Empty file: {file}")
                     continue
 
                 if len(points.shape) == 1:
                     points = points.reshape(-1, points.shape[0])
 
-                # We now only require 2 columns (x, y).
-                # The error was caused by trying to access columns that don't exist.
                 if points.shape[1] < 2:
-                    print(f"File {file} must have at least 2 columns (x, y), got shape {points.shape}")
                     continue
 
                 N = points.shape[0]
 
                 # Nodes: [point_id, x, y, yaw, original_lane_id]
-                # By initializing with zeros, yaw (index 3) is already 0.0
                 nodes = np.zeros((N, 5))
                 edges = np.zeros((N - 1, 2), dtype=int)
 
                 current_lane_point_ids = []
 
-                #  Populate Nodes 
-                # We only read columns 0 and 1 (x, y)
                 nodes[:, 1:3] = points[:, 0:2]
+                # Leave yaw (col 3) as 0.0 for now
 
-                # As requested ("keep the 3 axit to zero"), we will
-                # leave nodes[:, 3] (yaw) as 0.0.
-                # We are no longer accessing points[:, 2] or points[:, 3].
+                # Important: If we are appending, we might want to offset the lane_id too,
+                nodes[:, 4] = lane_idx
 
-                nodes[:, 4] = lane_idx  # original_lane_id
-
-                # Assign globally unique point_ids
+                # Assign globally unique point_ids starting from start_id
                 for i in range(N):
                     new_id = point_id_counter + i
                     nodes[i, 0] = new_id
                     current_lane_point_ids.append(new_id)
 
-                #  Populate Edges 
-                # Create the sequential connections for this lane
                 for i in range(N - 1):
-                    edges[i, 0] = current_lane_point_ids[i]  # from_id
-                    edges[i, 1] = current_lane_point_ids[i + 1]  # to_id
+                    edges[i, 0] = current_lane_point_ids[i]
+                    edges[i, 1] = current_lane_point_ids[i + 1]
 
                 nodes_list.append(nodes)
                 edges_list.append(edges)
@@ -116,14 +112,15 @@ class DataLoader:
         all_nodes = np.vstack(nodes_list)
         all_edges = np.vstack(edges_list)
 
+        # Calculate D
         if all_nodes.size > 0:
-            points_2d = all_nodes[:, 1:3]  # x, y columns
+            points_2d = all_nodes[:, 1:3]
             distances = np.sqrt(((points_2d[:, None] - points_2d[None, :]) ** 2).sum(axis=-1))
             self.D = np.max(distances) if distances.size > 0 else 1.0
         else:
             self.D = 1.0
 
         self.file_order = file_names
-        print(f"Loaded {len(file_names)} files, total nodes: {all_nodes.shape[0]}, total edges: {all_edges.shape[0]}")
+        print(f"Loaded {len(file_names)} files, total nodes: {all_nodes.shape[0]}")
 
         return all_nodes, all_edges, file_names

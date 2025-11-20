@@ -1,3 +1,4 @@
+import math
 import os
 import pickle
 import shutil
@@ -227,20 +228,48 @@ class DataManager:
         pass
 
     def _create_networkx_graph(self):
+        """
+        Creates a NetworkX graph with:
+        Node: t (point_id), x, y, yaw, zone=0, width=0, indicator=0
+        Edge: weight=EuclideanDistance
+        """
         G = nx.DiGraph()
+
+        node_coords = {}
+
         if self.nodes.size > 0:
             for node_data in self.nodes:
-                point_id = int(node_data[0])
+                t = int(node_data[0])
+                x = node_data[1]
+                y = node_data[2]
+                yaw = node_data[3]
+
+                node_coords[t] = (x, y)
+
                 G.add_node(
-                    point_id,
-                    x=node_data[1],
-                    y=node_data[2],
-                    yaw=node_data[3],
-                    original_lane_id=int(node_data[4])
+                    t,
+                    x=x,
+                    y=y,
+                    yaw=yaw,
+                    zone=0,
+                    width=0,
+                    indicator=0
                 )
+
         if self.edges.size > 0:
             for edge_data in self.edges:
-                G.add_edge(int(edge_data[0]), int(edge_data[1]))
+                u = int(edge_data[0])
+                v = int(edge_data[1])
+
+                # Calculate weight (Euclidean distance)
+                weight = 1.0
+                if u in node_coords and v in node_coords:
+                    x1, y1 = node_coords[u]
+                    x2, y2 = node_coords[v]
+                    weight = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+                G.add_edge(u, v, weight=weight)
+
         return G
 
     def save_all_lanes(self):
@@ -352,6 +381,45 @@ class DataManager:
         except Exception as e:
             print(f"Error saving data: {e}")
             return None
+
+    # def renumber_all_nodes(self):
+    #     """
+    #     Renumbers all node point_ids to be sequential (0 to N-1).
+    #     This is a destructive operation that clears the undo/redo history.
+    #     """
+    #     try:
+    #         N = len(self.nodes)
+    #         if N == 0:
+    #             print("No nodes to renumber.")
+    #             return
+    #
+    #         old_ids = self.nodes[:, 0].copy()
+    #         new_ids = np.arange(N)
+    #
+    #         # Create a fast lookup map {old_id: new_id}
+    #         id_map = {old: new for old, new in zip(old_ids, new_ids)}
+    #
+    #         # Update nodes array
+    #         self.nodes[:, 0] = new_ids
+    #
+    #         # Update edges array using the map
+    #         vectorized_map = np.vectorize(id_map.get)
+    #
+    #         if self.edges.size > 0:
+    #             self.edges[:, 0] = vectorized_map(self.edges[:, 0])
+    #             self.edges[:, 1] = vectorized_map(self.edges[:, 1])
+    #
+    #         # Reset the next_point_id counter
+    #         self._next_point_id = N
+    #
+    #         # Clear history
+    #         self.history = [(self.nodes.copy(), self.edges.copy())]
+    #         self.redo_stack = []
+    #
+    #         print("Renumbered all nodes. Undo/redo history has been cleared.")
+    #
+    #     except Exception as e:
+    #         print(f"Error during renumbering: {e}")
 
     def _auto_save_backup(self):
         try:
