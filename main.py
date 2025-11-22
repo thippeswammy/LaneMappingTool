@@ -1,4 +1,5 @@
 import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -14,11 +15,11 @@ def main():
     original_data_path = os.path.join(base_path, 'originalData')
 
     # These files must exist in your 'original_data_path' folder
-    files_path = ["lane-4.npy", "lane-5.npy"]
+    files_path_ = ["lane-3.npy"]
 
     nodes_path = os.path.join(files_dir, 'WorkingNodes1.npy')
     edges_path = os.path.join(files_dir, 'WorkingEdges1.npy')
-
+    files_path = [os.path.join(original_data_path, i) for i in files_path_]
     # Initialize variables
     final_nodes = np.array([])
     final_edges = np.array([])

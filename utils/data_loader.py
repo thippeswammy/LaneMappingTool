@@ -15,7 +15,7 @@ class DataLoader:
         self.D = None
         self.file_order = file_order
 
-    def load_data(self):
+    def load_data(self, specific_files=None, start_id=0):
         """Load and process .npy files from the specified directory.
         
         This function retrieves all .npy files from the directory specified by
