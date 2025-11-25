@@ -1,174 +1,83 @@
 :root {
-  --bg-color: #1e1e1e;
-  --sidebar-bg: #252526;
-  --text-color: #e0e0e0;
-  --accent-color: #007acc;
-  --accent-hover: #005f9e;
-  --border-color: #3e3e42;
-  --danger-color: #f44336;
-  --success-color: #4caf50;
+  --header-height: 60px;
+  --sidebar-width: 280px;
+  --primary-bg: #f4f7f6;
+  --secondary-bg: #ffffff;
+  --border-color: #e0e0e0;
+  --text-color: #333;
+  --primary-accent: #007bff;
+  --hover-accent: #0056b3;
 }
 
 body {
   margin: 0;
-  padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  background-color: var(--bg-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--primary-bg);
   color: var(--text-color);
-  overflow: hidden; /* Prevent body scroll */
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  width: 100vw;
 }
 
 .header {
-  background-color: var(--sidebar-bg);
-  padding: 0 20px;
-  height: 50px;
+  height: var(--header-height);
+  background-color: var(--secondary-bg);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   justify-content: space-between;
-  border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  z-index: 10;
 }
 
-.header h2 {
+.header h1 {
+  font-size: 1.5rem;
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 500;
-  color: var(--text-color);
 }
 
-.status-badge {
-  font-size: 0.85rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background-color: #333;
-  color: #aaa;
+.status-bar {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.status-message {
+  font-weight: bold;
+  color: var(--primary-accent);
 }
 
 .main-content {
-  flex: 1;
   display: flex;
+  flex: 1;
   overflow: hidden;
-  position: relative;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--secondary-bg);
+  border-right: 1px solid var(--border-color);
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .plot-area {
   flex: 1;
-  position: relative;
-  background-color: #1e1e1e; /* Match plot background */
-}
-
-.sidebar {
-  width: 280px;
-  background-color: var(--sidebar-bg);
-  border-left: 1px solid var(--border-color);
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-  overflow-y: auto;
-  z-index: 5;
+  background-color: #e9ecef;
+  position: relative;
 }
 
-.sidebar h3 {
-  margin-top: 0;
-  font-size: 1.1rem;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-}
-
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.section h4 {
-  margin: 0 0 5px 0;
-  font-size: 0.9rem;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-button {
-  background-color: #333;
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-button:hover:not(:disabled) {
-  background-color: #444;
-  border-color: #555;
-}
-
-button:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-button.primary {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-button.primary:hover {
-  background-color: var(--accent-hover);
-}
-
-button.danger {
-  background-color: rgba(244, 67, 54, 0.1);
-  border-color: var(--danger-color);
-  color: var(--danger-color);
-}
-
-button.danger:hover:not(:disabled) {
-  background-color: var(--danger-color);
-  color: white;
-}
-
-.slider-container {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.slider-container label {
-  font-size: 0.85rem;
-  display: flex;
-  justify-content: space-between;
-}
-
-input[type="range"] {
-  width: 100%;
-  accent-color: var(--accent-color);
-}
-
-.instructions {
-  font-size: 0.85rem;
-  color: #888;
-  line-height: 1.5;
-  background: rgba(0,0,0,0.2);
-  padding: 10px;
-  border-radius: 4px;
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
 }
