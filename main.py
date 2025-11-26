@@ -10,6 +10,15 @@ from utils.plot_manager import PlotManager
 
 
 def main():
+    """Main function to load, merge, and manage data for processing.
+    
+    This function orchestrates the loading of existing and new data files,
+    calculates necessary parameters, and initializes various managers for data
+    handling and visualization. It checks for the existence of saved working files,
+    loads them if available, and merges them with new raw data files. The function
+    also handles ID offsets to avoid conflicts and sets up the necessary components
+    for further data processing and visualization.
+    """
     base_path = os.getcwd()
     files_dir = os.path.join(base_path, 'files')
     original_data_path = os.path.join(base_path, 'originalData')
