@@ -11,7 +11,7 @@ A Python-based GUI tool designed for visualizing, editing, and refining lane gra
     * **Connect Nodes:** Link disjointed paths or create loops.
     * **Remove Between:** Automatically find the path between two nodes and delete all intermediate points.
     * **Reverse Path:** Intelligent pathfinding to reverse the direction of edges along a selected route.
-* **NetworkX Integration:** Exports the final graph as a NetworkX `.pickle` file with attributes (`id`,`x`, `y`, `yaw`, `original_lane_id`) -> (`id`,`x`, `y`, `yaw`, `zone`,`width`, `indicator`) suitable for autonomous navigation stacks.
+* **NetworkX Integration:** Exports the final graph as a NetworkX `.pickle` file with attributes (`id`,`x`, `y`, `yaw`, `zone`,`width`, `indicator`) suitable for autonomous navigation stacks.
 * **Session Resume:** Automatically detects and loads saved working files (`WorkingNodes.npy`) to resume editing sessions.
 
 ## 🛠️ Installation
@@ -68,11 +68,10 @@ LaneMappingTool
 
 When you click **Save**, the tool generates three files in the `files/` directory:
 
-1.  **`WorkingNodes.npy`**: Numpy array containing `[point_id, x, y, yaw, original_lane_id]`. Used to resume editing. # Need to fix
+1.  **`WorkingNodes.npy`**: Numpy array containing `[id,x, y, yaw, zone,width, indicator]`. Used to resume editing. # Need to fix
 2.  **`WorkingEdges.npy`**: Numpy array containing `[from_id, to_id]`. Used to resume editing.
 3.  **`output.pickle`**: A serialized `networkx.DiGraph` object.
-      * **Nodes:** Contain attributes `x`, `y`, `yaw`, `zone=0`, `width=0`, `indicator=0`. -> Need to fix
-      * **Edges:** Contain `weight` calculated as the Euclidean distance.
+      * **Nodes:** Contain attributes `id`,`x`, `y`, `yaw`, `zone`,`width`, `indicator`.
 
 ## 📝 Author
 
