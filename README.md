@@ -25,7 +25,7 @@ pip install numpy matplotlib networkx scipy
 ## 📂 Project Structure
 
 ```text
-DataVisualizationEditingTool/
+LaneMappingTool
 ├── originalData/          # Place raw lane-X.npy files here
 ├── files/                 # Output location for saved WorkingNodes/Edges and output.pickle
 ├── utils/
