@@ -4,7 +4,7 @@ import os
 
 import networkx as nx
 
-from DataVisualizationEditingTool.utils.network_view2 import network_view2 as network_view2
+from utils.network_view2 import network_view2 as network_view2
 
 # from networkx.readwrite import gpickle
 print(nx.__file__)

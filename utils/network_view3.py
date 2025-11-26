@@ -9,11 +9,7 @@ from matplotlib.widgets import Button
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Adjust this join if your folder structure is different
-graph_file_path = os.path.join(BASE_DIR, "files", "output.pickle")
-
-# Fallback to the absolute path if the relative one fails (based on your snippet)
-if not os.path.exists(graph_file_path):
-    graph_file_path = r"F:\RunningProjects\AutoSegmentor\DataVisualizationEditingTool\files\output.pickle"
+graph_file_path = os.path.join(BASE_DIR, "..", "files", "output.pickle")
 
 
 class GraphViewer:

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Button
 
-from DataVisualizationEditingTool.utils.curve_manager import CurveManager
+from utils.curve_manager import CurveManager
 
 
 class EventHandler:

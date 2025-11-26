@@ -7,9 +7,9 @@ import numpy as np
 # Adjust path to import from the parent project
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
-from DataVisualizationEditingTool.utils.data_loader import DataLoader
-from DataVisualizationEditingTool.utils.data_manager import DataManager
-from DataVisualizationEditingTool.web.backend.curve_utils import find_path, smooth_segment
+from utils.data_loader import DataLoader
+from utils.data_manager import DataManager
+from web.backend.curve_utils import find_path, smooth_segment
 
 # --- App Setup ---
 app = Flask(__name__)
