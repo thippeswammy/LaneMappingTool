@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Chart, registerables } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
@@ -7,25 +7,38 @@ import { useStore } from '../store';
 // Register Chart.js components
 Chart.register(...registerables, zoomPlugin);
 
-const Plot = ({ nodes, edges }) => {
-  const {
-    mode,
-    handleNodeClick,
-    performOperation,
-    selectedNodeIds,
-    operationStartNodeId,
-    smoothingPreview
-  } = useStore(state => ({
-    mode: state.mode,
-    handleNodeClick: state.handleNodeClick,
-    performOperation: state.performOperation,
-    selectedNodeIds: state.selectedNodeIds,
-    operationStartNodeId: state.operationStartNodeId,
-    smoothingPreview: state.smoothingPreview
-  }));
+const Plot = forwardRef(({ nodes, edges }, ref) => {
+  console.log("Plot component rendering", { nodesCount: nodes?.length, edgesCount: edges?.length });
+  const mode = useStore(state => state.mode);
+  const handleNodeClick = useStore(state => state.handleNodeClick);
+  const performOperation = useStore(state => state.performOperation);
+  const selectedNodeIds = useStore(state => state.selectedNodeIds);
+  const operationStartNodeId = useStore(state => state.operationStartNodeId);
+  const smoothingPreview = useStore(state => state.smoothingPreview);
+  const drawPoints = useStore(state => state.drawPoints);
+  const addDrawPoint = useStore(state => state.addDrawPoint);
+  const pointSize = useStore(state => state.pointSize);
 
   const chartRef = useRef(null);
   const lastDrawnNodeId = useRef(null);
+
+  // Expose methods to parent
+  useImperativeHandle(ref, () => ({
+    resetZoom: () => {
+      if (chartRef.current) {
+        chartRef.current.resetZoom();
+      }
+    },
+    togglePan: () => {
+      // Implementation depends on how we want to toggle. 
+      // For now, we might just rely on default behavior or toggle plugin options if needed.
+      // Chart.js zoom plugin usually has pan enabled by default if configured.
+      console.log("Pan toggled (placeholder)");
+    },
+    toggleZoom: () => {
+      console.log("Zoom toggled (placeholder)");
+    }
+  }));
 
   useEffect(() => {
     // Reset last drawn node when switching out of draw mode
@@ -34,19 +47,28 @@ const Plot = ({ nodes, edges }) => {
     }
   }, [mode]);
 
+  // Reset zoom when nodes or edges change
+  useEffect(() => {
+    if (chartRef.current) {
+      chartRef.current.resetZoom();
+    }
+  }, [nodes, edges]);
+
   // Performance Optimization: Prepare edge data for a single dataset
   const edgeData = [];
-  const nodeMap = new Map(nodes.map(n => [n[0], n]));
-  edges.forEach(edge => {
-    const fromNode = nodeMap.get(edge[0]);
-    const toNode = nodeMap.get(edge[1]);
-    if (fromNode && toNode) {
-      edgeData.push({ x: fromNode[1], y: fromNode[2] });
-      edgeData.push({ x: toNode[1], y: toNode[2] });
-      // Add a null data point to create a break in the line
-      edgeData.push(null);
-    }
-  });
+  if (nodes && edges) {
+    const nodeMap = new Map(nodes.map(n => [n[0], n]));
+    edges.forEach(edge => {
+      const fromNode = nodeMap.get(edge[0]);
+      const toNode = nodeMap.get(edge[1]);
+      if (fromNode && toNode) {
+        edgeData.push({ x: fromNode[1], y: fromNode[2] });
+        edgeData.push({ x: toNode[1], y: toNode[2] });
+        // Add a break in the line using NaN
+        edgeData.push({ x: NaN, y: NaN });
+      }
+    });
+  }
 
   const chartData = {
     datasets: [
@@ -65,24 +87,38 @@ const Plot = ({ nodes, edges }) => {
       // Nodes
       {
         label: 'Nodes',
-        data: nodes.map(node => ({ x: node[1], y: node[2], id: node[0] })),
-        backgroundColor: nodes.map(node => {
+        data: nodes ? nodes.map(node => ({ x: node[1], y: node[2], id: node[0] })) : [],
+        backgroundColor: nodes ? nodes.map(node => {
           if (selectedNodeIds.includes(node[0])) return 'red';
           if (operationStartNodeId === node[0]) return 'blue';
           return 'rgba(75,192,192,1)';
-        }),
-        pointRadius: 5,
+        }) : [],
+        pointRadius: pointSize, // Use dynamic point size
+        pointHitRadius: 15, // Increased hit radius for easier selection
         type: 'scatter',
       },
 
       // Smoothing Preview
       ...(smoothingPreview ? [{
         label: 'Smooth Preview',
-        data: smoothingPreview.points.map(p => ({x: p[0], y: p[1]})),
+        data: smoothingPreview.points.map(p => ({ x: p[0], y: p[1] })),
         borderColor: 'rgba(0, 0, 255, 0.7)',
         borderWidth: 2,
         borderDash: [5, 5],
         pointRadius: 0,
+        showLine: true,
+        type: 'line',
+        spanGaps: false,
+      }] : []),
+
+      // Draw Preview (Temporary Points)
+      ...(drawPoints && drawPoints.length > 0 ? [{
+        label: 'Draw Preview',
+        data: drawPoints,
+        borderColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent black
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: 'rgba(0, 0, 0, 0.5)',
         showLine: true,
         type: 'line',
       }] : []),
@@ -110,6 +146,23 @@ const Plot = ({ nodes, edges }) => {
     }
   };
 
+  const findNearestNode = (x, y) => {
+    if (!nodes || nodes.length === 0) return null;
+    let minDist = Infinity;
+    let nearestNodeId = null;
+
+    nodes.forEach(node => {
+      const dx = node[1] - x;
+      const dy = node[2] - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestNodeId = node[0];
+      }
+    });
+    return nearestNodeId;
+  };
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -127,24 +180,19 @@ const Plot = ({ nodes, edges }) => {
       const yData = yScale.getValueForPixel(y);
 
       if (mode === 'draw') {
-        const connectToId = lastDrawnNodeId.current;
-        await performOperation('add_node', {
-          x: xData,
-          y: yData,
-          lane_id: 0, // Default lane_id for now
-          connect_to: connectToId
-        });
-        const newNodes = useStore.getState().nodes;
-        if (newNodes.length > nodes.length) {
-          const newNode = newNodes.reduce((latest, current) => (current[0] > latest[0] ? current : latest), newNodes[0]);
-          lastDrawnNodeId.current = newNode[0];
-        }
+        addDrawPoint({ x: xData, y: yData });
       } else {
         if (elements.length > 0) {
           const element = elements[0];
           if (element.datasetIndex === 1) { // Nodes dataset
             const nodeId = nodes[element.index][0];
             handleNodeClick(nodeId);
+          }
+        } else if (event.ctrlKey || event.metaKey) {
+          // Quick Action: Add Node and Connect to Nearest
+          const nearestNodeId = findNearestNode(xData, yData);
+          if (nearestNodeId !== null) {
+            performOperation('add_node', { x: xData, y: yData, lane_id: 0, connect_to: nearestNodeId });
           }
         }
       }
@@ -153,7 +201,7 @@ const Plot = ({ nodes, edges }) => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: function(context) {
+          label: function (context) {
             if (context.dataset.label === 'Nodes') {
               const point = context.raw;
               return `Node ID: ${point.id} (X: ${point.x.toFixed(2)}, Y: ${point.y.toFixed(2)})`;
@@ -189,6 +237,6 @@ const Plot = ({ nodes, edges }) => {
       <Line ref={chartRef} data={chartData} options={options} />
     </div>
   );
-};
+});
 
 export default Plot;

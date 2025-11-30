@@ -8,3 +8,5 @@
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
 /files/WorkingNodes.npy
+utils/__pycache__/
+web/backend/__pycache__/

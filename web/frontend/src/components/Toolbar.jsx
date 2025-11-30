@@ -3,33 +3,18 @@ import { useStore } from '../store';
 import './Toolbar.css';
 
 const Toolbar = () => {
-  const {
-    mode,
-    setMode,
-    performOperation,
-    saveData,
-    selectedNodeIds,
-    operationStartNodeId,
-    smoothingPreview,
-    applySmooth,
-    smoothness,
-    weight,
-    setSmoothness,
-    setWeight
-  } = useStore(state => ({
-    mode: state.mode,
-    setMode: state.setMode,
-    performOperation: state.performOperation,
-    saveData: state.saveData,
-    selectedNodeIds: state.selectedNodeIds,
-    operationStartNodeId: state.operationStartNodeId,
-    smoothingPreview: state.smoothingPreview,
-    applySmooth: state.applySmooth,
-    smoothness: state.smoothness,
-    weight: state.weight,
-    setSmoothness: state.setSmoothness,
-    setWeight: state.setWeight
-  }));
+  const mode = useStore(state => state.mode);
+  const setMode = useStore(state => state.setMode);
+  const performOperation = useStore(state => state.performOperation);
+  const saveData = useStore(state => state.saveData);
+  const selectedNodeIds = useStore(state => state.selectedNodeIds);
+  const operationStartNodeId = useStore(state => state.operationStartNodeId);
+  const smoothingPreview = useStore(state => state.smoothingPreview);
+  const applySmooth = useStore(state => state.applySmooth);
+  const smoothness = useStore(state => state.smoothness);
+  const weight = useStore(state => state.weight);
+  const setSmoothness = useStore(state => state.setSmoothness);
+  const setWeight = useStore(state => state.setWeight);
 
   const handleUndo = () => performOperation('undo');
   const handleRedo = () => performOperation('redo');

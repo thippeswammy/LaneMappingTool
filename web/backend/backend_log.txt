@@ -1,0 +1,583 @@
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5001
+Press CTRL+C to quit
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+127.0.0.1 - - [30/Nov/2025 22:53:51] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:54:36] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:54:36] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:54:43] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:54:43] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:55:03] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:55:03] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:56:53] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:56:53] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:56:54] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:56:54] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:57:04] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:57:04] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:58:23] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 22:58:23] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:01:42] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:01:42] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:02:42] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:02:42] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:02:48] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:02:48] "GET /api/data HTTP/1.1" 200 -
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\flask\\app.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\flask\\json\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\flask\\globals.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\flask\\wrappers.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\werkzeug\\wrappers\\__init__.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\web\\frontend\\node_modules\\es-iterator-helpers\\Iterator.zip', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+127.0.0.1 - - [30/Nov/2025 23:04:06] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:04:06] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:06:37] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:06:37] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:08:33] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:08:33] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:08:38] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:08:38] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:08:47] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:08:47] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:09:58] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:09:58] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:10:08] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:10:08] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:11:28] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:11:28] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:12:36] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:12:36] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:13:14] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:17:07] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:17:07] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:18:15] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:18:51] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:18:51] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:19:09] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:22:53] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:23:00] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:23:29] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:23:45] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:23:53] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:24:01] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:24:06] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:24:09] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:24:13] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:24:15] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:24:30] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:24:45] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:25:00] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:27:16] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:27:16] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:29:53] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:29:53] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:01] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:01] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:02] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:02] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:02] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:03] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:03] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:03] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:03] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:03] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:04] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:20] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:21] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:21] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:27] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:30] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:30] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:32] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:32] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:33] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:33] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:33] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:33] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:33] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:34] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:34] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:34] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:34] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:34] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:35] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:35] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:35] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:35] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:35] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:36] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:36] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:36] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:36] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:37] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:37] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:37] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:37] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:37] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:38] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:38] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:38] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:39] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:39] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:39] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:39] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:40] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:40] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:40] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:40] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:40] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:41] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:48] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:48] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:48] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:48] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:49] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:49] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:49] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:49] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:49] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:50] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:50] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:50] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:30:50] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:31:17] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:31:24] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:32:07] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:32:07] "GET /api/data HTTP/1.1" 200 -
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\main.py', reloading
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\utils\\curve_manager.py', reloading
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\utils\\data_manager.py', reloading
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\utils\\event_handler.py', reloading
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\utils\\plot_manager.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+Auto-saved backup nodes and edges to 20251130_231314
+Error adding node: unsupported format string passed to NoneType.__format__
+Auto-saved backup nodes and edges to 20251130_231909
+Error adding node: unsupported format string passed to NoneType.__format__
+Deleted 3 nodes and associated edges
+Undo performed
+Deleted 1 nodes and associated edges
+Deleted 2 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Auto-saved backup nodes and edges to 20251130_232413
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Auto-saved backup nodes and edges to 20251130_233001
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 1 nodes and associated edges
+Deleted 70 nodes and associated edges
+Deleted 71 nodes and associated edges
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+127.0.0.1 - - [30/Nov/2025 23:35:16] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:35:16] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:35:22] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:35:23] "GET /api/data HTTP/1.1" 200 -
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\web\\backend\\curve_utils.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+127.0.0.1 - - [30/Nov/2025 23:35:55] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:35:55] "GET /api/data HTTP/1.1" 200 -
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\utils\\data_loader.py', reloading
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\utils\\network_.py', reloading
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\utils\\network_view2.py', reloading
+ * Detected change in 'F:\\RunningProjects\\LaneMappingTool\\utils\\network_view3.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\abc.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\aifc.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\antigravity.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\argparse.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\ast.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\asynchat.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\asyncio\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\asyncore.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\base64.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\bdb.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\binhex.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\bisect.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\bz2.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\calendar.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\cgi.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\cgitb.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\chunk.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\cmd.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\code.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\codecs.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\codeop.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\collections\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\colorsys.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\compileall.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\concurrent\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\configparser.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\contextlib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\contextvars.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\copy.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\copyreg.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\cProfile.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\crypt.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\csv.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\ctypes\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\curses\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\dataclasses.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\datetime.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\dbm\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\decimal.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\difflib.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\dis.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\doctest.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\email\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\encodings\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\ensurepip\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\enum.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\filecmp.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\fileinput.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\fnmatch.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\fractions.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\ftplib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\functools.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\genericpath.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\getopt.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\getpass.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\gettext.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\glob.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\graphlib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\gzip.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\hashlib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\heapq.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\hmac.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\html\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\http\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\idlelib\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\imaplib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\imghdr.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\imp.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\importlib\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\inspect.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\io.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\ipaddress.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\json\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\keyword.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\lib2to3\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\linecache.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\locale.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\logging\\__init__.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\netrc.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\nntplib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\ntpath.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\nturl2path.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\numbers.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\opcode.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\operator.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\optparse.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\os.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pathlib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pdb.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pickle.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pickletools.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pipes.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pkgutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\platform.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\plistlib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\poplib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\posixpath.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pprint.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\profile.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pstats.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pty.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pyclbr.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\pydoc.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\py_compile.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\queue.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\quopri.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\random.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\re.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\reprlib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\rlcompleter.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\runpy.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\sched.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\secrets.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\selectors.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\shelve.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\shlex.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\shutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\signal.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\smtpd.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\smtplib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\sndhdr.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\token.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\tokenize.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\trace.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\traceback.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\tracemalloc.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\tty.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\turtle.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\turtledemo\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\types.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\typing.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\unittest\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\uu.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\uuid.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\venv\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\warnings.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\wave.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\weakref.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\webbrowser.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\wsgiref\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\xdrlib.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\xml\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\xmlrpc\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\zipapp.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\zipfile.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\zipimport.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\zoneinfo\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_aix_support.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_bootsubprocess.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_collections_abc.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_compat_pickle.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_compression.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_markupbase.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_osx_support.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_pydecimal.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_pyio.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_py_abc.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_sitebuiltins.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_strptime.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_threading_local.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\_weakrefset.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\__future__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\absl\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\accelerate\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\adodbapi\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\aenum\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\ahrs\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\aiohappyeyeballs\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\aiohttp\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\aiosignal\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\altgraph\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\annotated_types\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\anyio\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\argon2\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\arrow\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\asttokens\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\astunparse\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\async_lru\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\async_timeout\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\attr\\__init__.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\multiprocess\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\murmurhash\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\namex\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\narwhals\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\nbclient\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\nbconvert\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\nbformat\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\nest_asyncio.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\networkx\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\ninja\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\nose2\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\notebook\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\notebook_shim\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\numpy\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\onnx\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\onnxoptimizer\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\onnxruntime\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\onnx_graphsurgeon\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\open3d\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\openai\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\OpenGL\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\OpenGL_accelerate\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\openpyxl\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\openrouteservice\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\optree\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\opt_einsum\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\ordlookup\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\osmnx\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\overrides\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\packaging\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\pandas\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\pandocfilters.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\parso\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\pasta\\__init__.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\pefile.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\afxres.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\commctrl.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\dbi.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\mmsystem.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\netbios.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\ntsecuritycon.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\pywin32_bootstrap.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\pywin32_testutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\pywintypes.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\rasutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\regcheck.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\regutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\sspi.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\sspicon.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win2kras.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32con.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32cryptcon.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32evtlogutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32gui_struct.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32inetcon.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32netcon.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32pdhquery.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32pdhutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32rcparser.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32serviceutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32timezone.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32traceutil.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\win32verstamp.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\winerror.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\winioctlcon.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\winnt.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\winperf.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\win32\\lib\\winxptheme.py', reloading
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\site-packages\\pythonwin\\pywin\\__init__.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+ * Detected change in 'E:\\SoftwareInstalls\\Python310\\Lib\\distutils\\__init__.py', reloading
+Loading data from: F:\RunningProjects\LaneMappingTool\web\backend\../../lanes/TEMP1
+Loaded 5 files, total nodes: 1670
+DataManager initialized with 1670 nodes and 1665 edges.
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 135-363-798
+127.0.0.1 - - [30/Nov/2025 23:40:47] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:40:47] "GET /api/data HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:41:07] "POST /api/operation HTTP/1.1" 200 -
+127.0.0.1 - - [30/Nov/2025 23:41:28] "POST /api/operation HTTP/1.1" 200 -

@@ -5,7 +5,7 @@ from flask_cors import CORS
 import numpy as np
 
 # Adjust path to import from the parent project
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from utils.data_loader import DataLoader
 from utils.data_manager import DataManager
@@ -17,17 +17,12 @@ CORS(app)
 
 # --- Data Loading ---
 base_dir = os.path.dirname(os.path.abspath(__file__))
+# Data is expected to be in lanes/TEMP1 relative to project root
 data_path = os.path.join(base_dir, '../../lanes/TEMP1')
 
 if not os.path.isdir(data_path):
-    repo_root = os.path.join(base_dir, '../../..')
-    data_path = os.path.join(repo_root, 'DataVisualizationEditingTool/lanes/TEMP1')
-    if not os.path.isdir(data_path):
-         # If it still doesn't exist, create it
-        os.makedirs(data_path)
-        print(f"Created data directory at: {data_path}")
-    else:
-        print(f"Loading data from: {data_path}")
+    os.makedirs(data_path)
+    print(f"Created data directory at: {data_path}")
 else:
     print(f"Loading data from: {data_path}")
 
@@ -157,14 +152,29 @@ def perform_operation():
             if path_ids and len(path_ids) > 2:
                 points_to_delete = path_ids[1:-1]
                 data_manager.delete_points(points_to_delete)
-            else:
-                pass
 
         elif operation == 'undo':
             data_manager.undo()
 
         elif operation == 'redo':
             data_manager.redo()
+
+        elif operation == 'batch_add_nodes':
+            points = params.get('points', [])
+            lane_id = params.get('lane_id', 0)
+            connect_to_start_id = params.get('connect_to_start_id')
+
+            previous_node_id = connect_to_start_id
+            new_node_ids = []
+
+            for point in points:
+                x, y = point['x'], point['y']
+                new_node_id = data_manager.add_node(x, y, lane_id)
+                new_node_ids.append(new_node_id)
+                
+                if previous_node_id is not None:
+                    data_manager.add_edge(previous_node_id, new_node_id)
+                previous_node_id = new_node_id
 
         else:
             return jsonify({'status': 'error', 'message': f'Unknown operation: {operation}'}), 400

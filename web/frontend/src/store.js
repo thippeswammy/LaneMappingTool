@@ -15,13 +15,16 @@ export const useStore = create((set, get) => ({
   // Selections & temporary data
   selectedNodeIds: [],
   operationStartNodeId: null,
-  smoothingPreview: null, // This will now store the full updated node objects
+  smoothingPreview: null,
   smoothness: 1.0,
   weight: 20,
+  pointSize: 5, // Default point size
+  drawPoints: [], // Temporary points for Draw mode
 
   // Actions
   setSmoothness: (smoothness) => set({ smoothness }),
   setWeight: (weight) => set({ weight }),
+  setPointSize: (pointSize) => set({ pointSize }),
 
   fetchData: async () => {
     try {
@@ -69,6 +72,7 @@ export const useStore = create((set, get) => ({
       selectedNodeIds: [],
       operationStartNodeId: null,
       smoothingPreview: null,
+      drawPoints: [],
     });
   },
 
@@ -76,15 +80,38 @@ export const useStore = create((set, get) => ({
     set({ selectedNodeIds: ids });
   },
 
+  addDrawPoint: (point) => {
+    set(state => ({
+      drawPoints: [...state.drawPoints, point]
+    }));
+  },
+
+  finalizeDraw: async () => {
+    const { drawPoints, performOperation } = get();
+    if (drawPoints.length === 0) return;
+
+    await performOperation('batch_add_nodes', {
+      points: drawPoints,
+      lane_id: 0,
+      connect_to_start_id: null
+    });
+
+    set({ drawPoints: [] });
+  },
+
+  cancelDraw: () => {
+    set({ drawPoints: [], status: 'Draw canceled.' });
+  },
+
   handleNodeClick: (nodeId) => {
     const { mode, operationStartNodeId, performOperation } = get();
 
     if (mode === 'select') {
-        set(state => ({
-            selectedNodeIds: state.selectedNodeIds.includes(nodeId)
-                ? state.selectedNodeIds.filter(id => id !== nodeId)
-                : [...state.selectedNodeIds, nodeId]
-        }));
+      set(state => ({
+        selectedNodeIds: state.selectedNodeIds.includes(nodeId)
+          ? state.selectedNodeIds.filter(id => id !== nodeId)
+          : [...state.selectedNodeIds, nodeId]
+      }));
     } else if (['smooth', 'remove_between', 'reverse_path', 'connect'].includes(mode)) {
       if (!operationStartNodeId) {
         set({ operationStartNodeId: nodeId, status: `Start node ${nodeId} selected.` });
@@ -124,8 +151,8 @@ export const useStore = create((set, get) => ({
         status: 'Preview generated. Click "Apply Smooth" to confirm.'
       });
     } catch (error) {
-       console.error("Error generating smooth preview:", error);
-       set({ status: 'Error generating preview.' });
+      console.error("Error generating smooth preview:", error);
+      set({ status: 'Error generating preview.' });
     }
   },
 
@@ -150,12 +177,12 @@ export const useStore = create((set, get) => ({
   saveData: async () => {
     const { nodes, edges } = get();
     try {
-        set({ status: 'Saving...' });
-        await axios.post(`${API__URL}/api/save`, { nodes, edges });
-        set({ status: 'Save successful.' });
+      set({ status: 'Saving...' });
+      await axios.post(`${API_URL}/api/save`, { nodes, edges });
+      set({ status: 'Save successful.' });
     } catch (error) {
-        console.error("Error saving data:", error);
-        set({ status: 'Save failed.' });
+      console.error("Error saving data:", error);
+      set({ status: 'Save failed.' });
     }
   }
 }));
