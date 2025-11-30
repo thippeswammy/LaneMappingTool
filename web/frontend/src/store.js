@@ -19,12 +19,14 @@ export const useStore = create((set, get) => ({
   smoothness: 1.0,
   weight: 20,
   pointSize: 5, // Default point size
+  plotWidth: 100, // Default plot width in %
   drawPoints: [], // Temporary points for Draw mode
 
   // Actions
   setSmoothness: (smoothness) => set({ smoothness }),
   setWeight: (weight) => set({ weight }),
   setPointSize: (pointSize) => set({ pointSize }),
+  setPlotWidth: (width) => set({ plotWidth: width }),
 
   fetchData: async () => {
     try {

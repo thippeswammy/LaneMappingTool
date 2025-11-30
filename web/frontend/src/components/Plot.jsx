@@ -47,13 +47,6 @@ const Plot = forwardRef(({ nodes, edges }, ref) => {
     }
   }, [mode]);
 
-  // Reset zoom when nodes or edges change
-  useEffect(() => {
-    if (chartRef.current) {
-      chartRef.current.resetZoom();
-    }
-  }, [nodes, edges]);
-
   // Performance Optimization: Prepare edge data for a single dataset
   const edgeData = [];
   if (nodes && edges) {
@@ -121,6 +114,7 @@ const Plot = forwardRef(({ nodes, edges }, ref) => {
         pointBackgroundColor: 'rgba(0, 0, 0, 0.5)',
         showLine: true,
         type: 'line',
+        spanGaps: false,
       }] : []),
     ]
   };
@@ -138,9 +132,11 @@ const Plot = forwardRef(({ nodes, edges }, ref) => {
         const nodeId = nodes[element.index][0];
 
         if (event.ctrlKey || event.metaKey) {
-          performOperation('break_links', { point_id: nodeId });
-        } else {
+          // Ctrl + Right Click = Delete Points
           performOperation('delete_points', { point_ids: [nodeId] });
+        } else {
+          // Right Click = Break Links
+          performOperation('break_links', { point_id: nodeId });
         }
       }
     }

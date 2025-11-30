@@ -13,6 +13,7 @@ function App() {
   const fetchData = useStore(state => state.fetchData);
   const nodes = useStore(state => state.nodes);
   const edges = useStore(state => state.edges);
+  const plotWidth = useStore(state => state.plotWidth);
 
   const plotRef = useRef(null);
 
@@ -99,11 +100,13 @@ function App() {
         </header>
 
         {/* Plot Area */}
-        <main className="plot-area" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <main className="plot-area" style={{ flex: 1, position: 'relative', overflow: 'auto' }}>
           {loading ? (
             <div className="loading-overlay">Loading...</div>
           ) : (
-            <Plot ref={plotRef} nodes={nodes} edges={edges} />
+            <div style={{ width: `${plotWidth}%`, height: '100%' }}>
+              <Plot ref={plotRef} nodes={nodes} edges={edges} />
+            </div>
           )}
         </main>
 

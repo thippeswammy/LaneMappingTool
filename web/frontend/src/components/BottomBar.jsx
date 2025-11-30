@@ -6,9 +6,11 @@ const BottomBar = ({ onHome, onZoom, onPan }) => {
     const smoothness = useStore(state => state.smoothness);
     const weight = useStore(state => state.weight);
     const pointSize = useStore(state => state.pointSize);
+    const plotWidth = useStore(state => state.plotWidth);
     const setSmoothness = useStore(state => state.setSmoothness);
     const setWeight = useStore(state => state.setWeight);
     const setPointSize = useStore(state => state.setPointSize);
+    const setPlotWidth = useStore(state => state.setPlotWidth);
 
     return (
         <div className="bottom-bar-container" style={{ display: 'flex', flexDirection: 'column', padding: '10px', background: '#f0f0f0', borderTop: '1px solid #ccc' }}>
@@ -45,6 +47,17 @@ const BottomBar = ({ onHome, onZoom, onPan }) => {
                         step="1"
                         value={pointSize}
                         onChange={(e) => setPointSize(parseInt(e.target.value))}
+                    />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <label>Plot Width: {plotWidth}%</label>
+                    <input
+                        type="range"
+                        min="95"
+                        max="105"
+                        step="1"
+                        value={plotWidth}
+                        onChange={(e) => setPlotWidth(parseInt(e.target.value))}
                     />
                 </div>
             </div>
