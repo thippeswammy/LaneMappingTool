@@ -74,7 +74,7 @@ def smooth_path_endpoint():
 
         new_points_xy = smooth_segment(data_manager.nodes, data_manager.edges, path_ids, smoothness, weight)
         if new_points_xy is None:
-            return jsonify({'status': 'error', 'message': 'Smoothing calculation failed.'}), 500
+            return jsonify({'status': 'error', 'message': 'Smoothing failed. Path may be too short, contain duplicates, or be invalid for B-Spline.'}), 400
         
         # Prepare the updated node data to be returned to the frontend
         updated_nodes_preview = []

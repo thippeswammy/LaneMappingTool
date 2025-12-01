@@ -16,6 +16,8 @@ export const useStore = create((set, get) => ({
   selectedNodeIds: [],
   operationStartNodeId: null,
   smoothingPreview: null,
+  smoothStartNodeId: null,
+  smoothEndNodeId: null,
   smoothness: 1.0,
   weight: 20,
   pointSize: 5, // Default point size
@@ -23,8 +25,20 @@ export const useStore = create((set, get) => ({
   drawPoints: [], // Temporary points for Draw mode
 
   // Actions
-  setSmoothness: (smoothness) => set({ smoothness }),
-  setWeight: (weight) => set({ weight }),
+  setSmoothness: (smoothness) => {
+    set({ smoothness });
+    const { smoothStartNodeId, smoothEndNodeId } = get();
+    if (smoothStartNodeId && smoothEndNodeId) {
+      get().previewSmooth(smoothStartNodeId, smoothEndNodeId);
+    }
+  },
+  setWeight: (weight) => {
+    set({ weight });
+    const { smoothStartNodeId, smoothEndNodeId } = get();
+    if (smoothStartNodeId && smoothEndNodeId) {
+      get().previewSmooth(smoothStartNodeId, smoothEndNodeId);
+    }
+  },
   setPointSize: (pointSize) => set({ pointSize }),
   setPlotWidth: (width) => set({ plotWidth: width }),
 
@@ -74,6 +88,8 @@ export const useStore = create((set, get) => ({
       selectedNodeIds: [],
       operationStartNodeId: null,
       smoothingPreview: null,
+      smoothStartNodeId: null,
+      smoothEndNodeId: null,
       drawPoints: [],
     });
   },
@@ -126,6 +142,7 @@ export const useStore = create((set, get) => ({
         set({ operationStartNodeId: null });
 
         if (mode === 'smooth') {
+          set({ smoothStartNodeId: startId, smoothEndNodeId: endId });
           get().previewSmooth(startId, endId);
         } else if (mode === 'connect') {
           performOperation('add_edge', { from_id: startId, to_id: endId });
@@ -154,7 +171,8 @@ export const useStore = create((set, get) => ({
       });
     } catch (error) {
       console.error("Error generating smooth preview:", error);
-      set({ status: 'Error generating preview.' });
+      const errorMessage = error.response?.data?.message || 'Error generating preview.';
+      set({ status: `Error: ${errorMessage}`, smoothingPreview: null });
     }
   },
 
@@ -173,7 +191,7 @@ export const useStore = create((set, get) => ({
     });
 
     get().performOperation('apply_updates', { nodes: updatedNodes, edges: get().edges });
-    set({ smoothingPreview: null, mode: 'select' });
+    set({ smoothingPreview: null, mode: 'select', smoothStartNodeId: null, smoothEndNodeId: null });
   },
 
   saveData: async () => {
@@ -188,3 +206,6 @@ export const useStore = create((set, get) => ({
     }
   }
 }));
+
+// Expose store for debugging
+window.store = useStore;

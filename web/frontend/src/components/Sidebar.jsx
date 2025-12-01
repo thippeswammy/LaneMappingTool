@@ -10,6 +10,11 @@ const Sidebar = () => {
     const smoothingPreview = useStore(state => state.smoothingPreview);
     const applySmooth = useStore(state => state.applySmooth);
 
+    const smoothness = useStore(state => state.smoothness);
+    const weight = useStore(state => state.weight);
+    const setSmoothness = useStore(state => state.setSmoothness);
+    const setWeight = useStore(state => state.setWeight);
+
     const getButtonClass = (buttonMode) => {
         return mode === buttonMode ? 'toolbar-button active' : 'toolbar-button';
     };
@@ -20,8 +25,32 @@ const Sidebar = () => {
             <button className="toolbar-button" disabled>Line</button> {/* Placeholder for Line if needed */}
             <button className={getButtonClass('smooth')} onClick={() => setMode('smooth')}>Smooth</button>
 
-            {mode === 'smooth' && smoothingPreview && (
-                <button className="toolbar-button confirm" onClick={applySmooth}>Apply Smooth</button>
+            {mode === 'smooth' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', padding: '5px', border: '1px solid #ddd' }}>
+                    <label>Smoothness: {smoothness}</label>
+                    <input
+                        type="range"
+                        min="0" max="10" step="0.1"
+                        value={smoothness}
+                        onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setSmoothness(val);
+                        }}
+                    />
+                    <label>Weight: {weight}</label>
+                    <input
+                        type="range"
+                        min="1" max="100" step="1"
+                        value={weight}
+                        onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setWeight(val);
+                        }}
+                    />
+                    {smoothingPreview && (
+                        <button className="toolbar-button confirm" onClick={applySmooth}>Apply Smooth</button>
+                    )}
+                </div>
             )}
 
             <div style={{ height: '20px' }}></div> {/* Spacer */}

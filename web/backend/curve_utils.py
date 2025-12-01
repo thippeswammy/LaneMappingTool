@@ -45,12 +45,22 @@ def smooth_segment(nodes, edges, path_ids, smoothness, weight):
     Calculate smoothed points for a given path of IDs.
     This is a standalone utility function.
     """
-    if len(path_ids) < 2:
+    if len(path_ids) < 3:
+        print("Path too short for smoothing (needs >= 3 points)")
         return None
 
     points_xy = [_get_node_coords(nodes, pid) for pid in path_ids]
     points = np.array([p for p in points_xy if p is not None])
-    if len(points) < 2:
+    
+    # Check for duplicates or insufficient unique points
+    if len(points) < 3:
+         print("Insufficient valid points for smoothing")
+         return None
+         
+    # Check for duplicate consecutive points which can crash splprep
+    unique_points = np.unique(points, axis=0)
+    if len(unique_points) < 3:
+        print("Not enough unique points for B-spline")
         return None
 
     original_start_point = points[0]
@@ -99,14 +109,32 @@ def smooth_segment(nodes, edges, path_ids, smoothness, weight):
 
     try:
         x, y = fitting_points[:, 0], fitting_points[:, 1]
-        if len(np.unique(x)) < 2 and len(np.unique(y)) < 2:
-            return points
+        
+        # Ensure we have enough points for k=3
+        if len(fitting_points) <= 3:
+             # Fallback to k=2 or k=1 if very few points, or just return None
+             # But user asked for B-Spline which usually implies cubic (k=3)
+             # If we added anchors, we might have enough.
+             pass
 
         # Correct spline parameterization based on cumulative distance
         distances = np.sqrt(np.sum(np.diff(fitting_points, axis=0)**2, axis=1))
+        
+        # Handle case where all points are same location (distances all 0)
+        if np.sum(distances) == 0:
+             return None
+
         u = np.zeros(len(fitting_points))
         u[1:] = np.cumsum(distances)
         u /= u[-1]
+
+        # Check for duplicate 'u' values which causes splprep to fail
+        # This happens if two consecutive points are identical
+        if len(np.unique(u)) < len(u):
+             # Add tiny noise to duplicates to separate them
+             u = u + np.random.normal(0, 1e-6, len(u))
+             u = np.sort(u) # Re-sort just in case
+             u /= u[-1] # Re-normalize
 
         tck, u_fitted = splprep([x, y], u=u, s=smoothness, k=3, w=weights)
 
@@ -121,6 +149,6 @@ def smooth_segment(nodes, edges, path_ids, smoothness, weight):
         new_points[-1] = original_end_point
 
         return new_points
-    except ValueError as e:
+    except Exception as e:
         print(f"Spline fitting failed: {e}")
         return None
