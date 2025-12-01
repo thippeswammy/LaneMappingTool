@@ -21,13 +21,13 @@ def main():
     """
     base_path = os.getcwd()
     files_dir = os.path.join(base_path, 'files')
-    original_data_path = os.path.join(base_path, 'originalData')
+    original_data_path = os.path.join(base_path, 'lanes','TEMP1')
 
     # These files must exist in your 'original_data_path' folder
     files_path_ = ["lane-0.npy"]
 
-    nodes_path = os.path.join(files_dir, 'WorkingNodes1.npy')
-    edges_path = os.path.join(files_dir, 'WorkingEdges1.npy')
+    nodes_path = os.path.join(files_dir, 'graph_nodes.npy')
+    edges_path = os.path.join(files_dir, 'graph_edges.npy')
     files_path = [os.path.join(original_data_path, i) for i in files_path_]
     # Initialize variables
     final_nodes = np.array([])
