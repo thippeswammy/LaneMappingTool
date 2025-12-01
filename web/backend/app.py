@@ -65,8 +65,8 @@ def smooth_path_endpoint():
         data = request.get_json()
         start_id = int(data.get('start_id'))
         end_id = int(data.get('end_id'))
-        smoothness = float(data.get('smoothness', 1.0))
-        weight = float(data.get('weight', 20))
+        smoothness = float(data.get('smoothness', 2.0))
+        weight = float(data.get('weight', 1))
 
         path_ids = find_path(data_manager.edges, start_id, end_id)
         if not path_ids:
@@ -75,7 +75,7 @@ def smooth_path_endpoint():
         new_points_xy = smooth_segment(data_manager.nodes, data_manager.edges, path_ids, smoothness, weight)
         if new_points_xy is None:
             return jsonify({'status': 'error', 'message': 'Smoothing failed. Path may be too short, contain duplicates, or be invalid for B-Spline.'}), 400
-        
+
         # Prepare the updated node data to be returned to the frontend
         updated_nodes_preview = []
         for i, point_id in enumerate(path_ids):
@@ -129,11 +129,11 @@ def perform_operation():
         elif operation == 'add_edge':
             from_id, to_id = params['from_id'], params['to_id']
             data_manager.add_edge(from_id, to_id)
-            
+
         elif operation == 'delete_points':
             point_ids = params['point_ids']
             data_manager.delete_points(point_ids)
-            
+
         elif operation == 'break_links':
             point_id = params['point_id']
             data_manager.delete_edges_for_node(point_id)
@@ -171,7 +171,7 @@ def perform_operation():
                 x, y = point['x'], point['y']
                 new_node_id = data_manager.add_node(x, y, lane_id)
                 new_node_ids.append(new_node_id)
-                
+
                 if previous_node_id is not None:
                     data_manager.add_edge(previous_node_id, new_node_id)
                 previous_node_id = new_node_id

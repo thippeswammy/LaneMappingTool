@@ -1,12 +1,12 @@
-/files/WorkingEdges.npy
 /.idea/.gitignore
 /.idea/LaneMappingTool.iml
 /.idea/misc.xml
 /.idea/modules.xml
-/files/output.pickle
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
-/files/WorkingNodes.npy
+/files
+/lanes
 utils/__pycache__/
 web/backend/__pycache__/
+/web/backend/workspace-Temp/
