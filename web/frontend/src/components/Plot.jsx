@@ -138,7 +138,7 @@ const Plot = forwardRef(({ nodes, edges }, ref) => {
         // Smoothing Preview
         ...(smoothingPreview ? [{
           label: 'Smooth Preview',
-          data: smoothingPreview.points.map(p => ({ x: p[0], y: p[1] })),
+          data: smoothingPreview.map(p => ({ x: p[1], y: p[2] })),
           borderColor: 'rgba(0, 0, 255, 0.7)',
           borderWidth: 2,
           borderDash: [5, 5],
