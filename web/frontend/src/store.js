@@ -111,8 +111,8 @@ export const useStore = create((set, get) => ({
     if (mode === 'select') {
       set(state => ({
         selectedNodeIds: state.selectedNodeIds.includes(nodeId)
-          ? state.selectedNodeIds.filter(id => id !== nodeId)
-          : [...state.selectedNodeIds, nodeId]
+          ? []
+          : [nodeId]
       }));
     } else if (['smooth', 'remove_between', 'reverse_path', 'connect'].includes(mode)) {
       if (!operationStartNodeId) {
