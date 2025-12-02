@@ -6,6 +6,15 @@ import BottomBar from './components/BottomBar';
 import { IconMenu } from './components/Icons';
 import './App.css';
 
+/**
+ * Renders the main application component with a sidebar, header, plot area, and bottom bar.
+ *
+ * The component manages its state using Zustand for loading status, nodes, edges, and fetches data on mount.
+ * It also sets up keyboard shortcuts for various operations and handles resizing of the plot area using ResizeObserver.
+ * The sidebar can be toggled open or closed, and the plot area displays loading status or the plot based on dimensions.
+ *
+ * @returns {JSX.Element} The rendered application component.
+ */
 function App() {
   console.log("App component rendering");
   // Get state and actions from the Zustand store
