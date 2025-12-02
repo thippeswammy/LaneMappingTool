@@ -17,19 +17,95 @@ CORS(app)
 
 # --- Data Loading ---
 base_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(base_dir, '../..'))
 # Data is expected to be in lanes/TEMP1 relative to project root
-data_path = os.path.join(base_dir, '../../lanes/TEMP1')
+data_path = os.path.join(project_root, 'files')
+original_data_path = os.path.join(project_root, 'lanes', 'TEMP1')
 
-if not os.path.isdir(data_path):
-    os.makedirs(data_path)
-    print(f"Created data directory at: {data_path}")
+# Paths for saved working state
+nodes_path = os.path.join(data_path, 'graph_nodes.npy')
+edges_path = os.path.join(data_path, 'graph_edges.npy')
+
+# These files must exist in your 'original_data_path' folder
+files_path_ = ["lane-0.npy"]
+files_path = [os.path.join(original_data_path, i) for i in files_path_]
+
+# Initialize DataLoader
+loader = DataLoader(original_data_path)
+
+# Load Saved Working Data (Graph Nodes/Edges)
+final_nodes, final_edges, file_names, D = loader.load_graph_data(nodes_path, edges_path)
+
+# Load New Raw Data and Merge
+if files_path:
+    print(f"Attempting to merge {len(files_path)} new raw files...")
+
+    # Calculate ID offsets to prevent collision with saved graph data
+    start_id_offset = 0
+    lane_id_offset = 0
+
+    if final_nodes.size > 0:
+        # Start IDs after the highest existing ID
+        start_id_offset = int(np.max(final_nodes[:, 0])) + 1
+        # Start Lane IDs after the highest existing Lane ID
+        lane_id_offset = int(np.max(final_nodes[:, 4])) + 1
+
+    # Load specific new files with offset using the SAME loader
+    new_nodes, new_edges, new_names = loader.load_data(
+        specific_files=files_path_,
+        start_id=start_id_offset
+    )
+
+    if new_nodes.size > 0:
+        # Adjust Lane IDs for the new nodes to avoid color/logic conflict
+        new_nodes[:, 4] += lane_id_offset
+
+        # Merge Data
+        if final_nodes.size > 0:
+            final_nodes = np.vstack([final_nodes, new_nodes])
+            final_edges = np.vstack([final_edges, new_edges])
+            file_names.extend(new_names)
+            # Update D to be the max of existing D and new loader D
+            D = max(D, loader.D)
+        else:
+            final_nodes = new_nodes
+            final_edges = new_edges
+            file_names = new_names
+            D = loader.D
+
+        print(f"Merged successfully. Total: {final_nodes.shape[0]} nodes.")
+    else:
+        print("Could not load new files (check filenames/paths).")
+
+
+if new_nodes.size > 0:
+    # Adjust Lane IDs for the new nodes to avoid color/logic conflict
+    new_nodes[:, 4] += lane_id_offset
+
+    # Merge Data
+    if final_nodes.size > 0:
+        final_nodes = np.vstack([final_nodes, new_nodes])
+        final_edges = np.vstack([final_edges, new_edges])
+        file_names.extend(new_names)
+        # Update D to be the max of existing D and new loader D
+        D = max(D, loader.D)
+    else:
+        final_nodes = new_nodes
+        final_edges = new_edges
+        file_names = new_names
+        D = loader.D
+
+    print(f"Merged successfully. Total: {final_nodes.shape[0]} nodes.")
 else:
-    print(f"Loading data from: {data_path}")
+    print("No new raw files loaded or merged.")
 
+if final_nodes.size == 0:
+    print("No data loaded at all.")
+    # Initialize empty to avoid errors
+    final_nodes = np.array([])
+    final_edges = np.array([])
 
-loader = DataLoader(data_path)
-nodes, edges, file_names = loader.load_data()
-data_manager = DataManager(nodes, edges, file_names)
+data_manager = DataManager(final_nodes, final_edges, file_names)
 
 # --- API Endpoints ---
 
