@@ -151,9 +151,9 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ...(smoothingPreview ? [{
           label: 'Smooth Preview',
           data: smoothingPreview.map(p => ({ x: p[1], y: p[2] })),
-          borderColor: 'rgba(0, 0, 255, 0.7)',
+          borderColor: 'rgba(255, 0, 0, 1)',
           borderWidth: 2,
-          borderDash: [5, 5],
+          borderDash: [10, 3],
           pointRadius: 0,
           showLine: true,
           type: 'line',
@@ -220,6 +220,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
 
   const options = useMemo(() => ({
     responsive: true,
+    animation: false,
     maintainAspectRatio: false,
     onClick: async (event, elements) => {
       const chart = chartRef.current;
