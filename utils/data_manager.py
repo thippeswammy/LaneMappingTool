@@ -526,7 +526,16 @@ class DataManager:
         except Exception as e:
             print(f"Error deleting edges: {e}")
     def remove_file(self, filename):
-        """Remove all nodes and edges associated with a specific file (zone)."""
+        """def remove_file(self, filename):
+        
+        Remove all nodes and edges associated with a specific file (zone).  This
+        function checks if the specified filename exists in the loaded files.  If
+        found, it retrieves the corresponding zone ID and identifies all nodes
+        associated with that zone. It then removes these nodes and any edges  connected
+        to them, while marking the filename as removed in the list.  The function also
+        maintains a history of changes and handles exceptions  that may occur during
+        the process.
+        """
         try:
             if filename not in self.file_names:
                 print(f"File {filename} not found in loaded files.")
