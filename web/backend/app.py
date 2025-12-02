@@ -1,5 +1,6 @@
 import os
 import sys
+
 import numpy as np
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -21,7 +22,7 @@ project_root = os.path.abspath(os.path.join(base_dir, '../..'))
 
 # Data is expected to be in lanes/TEMP1 relative to project root
 # Default paths as requested
-graph_dir = os.path.join(project_root, 'files')
+graph_dir = os.path.join(base_dir, "workspace")
 lanes_root = os.path.join(project_root, 'lanes')
 raw_data_path = os.path.join(lanes_root, 'TEMP1')
 
@@ -30,7 +31,7 @@ nodes_path = os.path.join(graph_dir, 'graph_nodes1.npy')
 edges_path = os.path.join(graph_dir, 'graph_edges1.npy')
 
 # These files must exist in your 'original_data_path' folder
-files_path_ = [] # No default files
+files_path_ = []  # No default files
 files_path = []
 
 # Initialize DataLoader with default path
@@ -74,7 +75,7 @@ def save_data():
         data_manager.nodes = nodes_array
         data_manager.edges = edges_array
 
-        data_manager.save_by_web(graph_dir)
+        data_manager.save_by_web(os.path.join(base_dir, "workspace"))
 
         return jsonify({'status': 'success', 'message': 'Data saved successfully.'})
     except Exception as e:
@@ -88,12 +89,12 @@ def get_files():
     try:
         # Get requested subdirectory for raw files, default to TEMP1
         subdir = request.args.get('subdir', 'TEMP1')
-        
+
         if os.path.isabs(subdir):
             current_raw_path = subdir
         else:
             current_raw_path = os.path.join(lanes_root, subdir)
-        
+
         # Get requested subdirectory for saved files, default to graph_dir
         saved_subdir = request.args.get('saved_subdir')
         if saved_subdir:
@@ -143,22 +144,23 @@ def load_data_endpoint():
         saved_nodes_file = data.get('saved_nodes_file')
         saved_edges_file = data.get('saved_edges_file')
         raw_data_dir = data.get('raw_data_dir')
-        saved_graph_dir = data.get('saved_graph_dir') # New parameter
+        saved_graph_dir = data.get('saved_graph_dir')  # New parameter
 
-        print(f"Loading data: raw={raw_files}, nodes={saved_nodes_file}, edges={saved_edges_file}, dir={raw_data_dir}, saved_dir={saved_graph_dir}")
+        print(
+            f"Loading data: raw={raw_files}, nodes={saved_nodes_file}, edges={saved_edges_file}, dir={raw_data_dir}, saved_dir={saved_graph_dir}")
 
         # Update loader if a directory is specified
         if raw_data_dir:
-             if os.path.isabs(raw_data_dir):
-                 new_path = raw_data_dir
-             else:
-                 new_path = os.path.join(lanes_root, raw_data_dir)
-                 
-             if os.path.exists(new_path):
-                 loader = DataLoader(new_path)
-                 print(f"Updated loader path to: {new_path}")
-             else:
-                 print(f"Warning: Requested directory {new_path} does not exist. Using default.")
+            if os.path.isabs(raw_data_dir):
+                new_path = raw_data_dir
+            else:
+                new_path = os.path.join(lanes_root, raw_data_dir)
+
+            if os.path.exists(new_path):
+                loader = DataLoader(new_path)
+                print(f"Updated loader path to: {new_path}")
+            else:
+                print(f"Warning: Requested directory {new_path} does not exist. Using default.")
 
         # Initialize with current data if NOT loading a saved graph
         if saved_nodes_file and saved_edges_file:
@@ -167,7 +169,7 @@ def load_data_endpoint():
             final_edges = np.array([])
             file_names = []
             D = 1.0
-            
+
             # Determine path for saved files
             if saved_graph_dir:
                 if os.path.isabs(saved_graph_dir):
@@ -179,21 +181,21 @@ def load_data_endpoint():
 
             nodes_path_full = os.path.join(load_path, saved_nodes_file)
             edges_path_full = os.path.join(load_path, saved_edges_file)
-            
+
             if os.path.exists(nodes_path_full) and os.path.exists(edges_path_full):
                 g_nodes, g_edges, g_names, g_D = loader.load_graph_data(nodes_path_full, edges_path_full)
-                
+
                 if g_nodes.size > 0:
                     if final_nodes.size > 0:
                         # Calculate offsets
                         start_id_offset = int(np.max(final_nodes[:, 0])) + 1
                         lane_id_offset = int(np.max(final_nodes[:, 4])) + 1
-                        
+
                         # Apply offsets to new graph data
                         g_nodes[:, 0] += start_id_offset
                         g_nodes[:, 4] += lane_id_offset
                         g_edges += start_id_offset
-                        
+
                         # Update file names to reflect new lane IDs
                         unique_lanes = np.unique(g_nodes[:, 4]).astype(int)
                         g_names = [f"Edited Lane {i}" for i in unique_lanes]
@@ -208,7 +210,7 @@ def load_data_endpoint():
                         final_edges = g_edges
                         file_names = g_names
                         D = g_D
-                        
+
                 print(f"Loaded and merged saved graph: {g_nodes.shape[0]} nodes")
             else:
                 print("Saved graph files not found.")
@@ -217,14 +219,14 @@ def load_data_endpoint():
             final_nodes = data_manager.nodes.copy() if data_manager.nodes.size > 0 else np.array([])
             final_edges = data_manager.edges.copy() if data_manager.edges.size > 0 else np.array([])
             file_names = list(data_manager.file_names)
-            D = loader.D # Best effort to keep D
+            D = loader.D  # Best effort to keep D
 
         # 2. Load Raw Data if requested
         if raw_files:
             # Filter out already loaded files
             existing_files = set(data_manager.file_names)
             files_to_load = [f for f in raw_files if f not in existing_files]
-            
+
             if not files_to_load:
                 print("All selected files are already loaded.")
             else:
@@ -257,17 +259,17 @@ def load_data_endpoint():
                         final_edges = new_edges
                         file_names = new_names
                         D = loader.D
-                    
+
                     print(f"Merged raw files. Total: {final_nodes.shape[0]} nodes.")
 
         # Update DataManager
         if final_nodes.size == 0:
-             # Initialize empty to avoid errors
+            # Initialize empty to avoid errors
             final_nodes = np.array([])
             final_edges = np.array([])
-        
+
         data_manager = DataManager(final_nodes, final_edges, file_names)
-        
+
         return jsonify({
             'status': 'success',
             'nodes': data_manager.nodes.tolist() if data_manager.nodes.size > 0 else [],
@@ -285,12 +287,12 @@ def unload_data_endpoint():
     try:
         data = request.json
         filename = data.get('filename')
-        
+
         if not filename:
             return jsonify({'status': 'error', 'message': 'No filename provided'}), 400
 
         success = data_manager.remove_file(filename)
-        
+
         if success:
             return jsonify({
                 'status': 'success',
@@ -299,7 +301,7 @@ def unload_data_endpoint():
                 'file_names': [f for f in data_manager.file_names if f is not None]
             })
         else:
-             return jsonify({'status': 'error', 'message': 'Failed to remove file'}), 500
+            return jsonify({'status': 'error', 'message': 'Failed to remove file'}), 500
 
     except Exception as e:
         print(f"Error unloading data: {e}")
