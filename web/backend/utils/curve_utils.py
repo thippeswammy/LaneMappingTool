@@ -5,7 +5,7 @@ from scipy.interpolate import splprep, splev
 
 
 def _get_node_coords(nodes, point_id):
-    """Helper to get (x, y) for a point_id from a nodes numpy array."""
+    """Retrieve (x, y) coordinates for a given point_id from a nodes array."""
     node_mask = (nodes[:, 0] == point_id)
     if np.any(node_mask):
         return nodes[node_mask][0, 1:3]  # [x, y]
@@ -13,9 +13,12 @@ def _get_node_coords(nodes, point_id):
 
 
 def find_path(edges, start_id, end_id):
-    """
-    Finds a path from start_id to end_id using bidirectional BFS.
-    This is a standalone utility function.
+    """Finds a path from start_id to end_id using bidirectional BFS.
+    
+    This function constructs an adjacency list from the given edges and  performs a
+    breadth-first search (BFS) to find a path between the  specified start_id and
+    end_id. It handles cases where the edges  are empty or the start_id is not
+    present in the adjacency list,  returning None in such scenarios.
     """
     if edges.size == 0:
         return None
@@ -45,9 +48,24 @@ def find_path(edges, start_id, end_id):
 
 
 def smooth_segment(nodes, edges, path_ids, smoothness, weight):
-    """
-    Calculate smoothed points for a given path of IDs.
-    This is a standalone utility function.
+    """Calculate smoothed points for a given path of IDs.
+    
+    This function takes a set of nodes and edges to compute a smoothed path based
+    on the provided path IDs. It first checks the validity of the input path,
+    ensuring there are enough unique points for smoothing. The function then
+    constructs a weighted B-spline using the specified smoothness parameter,
+    adjusting for adjacent points if necessary. Finally, it returns the newly
+    computed smoothed points while preserving the original start and end points.
+    
+    Args:
+        nodes (list): A list of node coordinates.
+        edges (list): A list of edges connecting the nodes.
+        path_ids (list): A list of IDs representing the path to be smoothed.
+        smoothness (float): The smoothness parameter for the B-spline.
+        weight (float): The weight applied to the start and end points in the fitting process.
+    
+    Returns:
+        np.ndarray: An array of smoothed points, or None if smoothing fails.
     """
     if len(path_ids) < 3:
         print("Path too short for smoothing (needs >= 3 points)")
