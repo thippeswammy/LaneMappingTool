@@ -125,6 +125,47 @@ export const useStore = create((set, get) => ({
     }
   },
 
+  clearAllData: async () => {
+    if (!window.confirm("Are you sure you want to clear ALL data? This cannot be undone.")) {
+      return;
+    }
+    try {
+      set({ loading: true, status: 'Clearing all data...' });
+      const response = await axios.post(`${API_URL}/api/clear`);
+      set({
+        nodes: response.data.nodes,
+        edges: response.data.edges,
+        fileNames: response.data.file_names,
+        loading: false,
+        status: 'All data cleared.'
+      });
+
+      // Refresh file list to update checkboxes (though they should just be unchecked now)
+      get().fetchFiles(get().currentRawDir);
+
+    } catch (error) {
+      console.error("Error clearing data:", error);
+      set({ loading: false, status: 'Error clearing data.' });
+    }
+  },
+
+  unloadGraph: async () => {
+    try {
+      set({ loading: true, status: 'Unloading graph data...' });
+      const response = await axios.post(`${API_URL}/api/unload_graph`);
+      set({
+        nodes: response.data.nodes,
+        edges: response.data.edges,
+        fileNames: response.data.file_names,
+        loading: false,
+        status: 'Graph data unloaded.'
+      });
+    } catch (error) {
+      console.error("Error unloading graph data:", error);
+      set({ loading: false, status: 'Error unloading graph data.' });
+    }
+  },
+
   performOperation: async (operation, params = {}) => {
     try {
       set({ status: `Executing: ${operation}...` });

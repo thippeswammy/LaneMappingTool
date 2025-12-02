@@ -279,6 +279,29 @@ const FileLoader = ({ onClose }) => {
                                     ))}
                                 </select>
                             </div>
+                            <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                    onClick={() => {
+                                        useStore.getState().unloadGraph();
+                                        // Optional: Close loader or stay open? User might want to load something else.
+                                        // Let's keep it open but maybe show a toast? Store handles status update.
+                                    }}
+                                    style={{
+                                        padding: '5px 10px',
+                                        borderRadius: '4px',
+                                        background: '#d32f2f',
+                                        color: 'white',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        fontSize: '0.8rem'
+                                    }}
+                                >
+                                    <IconCancel size={14} /> Unload Graph Data
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

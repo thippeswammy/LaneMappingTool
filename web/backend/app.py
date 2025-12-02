@@ -308,6 +308,45 @@ def unload_data_endpoint():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/api/unload_graph', methods=['POST'])
+def unload_graph_endpoint():
+    try:
+        # Identify files associated with the graph (Edited Lane ...)
+        graph_files = [f for f in data_manager.file_names if f and f.startswith("Edited Lane")]
+        
+        if not graph_files:
+             return jsonify({'status': 'success', 'message': 'No graph data to unload.', 'nodes': data_manager.nodes.tolist(), 'edges': data_manager.edges.tolist(), 'file_names': data_manager.file_names})
+
+        for filename in graph_files:
+            data_manager.remove_file(filename)
+
+        return jsonify({
+            'status': 'success',
+            'nodes': data_manager.nodes.tolist() if data_manager.nodes.size > 0 else [],
+            'edges': data_manager.edges.tolist() if data_manager.edges.size > 0 else [],
+            'file_names': [f for f in data_manager.file_names if f is not None]
+        })
+
+    except Exception as e:
+        print(f"Error unloading graph data: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/clear', methods=['POST'])
+def clear_data_endpoint():
+    try:
+        data_manager.clear_data()
+        return jsonify({
+            'status': 'success',
+            'nodes': [],
+            'edges': [],
+            'file_names': []
+        })
+    except Exception as e:
+        print(f"Error clearing data: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @app.route('/api/smooth', methods=['POST'])
 def smooth_path_endpoint():
     try:
