@@ -3,6 +3,9 @@ import { useStore } from '../store';
 import './Toolbar.css';
 import { IconHome, IconZoom, IconPan } from './Icons';
 
+/**
+ * Renders the bottom bar with point size and plot width controls, and navigation buttons.
+ */
 const BottomBar = ({ onHome, onZoom, onPan }) => {
     const pointSize = useStore(state => state.pointSize);
     const plotWidth = useStore(state => state.plotWidth);
