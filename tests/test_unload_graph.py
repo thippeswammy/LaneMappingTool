@@ -4,14 +4,15 @@ from web.backend.app import app, data_manager
 
 @pytest.fixture
 def client():
+    """Create a test client for the application."""
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
 
 def test_unload_graph(client):
-    """Test the /api/unload_graph endpoint."""
     # 1. Setup: Load some mixed data
     # Raw data (simulated)
+    """Test the /api/unload_graph endpoint."""
     data_manager.nodes = np.array([[0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 1]])
     data_manager.edges = np.array([[0, 1]])
     data_manager.file_names = ['lane-01.npy', 'Edited Lane 0']
