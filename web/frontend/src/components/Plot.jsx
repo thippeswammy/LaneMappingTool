@@ -99,6 +99,18 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     }
   }, [minX, maxX, minY, maxY]);
 
+  // Imperatively update pan enablement based on mode
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (chart) {
+      const isSelectionMode = mode === 'brush_select' || mode === 'box_select';
+      if (chart.options.plugins.zoom.pan.enabled !== !isSelectionMode) {
+        chart.options.plugins.zoom.pan.enabled = !isSelectionMode;
+        chart.update('none');
+      }
+    }
+  }, [mode]);
+
   // Performance Optimization: Prepare edge data
   const chartData = useMemo(() => {
     const edgeData = [];
@@ -433,7 +445,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       },
       zoom: {
         pan: {
-          enabled: mode !== 'brush_select' && mode !== 'box_select', // Disable pan in selection modes
+          enabled: true, // Default enabled, controlled imperatively
           mode: 'xy',
         },
         zoom: {
@@ -457,7 +469,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ticks: { color: '#aaa' }
       }
     }
-  }), [mode, minX, maxX, minY, maxY]);
+  }), []); // Removed dependencies to prevent recreation
 
   return (
     <div

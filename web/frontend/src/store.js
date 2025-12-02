@@ -8,7 +8,9 @@ export const useStore = create((set, get) => ({
   nodes: [],
   edges: [],
   fileNames: [],
-  availableFiles: { raw_files: [], saved_files: [], raw_path: '', saved_path: '' },
+  availableFiles: { raw_files: [], saved_files: [], raw_path: '', saved_path: '', subdirs: [], current_subdir: 'TEMP1', current_saved_subdir: '' },
+  currentRawDir: 'TEMP1',
+  currentSavedDir: '',
   loading: true,
   status: 'Initializing...',
   mode: 'select', // select, draw, smooth, connect, remove_between, reverse_path, zoom, brush_select, box_select
@@ -62,22 +64,34 @@ export const useStore = create((set, get) => ({
     }
   },
 
-  fetchFiles: async () => {
+  fetchFiles: async (subdir = null, savedSubdir = null) => {
     try {
-      const response = await axios.get(`${API_URL}/api/files`);
+      const params = {};
+      if (subdir) params.subdir = subdir;
+      if (savedSubdir) params.saved_subdir = savedSubdir;
+
+      const response = await axios.get(`${API_URL}/api/files`, { params });
       set({ availableFiles: response.data });
+      if (subdir) {
+        set({ currentRawDir: subdir });
+      }
+      if (savedSubdir) {
+        set({ currentSavedDir: savedSubdir });
+      }
     } catch (error) {
       console.error("Error fetching files:", error);
     }
   },
 
-  loadData: async (rawFiles, savedNodesFile, savedEdgesFile) => {
+  loadData: async (rawFiles, savedNodesFile, savedEdgesFile, rawDataDir, savedGraphDir) => {
     try {
       set({ loading: true, status: 'Loading selected files...' });
       const response = await axios.post(`${API_URL}/api/load`, {
         raw_files: rawFiles,
         saved_nodes_file: savedNodesFile,
-        saved_edges_file: savedEdgesFile
+        saved_edges_file: savedEdgesFile,
+        raw_data_dir: rawDataDir,
+        saved_graph_dir: savedGraphDir
       });
       const { nodes, edges, file_names } = response.data;
       set({
@@ -90,6 +104,24 @@ export const useStore = create((set, get) => ({
     } catch (error) {
       console.error("Error loading data:", error);
       set({ loading: false, status: 'Error loading data.' });
+    }
+  },
+
+  unloadData: async (filename) => {
+    try {
+      set({ loading: true, status: `Unloading ${filename}...` });
+      const response = await axios.post(`${API_URL}/api/unload`, { filename });
+      const { nodes, edges, file_names } = response.data;
+      set({
+        nodes: nodes || [],
+        edges: edges || [],
+        fileNames: file_names || [],
+        loading: false,
+        status: `Unloaded ${filename}.`
+      });
+    } catch (error) {
+      console.error("Error unloading data:", error);
+      set({ loading: false, status: 'Error unloading data.' });
     }
   },
 

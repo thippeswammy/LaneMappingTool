@@ -28,7 +28,7 @@ def main():
     edges_path = os.path.join(graph_dir, 'graph_edges.npy')
 
     # These files must exist in your 'raw_data_path' folder
-    files_path_ = ["lane-2.npy", "lane-3.npy"]
+    files_path_ = ["lane-20.npy", "lane-30.npy"]
     files_path = [os.path.join(raw_data_path, i) for i in files_path_]
 
     # Initialize DataLoader

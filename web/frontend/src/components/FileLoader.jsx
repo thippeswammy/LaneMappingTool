@@ -6,28 +6,82 @@ const FileLoader = ({ onClose }) => {
     const availableFiles = useStore(state => state.availableFiles);
     const fetchFiles = useStore(state => state.fetchFiles);
     const loadData = useStore(state => state.loadData);
+    const unloadData = useStore(state => state.unloadData);
+    const loadedFileNames = useStore(state => state.fileNames);
+    const currentRawDir = useStore(state => state.currentRawDir);
+    const currentSavedDir = useStore(state => state.currentSavedDir);
 
     const [selectedRawFiles, setSelectedRawFiles] = useState([]);
     const [selectedSavedNodes, setSelectedSavedNodes] = useState(null);
     const [selectedSavedEdges, setSelectedSavedEdges] = useState(null);
     const [activeTab, setActiveTab] = useState('raw'); // 'raw' or 'saved'
 
+    // Raw Dir State
+    const [isCustomDir, setIsCustomDir] = useState(false);
+    const [customPath, setCustomPath] = useState('');
+
+    // Saved Dir State
+    const [isCustomSavedDir, setIsCustomSavedDir] = useState(false);
+    const [customSavedPath, setCustomSavedPath] = useState('');
+
     useEffect(() => {
         fetchFiles();
     }, [fetchFiles]);
 
+    // Raw Dir Handlers
+    const handleDirChange = (e) => {
+        const value = e.target.value;
+        if (value === 'CUSTOM') {
+            setIsCustomDir(true);
+            setCustomPath('');
+        } else {
+            setIsCustomDir(false);
+            fetchFiles(value, currentSavedDir);
+        }
+    };
+
+    const handleCustomPathSubmit = () => {
+        if (customPath) {
+            fetchFiles(customPath, currentSavedDir);
+        }
+    };
+
+    // Saved Dir Handlers
+    const handleSavedDirChange = (e) => {
+        const value = e.target.value;
+        if (value === 'CUSTOM') {
+            setIsCustomSavedDir(true);
+            setCustomSavedPath('');
+        } else {
+            setIsCustomSavedDir(false);
+            fetchFiles(currentRawDir, value);
+        }
+    };
+
+    const handleCustomSavedPathSubmit = () => {
+        if (customSavedPath) {
+            fetchFiles(currentRawDir, customSavedPath);
+        }
+    };
+
     const handleRawFileToggle = (fileName) => {
-        setSelectedRawFiles(prev => {
-            if (prev.includes(fileName)) {
-                return prev.filter(f => f !== fileName);
-            } else {
-                return [...prev, fileName];
-            }
-        });
+        if (loadedFileNames.includes(fileName)) {
+            // If already loaded, unload it immediately
+            unloadData(fileName);
+        } else {
+            // Toggle selection for loading
+            setSelectedRawFiles(prev => {
+                if (prev.includes(fileName)) {
+                    return prev.filter(f => f !== fileName);
+                } else {
+                    return [...prev, fileName];
+                }
+            });
+        }
     };
 
     const handleLoad = () => {
-        loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges);
+        loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir);
         onClose();
     };
 
@@ -95,29 +149,107 @@ const FileLoader = ({ onClose }) => {
                 <div className="file-list" style={{ flex: 1, overflowY: 'auto', minHeight: '200px', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '10px', background: 'var(--bg-primary)' }}>
                     {activeTab === 'raw' && (
                         <div>
+                            <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <label style={{ color: 'var(--text-secondary)' }}>Directory:</label>
+                                <select
+                                    value={isCustomDir ? 'CUSTOM' : currentRawDir}
+                                    onChange={handleDirChange}
+                                    style={{ padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                >
+                                    {availableFiles.subdirs && availableFiles.subdirs.map(subdir => (
+                                        <option key={subdir} value={subdir}>{subdir}</option>
+                                    ))}
+                                    <option value="CUSTOM">Custom Path...</option>
+                                </select>
+                            </div>
+                            {isCustomDir && (
+                                <div style={{ marginBottom: '10px', display: 'flex', gap: '5px' }}>
+                                    <input
+                                        type="text"
+                                        value={customPath}
+                                        onChange={(e) => setCustomPath(e.target.value)}
+                                        placeholder="Enter full path (e.g. F:\Projects\Data)"
+                                        style={{ flex: 1, padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                    />
+                                    <button
+                                        onClick={handleCustomPathSubmit}
+                                        style={{ padding: '5px 10px', borderRadius: '4px', background: 'var(--accent-color)', color: 'white', border: 'none', cursor: 'pointer' }}
+                                    >
+                                        Go
+                                    </button>
+                                </div>
+                            )}
                             <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                 Location: {availableFiles.raw_path}
                             </p>
                             {availableFiles.raw_files.length === 0 ? (
                                 <p style={{ color: 'var(--text-secondary)' }}>No raw data files found.</p>
                             ) : (
-                                availableFiles.raw_files.map(file => (
-                                    <div key={file} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedRawFiles.includes(file)}
-                                            onChange={() => handleRawFileToggle(file)}
-                                            id={`raw-${file}`}
-                                        />
-                                        <label htmlFor={`raw-${file}`} style={{ color: 'var(--text-primary)', cursor: 'pointer', flex: 1 }}>{file}</label>
-                                    </div>
-                                ))
+                                availableFiles.raw_files.map(file => {
+                                    const isLoaded = loadedFileNames.includes(file);
+                                    return (
+                                        <div key={file} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedRawFiles.includes(file) || isLoaded}
+                                                onChange={() => handleRawFileToggle(file)}
+                                                id={`raw-${file}`}
+                                            />
+                                            <label
+                                                htmlFor={`raw-${file}`}
+                                                style={{
+                                                    color: 'var(--text-primary)',
+                                                    cursor: 'pointer',
+                                                    flex: 1
+                                                }}
+                                            >
+                                                {file} {isLoaded && "(Loaded)"}
+                                            </label>
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     )}
 
                     {activeTab === 'saved' && (
                         <div>
+                            <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <label style={{ color: 'var(--text-secondary)' }}>Directory:</label>
+                                <select
+                                    value={isCustomSavedDir ? 'CUSTOM' : currentSavedDir}
+                                    onChange={handleSavedDirChange}
+                                    style={{ padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                >
+                                    <option value="">Default (files)</option>
+                                    {/* Assuming subdirs are shared or we want to list subdirs of graph_dir? 
+                                        For now, let's just allow Custom Path or Default, as we don't list subdirs of graph_dir in backend yet.
+                                        But we can reuse availableFiles.subdirs if they are relevant, or just stick to Custom/Default.
+                                        Actually, user might want to pick a folder from 'lanes' too?
+                                        Let's just show Custom Path and Default for now, as we didn't implement listing subdirs of graph_dir specifically. 
+                                        Wait, availableFiles.subdirs is for 'lanes'. 
+                                        Let's just allow Custom Path for flexibility.
+                                    */}
+                                    <option value="CUSTOM">Custom Path...</option>
+                                </select>
+                            </div>
+                            {isCustomSavedDir && (
+                                <div style={{ marginBottom: '10px', display: 'flex', gap: '5px' }}>
+                                    <input
+                                        type="text"
+                                        value={customSavedPath}
+                                        onChange={(e) => setCustomSavedPath(e.target.value)}
+                                        placeholder="Enter full path (e.g. F:\Projects\Saved)"
+                                        style={{ flex: 1, padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                    />
+                                    <button
+                                        onClick={handleCustomSavedPathSubmit}
+                                        style={{ padding: '5px 10px', borderRadius: '4px', background: 'var(--accent-color)', color: 'white', border: 'none', cursor: 'pointer' }}
+                                    >
+                                        Go
+                                    </button>
+                                </div>
+                            )}
                             <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                 Location: {availableFiles.saved_path}
                             </p>

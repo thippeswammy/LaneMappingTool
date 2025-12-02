@@ -421,9 +421,10 @@ class DataManager:
             print(f"Error saving data: {e}")
             return None
 
-    def save_by_web(self):
+    def save_by_web(self, folder="workspace"):
         """Save nodes and edges to files and create a backup."""
-        folder = "workspace"
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         try:
             nodes_filename = os.path.join(folder, "graph_nodes.npy")
             edges_filename = os.path.join(folder, "graph_edges.npy")
@@ -524,3 +525,52 @@ class DataManager:
 
         except Exception as e:
             print(f"Error deleting edges: {e}")
+    def remove_file(self, filename):
+        """Remove all nodes and edges associated with a specific file (zone)."""
+        try:
+            if filename not in self.file_names:
+                print(f"File {filename} not found in loaded files.")
+                return False
+
+            # Find the index (zone ID) of the file
+            # Note: We must find the *original* index, even if we've replaced some with None.
+            # But here we assume file_names tracks the zones.
+            try:
+                zone_id = self.file_names.index(filename)
+            except ValueError:
+                print(f"File {filename} not found in file_names list.")
+                return False
+
+            print(f"Removing file {filename} (Zone {zone_id})...")
+
+            # Identify nodes to remove
+            nodes_to_remove_mask = self.nodes[:, 4] == zone_id
+            nodes_to_remove_ids = self.nodes[nodes_to_remove_mask, 0]
+
+            if nodes_to_remove_ids.size == 0:
+                print(f"No nodes found for zone {zone_id}. Just removing filename.")
+                self.file_names[zone_id] = None # Mark as removed
+                return True
+
+            # Remove nodes
+            self.nodes = self.nodes[~nodes_to_remove_mask]
+
+            # Remove edges connected to these nodes
+            if self.edges.size > 0:
+                edge_mask_from = np.isin(self.edges[:, 0], nodes_to_remove_ids)
+                edge_mask_to = np.isin(self.edges[:, 1], nodes_to_remove_ids)
+                edge_mask_delete = edge_mask_from | edge_mask_to
+                self.edges = self.edges[~edge_mask_delete]
+
+            # Mark file as removed in the list to preserve indices for other zones
+            self.file_names[zone_id] = None
+
+            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.redo_stack = []
+            self._auto_save_backup()
+            print(f"Successfully removed file {filename}.")
+            return True
+
+        except Exception as e:
+            print(f"Error removing file {filename}: {e}")
+            return False
