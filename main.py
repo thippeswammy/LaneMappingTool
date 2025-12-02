@@ -82,7 +82,7 @@ def main():
         print("No data loaded at all.")
         return
 
-        # Initialize Managers
+    # Initialize Managers
     data_manager = DataManager(final_nodes, final_edges, file_names)
     event_handler = EventHandler(data_manager)
     plot_manager = PlotManager(final_nodes, final_edges, file_names, D, data_manager, event_handler)
