@@ -1,8 +1,9 @@
 import os
 import sys
+
+import numpy as np
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import numpy as np
 
 # Adjust path to import from the parent project
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -18,20 +19,21 @@ CORS(app)
 # --- Data Loading ---
 base_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(base_dir, '../..'))
+
 # Data is expected to be in lanes/TEMP1 relative to project root
-data_path = os.path.join(project_root, 'files')
-original_data_path = os.path.join(project_root, 'lanes', 'TEMP1')
+graph_dir = os.path.join(base_dir, 'workspace')
+raw_data_path = os.path.join(project_root, 'lanes', 'TEMP1')
 
 # Paths for saved working state
-nodes_path = os.path.join(data_path, 'graph_nodes.npy')
-edges_path = os.path.join(data_path, 'graph_edges.npy')
+nodes_path = os.path.join(graph_dir, 'graph_nodes.npy')
+edges_path = os.path.join(graph_dir, 'graph_edges.npy')
 
 # These files must exist in your 'original_data_path' folder
-files_path_ = ["lane-0.npy"]
-files_path = [os.path.join(original_data_path, i) for i in files_path_]
+files_path_ = ["lane-30.npy"]
+files_path = [os.path.join(raw_data_path, i) for i in files_path_]
 
 # Initialize DataLoader
-loader = DataLoader(original_data_path)
+loader = DataLoader(raw_data_path)
 
 # Load Saved Working Data (Graph Nodes/Edges)
 final_nodes, final_edges, file_names, D = loader.load_graph_data(nodes_path, edges_path)
@@ -77,28 +79,6 @@ if files_path:
     else:
         print("Could not load new files (check filenames/paths).")
 
-
-if new_nodes.size > 0:
-    # Adjust Lane IDs for the new nodes to avoid color/logic conflict
-    new_nodes[:, 4] += lane_id_offset
-
-    # Merge Data
-    if final_nodes.size > 0:
-        final_nodes = np.vstack([final_nodes, new_nodes])
-        final_edges = np.vstack([final_edges, new_edges])
-        file_names.extend(new_names)
-        # Update D to be the max of existing D and new loader D
-        D = max(D, loader.D)
-    else:
-        final_nodes = new_nodes
-        final_edges = new_edges
-        file_names = new_names
-        D = loader.D
-
-    print(f"Merged successfully. Total: {final_nodes.shape[0]} nodes.")
-else:
-    print("No new raw files loaded or merged.")
-
 if final_nodes.size == 0:
     print("No data loaded at all.")
     # Initialize empty to avoid errors
@@ -107,8 +87,8 @@ if final_nodes.size == 0:
 
 data_manager = DataManager(final_nodes, final_edges, file_names)
 
-# --- API Endpoints ---
 
+# --- API Endpoints ---
 @app.route('/api/data', methods=['GET'])
 def get_data():
     nodes_list = data_manager.nodes.tolist() if data_manager.nodes.size > 0 else []
@@ -119,6 +99,7 @@ def get_data():
         'file_names': data_manager.file_names
     })
 
+
 @app.route('/api/save', methods=['POST'])
 def save_data():
     try:
@@ -128,12 +109,13 @@ def save_data():
         data_manager.nodes = nodes_array
         data_manager.edges = edges_array
 
-        data_manager.save_all_lanes()
+        data_manager.save_by_web()
 
         return jsonify({'status': 'success', 'message': 'Data saved successfully.'})
     except Exception as e:
         print(f"Error saving data: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 @app.route('/api/smooth', methods=['POST'])
 def smooth_path_endpoint():
@@ -150,7 +132,8 @@ def smooth_path_endpoint():
 
         new_points_xy = smooth_segment(data_manager.nodes, data_manager.edges, path_ids, smoothness, weight)
         if new_points_xy is None:
-            return jsonify({'status': 'error', 'message': 'Smoothing failed. Path may be too short, contain duplicates, or be invalid for B-Spline.'}), 400
+            return jsonify({'status': 'error',
+                            'message': 'Smoothing failed. Path may be too short, contain duplicates, or be invalid for B-Spline.'}), 400
 
         # Prepare the updated node data to be returned to the frontend
         updated_nodes_preview = []
@@ -163,12 +146,12 @@ def smooth_path_endpoint():
 
                 # Calculate Yaw
                 if i < len(new_points_xy) - 1:
-                    dx = new_points_xy[i+1, 0] - new_points_xy[i, 0]
-                    dy = new_points_xy[i+1, 1] - new_points_xy[i, 1]
+                    dx = new_points_xy[i + 1, 0] - new_points_xy[i, 0]
+                    dy = new_points_xy[i + 1, 1] - new_points_xy[i, 1]
                     new_node[3] = np.arctan2(dy, dx)
                 elif i > 0:
                     # Last point inherits yaw from the previous one in the preview
-                    new_node[3] = updated_nodes_preview[i-1][3]
+                    new_node[3] = updated_nodes_preview[i - 1][3]
 
                 updated_nodes_preview.append(new_node.tolist())
 
@@ -190,11 +173,11 @@ def perform_operation():
         params = data.get('params')
 
         if operation == 'apply_updates':
-             nodes_array = np.array(params['nodes'])
-             edges_array = np.array(params['edges'])
-             data_manager.nodes = nodes_array
-             data_manager.edges = edges_array
-             data_manager.history.append((data_manager.nodes.copy(), data_manager.edges.copy()))
+            nodes_array = np.array(params['nodes'])
+            edges_array = np.array(params['edges'])
+            data_manager.nodes = nodes_array
+            data_manager.edges = edges_array
+            data_manager.history.append((data_manager.nodes.copy(), data_manager.edges.copy()))
 
         elif operation == 'add_node':
             x, y, lane_id = params['x'], params['y'], params['lane_id']
@@ -263,6 +246,7 @@ def perform_operation():
     except Exception as e:
         print(f"Error performing operation '{operation}': {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

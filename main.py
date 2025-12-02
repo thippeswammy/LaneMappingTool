@@ -20,19 +20,19 @@ def main():
     for further data processing and visualization.
     """
     base_path = os.getcwd()
-    files_dir = os.path.join(base_path, 'files')
-    original_data_path = os.path.join(base_path, 'lanes', 'TEMP1')
+    graph_dir = os.path.join(base_path, 'files')
+    raw_data_path = os.path.join(base_path, 'lanes', 'TEMP1')
 
     # Paths for saved working state
-    nodes_path = os.path.join(files_dir, 'graph_nodes.npy')
-    edges_path = os.path.join(files_dir, 'graph_edges.npy')
+    nodes_path = os.path.join(graph_dir, 'graph_nodes.npy')
+    edges_path = os.path.join(graph_dir, 'graph_edges.npy')
 
-    # These files must exist in your 'original_data_path' folder
+    # These files must exist in your 'raw_data_path' folder
     files_path_ = ["lane-0.npy"]
-    files_path = [os.path.join(original_data_path, i) for i in files_path_]
+    files_path = [os.path.join(raw_data_path, i) for i in files_path_]
 
     # Initialize DataLoader
-    loader = DataLoader(original_data_path)
+    loader = DataLoader(raw_data_path)
 
     # Load Saved Working Data (Graph Nodes/Edges)
     final_nodes, final_edges, file_names, D = loader.load_graph_data(nodes_path, edges_path)

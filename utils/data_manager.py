@@ -1,7 +1,6 @@
 import math
 import os
 import pickle
-import shutil
 import time
 
 import networkx as nx
@@ -272,36 +271,6 @@ class DataManager:
 
         return G
 
-    def save_all_lanes(self):
-        folder = "workspace-Temp"
-        try:
-            os.makedirs(folder, exist_ok=True)
-            for filename in os.listdir(folder):
-                file_path = os.path.join(folder, filename)
-                try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)
-                except Exception as e:
-                    print(f"Failed to delete {file_path}: {e}")
-
-            nodes_filename = os.path.join(folder, "graph_nodes.npy")
-            edges_filename = os.path.join(folder, "graph_edges.npy")
-            np.save(nodes_filename, self.nodes)
-            np.save(edges_filename, self.edges)
-            print(f"Saved graph nodes to {nodes_filename}")
-            print(f"Saved graph edges to {edges_filename}")
-
-            G = self._create_networkx_graph()
-            pickle_file_path = os.path.join(folder, "output.pickle")
-            with open(pickle_file_path, "wb") as f:
-                pickle.dump(G, f)
-            print(f"Saved NetworkX graph to {pickle_file_path}")
-
-        except Exception as e:
-            print(f"Error saving graph data to temp: {e}")
-
     def clear_data(self):
         try:
             self.nodes = np.array([])
@@ -355,7 +324,7 @@ class DataManager:
             print(f"Error during redo: {e}")
             return self.nodes, self.edges, False
 
-    def save(self):
+    def save_by_matplotlib(self):
         """Save nodes and edges to files and create a backup."""
         try:
             os.makedirs("./files", exist_ok=True)
@@ -378,6 +347,29 @@ class DataManager:
 
             return nodes_filename
 
+        except Exception as e:
+            print(f"Error saving data: {e}")
+            return None
+
+    def save_by_web(self):
+        """Save nodes and edges to files and create a backup."""
+        folder = "workspace"
+        try:
+            nodes_filename = os.path.join(folder, "graph_nodes.npy")
+            edges_filename = os.path.join(folder, "graph_edges.npy")
+
+            np.save(nodes_filename, self.nodes)
+            np.save(edges_filename, self.edges)
+
+            print(f"Saved graph nodes to {nodes_filename}")
+            print(f"Saved graph edges to {edges_filename}")
+
+            G = self._create_networkx_graph()
+            pickle_file_path = os.path.join(folder, "output.pickle")
+            with open(pickle_file_path, "wb") as f:
+                pickle.dump(G, f)
+
+            print(f"Saved NetworkX graph to {pickle_file_path}")
         except Exception as e:
             print(f"Error saving data: {e}")
             return None

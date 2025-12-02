@@ -9,7 +9,7 @@ from matplotlib.widgets import Button
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Adjust this join if your folder structure is different
-graph_file_path = os.path.join(BASE_DIR, "workspace-Temp", "output.pickle")
+graph_file_path = os.path.join(BASE_DIR, "workspace", "output.pickle")
 
 
 class GraphViewer:

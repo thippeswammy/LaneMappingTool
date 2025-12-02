@@ -38,14 +38,14 @@ class PlotManager:
 
     def setup_widgets(self):
         ax_size = plt.axes([0.6, 0.02, 0.3, 0.03])
-        self.slider_size = Slider(ax_size, 'Point Size', 1, 100, valinit=10)
+        self.slider_size = Slider(ax_size, 'Point Size', 1.0, 10, valinit=0.1)
         # self.slider_size.on_changed(self.event_handler.update_point_sizes) # Re-enable later
 
         ax_smooth = plt.axes([0.1, 0.06, 0.8, 0.03])
-        self.slider_smooth = Slider(ax_smooth, 'Smoothness', 0.1, 30.0, valinit=1.0)
+        self.slider_smooth = Slider(ax_smooth, 'Smoothness', 0.01, 10.0, valinit=0.1)
 
         ax_weight = plt.axes([0.1, 0.02, 0.3, 0.03])
-        self.slider_weight = Slider(ax_weight, 'Smoothing Weight', 1, 100, valinit=20)
+        self.slider_weight = Slider(ax_weight, 'Smoothing Weight', 0.1, 10, valinit=1)
         # self.slider_weight.on_changed(lambda val: self.event_handler.update_smoothing_weight(val)) # Re-enable later
 
         self.fig.canvas.draw()
