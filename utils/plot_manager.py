@@ -188,7 +188,7 @@ class PlotManager:
                 self.fig.canvas.draw_idle()
                 return
 
-            #  1. PLOT EDGES 
+            #  PLOT EDGES
             if edges.size > 0:
                 # Create a lookup dictionary for node coordinates by point_id
                 # Node: [point_id, x, y, yaw, original_lane_id]
@@ -206,7 +206,7 @@ class PlotManager:
                     line = self.ax.plot(x_pair, y_pair, 'k-', alpha=0.3, zorder=1)[0]
                     self.edge_plots.append(line)
 
-            #  2. PLOT NODES (POINTS) 
+            #  PLOT NODES (POINTS)
             # Node: [point_id, x, y, yaw, original_lane_id]
             unique_lane_ids = np.unique(nodes[:, 4])
             colors = plt.cm.get_cmap('tab10')(np.linspace(0, 1, max(len(unique_lane_ids), 10)))
@@ -222,7 +222,7 @@ class PlotManager:
                     self.lane_scatter_plots.append(sc)
                     self.indices.append(np.where(mask)[0])  # Store row indices
 
-            #  3. PLOT START POINTS 
+            #  PLOT START POINTS
             if edges.size > 0:
                 # Find all nodes that are "to" nodes (i.e., have an incoming edge)
                 to_ids = set(edges[:, 1])
@@ -235,19 +235,19 @@ class PlotManager:
                                                marker='s', label=f'Lane {lane_id} Start', zorder=3)
                     self.start_point_plots.append(start_sc)
 
-            #  4. PLOT SELECTED POINTS 
+            #  PLOT SELECTED POINTS
             if self.selected_indices:
                 selected_nodes = nodes[np.array(self.selected_indices, dtype=int)]
                 sc = self.ax.scatter(selected_nodes[:, 1], selected_nodes[:, 2], s=30, color='red', marker='x',
                                      label='Selected', zorder=4)
                 self.extra_scatter_plots.append(sc)
 
-            #  5. PLOT MERGE/SMOOTHING POINTS (from event_handler) 
+            #  PLOT MERGE/SMOOTHING POINTS (from event_handler)
             if self.event_handler.merge_mode:
                 # This logic will need to be updated in event_handler.py
                 pass
 
-            #  6. FINALIZE PLOT 
+            #  FINALIZE PLOT
             self.ax.set_xlabel('X')
             self.ax.set_ylabel('Y')
             self.ax.set_title('Lane Data Visualization')

@@ -30,7 +30,7 @@ const Sidebar = () => {
                     <label>Smoothness: {smoothness}</label>
                     <input
                         type="range"
-                        min="0" max="10" step="0.1"
+                        min="0.01" max="10" step="0.1"
                         value={smoothness}
                         onChange={(e) => {
                             const val = parseFloat(e.target.value);
@@ -40,7 +40,7 @@ const Sidebar = () => {
                     <label>Weight: {weight}</label>
                     <input
                         type="range"
-                        min="1" max="100" step="1"
+                        min="0.1" max="10" step="0.1"
                         value={weight}
                         onChange={(e) => {
                             const val = parseFloat(e.target.value);

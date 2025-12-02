@@ -1,6 +1,8 @@
 from collections import deque
+
 import numpy as np
 from scipy.interpolate import splprep, splev
+
 
 def _get_node_coords(nodes, point_id):
     """Helper to get (x, y) for a point_id from a nodes numpy array."""
@@ -8,6 +10,7 @@ def _get_node_coords(nodes, point_id):
     if np.any(node_mask):
         return nodes[node_mask][0, 1:3]  # [x, y]
     return None
+
 
 def find_path(edges, start_id, end_id):
     """
@@ -40,6 +43,7 @@ def find_path(edges, start_id, end_id):
                 queue.append((neighbor_id, new_path))
     return None
 
+
 def smooth_segment(nodes, edges, path_ids, smoothness, weight):
     """
     Calculate smoothed points for a given path of IDs.
@@ -51,12 +55,12 @@ def smooth_segment(nodes, edges, path_ids, smoothness, weight):
 
     points_xy = [_get_node_coords(nodes, pid) for pid in path_ids]
     points = np.array([p for p in points_xy if p is not None])
-    
+
     # Check for duplicates or insufficient unique points
     if len(points) < 3:
-         print("Insufficient valid points for smoothing")
-         return None
-         
+        print("Insufficient valid points for smoothing")
+        return None
+
     # Check for duplicate consecutive points which can crash splprep
     unique_points = np.unique(points, axis=0)
     if len(unique_points) < 3:
@@ -109,20 +113,20 @@ def smooth_segment(nodes, edges, path_ids, smoothness, weight):
 
     try:
         x, y = fitting_points[:, 0], fitting_points[:, 1]
-        
+
         # Ensure we have enough points for k=3
         if len(fitting_points) <= 3:
-             # Fallback to k=2 or k=1 if very few points, or just return None
-             # But user asked for B-Spline which usually implies cubic (k=3)
-             # If we added anchors, we might have enough.
-             pass
+            # Fallback to k=2 or k=1 if very few points, or just return None
+            # But user asked for B-Spline which usually implies cubic (k=3)
+            # If we added anchors, we might have enough.
+            pass
 
         # Correct spline parameterization based on cumulative distance
-        distances = np.sqrt(np.sum(np.diff(fitting_points, axis=0)**2, axis=1))
-        
+        distances = np.sqrt(np.sum(np.diff(fitting_points, axis=0) ** 2, axis=1))
+
         # Handle case where all points are same location (distances all 0)
         if np.sum(distances) == 0:
-             return None
+            return None
 
         u = np.zeros(len(fitting_points))
         u[1:] = np.cumsum(distances)
@@ -131,10 +135,10 @@ def smooth_segment(nodes, edges, path_ids, smoothness, weight):
         # Check for duplicate 'u' values which causes splprep to fail
         # This happens if two consecutive points are identical
         if len(np.unique(u)) < len(u):
-             # Add tiny noise to duplicates to separate them
-             u = u + np.random.normal(0, 1e-6, len(u))
-             u = np.sort(u) # Re-sort just in case
-             u /= u[-1] # Re-normalize
+            # Add tiny noise to duplicates to separate them
+            u = u + np.random.normal(0, 1e-6, len(u))
+            u = np.sort(u)  # Re-sort just in case
+            u /= u[-1]  # Re-normalize
 
         tck, u_fitted = splprep([x, y], u=u, s=smoothness, k=3, w=weights)
 

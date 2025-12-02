@@ -50,8 +50,8 @@ const Toolbar = () => {
             <label>Smoothness: {smoothness.toFixed(1)}</label>
             <input
               type="range"
-              min="0.1"
-              max="30"
+              min="0.01"
+              max="10"
               step="0.1"
               value={smoothness}
               onChange={(e) => setSmoothness(parseFloat(e.target.value))}
@@ -59,9 +59,9 @@ const Toolbar = () => {
             <label>Weight: {weight.toFixed(0)}</label>
             <input
               type="range"
-              min="1"
-              max="100"
-              step="1"
+              min="0.1"
+              max="10"
+              step="0.1"
               value={weight}
               onChange={(e) => setWeight(parseFloat(e.target.value))}
             />

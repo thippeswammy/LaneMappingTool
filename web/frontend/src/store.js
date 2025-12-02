@@ -19,8 +19,8 @@ export const useStore = create((set, get) => ({
   smoothStartNodeId: null,
   smoothEndNodeId: null,
   smoothness: 1.0,
-  weight: 20,
-  pointSize: 5, // Default point size
+  weight: 1,
+  pointSize: 2, // Default point size
   plotWidth: 100, // Default plot width in %
   drawPoints: [], // Temporary points for Draw mode
 

@@ -123,8 +123,8 @@ def smooth_path_endpoint():
         data = request.get_json()
         start_id = int(data.get('start_id'))
         end_id = int(data.get('end_id'))
-        smoothness = float(data.get('smoothness', 2.0))
-        weight = float(data.get('weight', 1))
+        smoothness = float(data.get('smoothness', 1.0))
+        weight = float(data.get('weight', 1.0))
 
         path_ids = find_path(data_manager.edges, start_id, end_id)
         if not path_ids:
