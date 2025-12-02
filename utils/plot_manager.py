@@ -161,6 +161,20 @@ class PlotManager:
             legend_line.set_pickradius(5)
 
     def update_plot(self, nodes, edges, selected_indices=None):
+        """Update the plot with nodes and edges data.
+        
+        This function clears existing plot elements and updates the visualization based
+        on the provided nodes and edges. It handles the plotting of edges, nodes, start
+        points, and selected points, while managing the state of the plot and ensuring
+        that any previous elements are removed. The function also includes error
+        handling to manage exceptions that may arise during the plotting process.
+        
+        Args:
+            nodes (np.ndarray): An array of node data, where each node contains point_id, x, y, yaw, and
+                original_lane_id.
+            edges (np.ndarray): An array of edges, where each edge is defined by a pair of node IDs.
+            selected_indices (list?): A list of indices for selected nodes. Defaults to None.
+        """
         if selected_indices is None:
             selected_indices = self.selected_indices
         self.selected_indices = selected_indices  # row indices of nodes
