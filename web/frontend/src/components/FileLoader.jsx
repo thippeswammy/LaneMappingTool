@@ -2,6 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { IconSave, IconCheck, IconCancel } from './Icons';
 
+/**
+ * Component for loading files and managing data directories.
+ *
+ * This component fetches available files from the store and allows users to select raw or saved files for loading.
+ * It manages custom directory paths and handles the loading and unloading of selected files.
+ * The component also provides a user interface for toggling between raw data and saved graphs,
+ * and it ensures that the appropriate data is loaded based on user selections.
+ *
+ * @param {Object} props - The component properties.
+ * @param {Function} props.onClose - Callback function to close the file loader.
+ */
 const FileLoader = ({ onClose }) => {
     const availableFiles = useStore(state => state.availableFiles);
     const fetchFiles = useStore(state => state.fetchFiles);
@@ -40,6 +51,9 @@ const FileLoader = ({ onClose }) => {
         }
     };
 
+    /**
+     * Handles the submission of a custom path.
+     */
     const handleCustomPathSubmit = () => {
         if (customPath) {
             fetchFiles(customPath, currentSavedDir);
@@ -47,6 +61,9 @@ const FileLoader = ({ onClose }) => {
     };
 
     // Saved Dir Handlers
+    /**
+     * Handles changes to the saved directory selection.
+     */
     const handleSavedDirChange = (e) => {
         const value = e.target.value;
         if (value === 'CUSTOM') {
@@ -58,12 +75,25 @@ const FileLoader = ({ onClose }) => {
         }
     };
 
+    /**
+     * Handles the submission of a custom saved path.
+     */
     const handleCustomSavedPathSubmit = () => {
         if (customSavedPath) {
             fetchFiles(currentRawDir, customSavedPath);
         }
     };
 
+    /**
+     * Toggles the loading state of a raw file based on its current status.
+     *
+     * This function checks if the specified fileName is already included in the loadedFileNames array.
+     * If it is, the function unloads the data for that file. If not, it updates the selected raw files
+     * by either adding or removing the fileName from the selection, depending on its current presence in
+     * the selected files.
+     *
+     * @param {string} fileName - The name of the file to toggle.
+     */
     const handleRawFileToggle = (fileName) => {
         if (loadedFileNames.includes(fileName)) {
             // If already loaded, unload it immediately
@@ -80,6 +110,9 @@ const FileLoader = ({ onClose }) => {
         }
     };
 
+    /**
+     * Handles the loading of data and closes the interface.
+     */
     const handleLoad = () => {
         loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir);
         onClose();
