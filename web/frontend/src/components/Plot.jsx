@@ -204,7 +204,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     const currentNodes = nodesRef.current;
     if (!currentNodes || currentNodes.length === 0) return null;
     let minDist = Infinity;
-    let nearestNodeId = null;
+    let nearestNode = null;
 
     currentNodes.forEach(node => {
       const dx = node[1] - x;
@@ -212,10 +212,10 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < minDist) {
         minDist = dist;
-        nearestNodeId = node[0];
+        nearestNode = node;
       }
     });
-    return nearestNodeId;
+    return { node: nearestNode, dist: minDist };
   }, []);
 
   const options = useMemo(() => ({
@@ -225,82 +225,20 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     onClick: async (event, elements) => {
       const chart = chartRef.current;
       if (!chart) return;
-
-      const canvas = chart.canvas;
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const xScale = chart.scales.x;
-      const yScale = chart.scales.y;
-      const xData = xScale.getValueForPixel(x);
-      const yData = yScale.getValueForPixel(y);
-
-      const currentMode = modeRef.current;
-
-      if (currentMode === 'draw') {
-        addDrawPointRef.current({ x: xData, y: yData });
-      } else {
-        if (elements.length > 0) {
-          const element = elements[0];
-          if (element.datasetIndex === 1) { // Nodes dataset
-            const currentNodes = nodesRef.current;
-            const nodeId = currentNodes[element.index][0];
-            handleNodeClickRef.current(nodeId);
-          }
-        } else if (event.ctrlKey || event.metaKey) {
-          // Quick Action: Add Node and Connect to Nearest
-          const nearestNodeId = findNearestNode(xData, yData);
-          if (nearestNodeId !== null) {
-            performOperationRef.current('add_node', { x: xData, y: yData, lane_id: 0, connect_to: nearestNodeId });
-          }
-        }
+      type: 'linear',
       }
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: function (context) {
-            if (context.dataset.label === 'Nodes') {
-              const point = context.raw;
-              return `Node ID: ${point.id} (X: ${point.x.toFixed(2)}, Y: ${point.y.toFixed(2)})`;
-            }
-            return null;
-          }
-        }
-      },
-      zoom: {
-        pan: {
-          enabled: true,
-          mode: 'xy',
-        },
-        zoom: {
-          wheel: { enabled: true },
-          pinch: { enabled: true },
-          mode: 'xy',
-        }
-      }
-    },
-    scales: {
-      x: {
-        type: 'linear',
-        position: 'bottom',
-      },
-      y: {
-        type: 'linear',
-      }
-    }
+  }
   }), [findNearestNode]);
 
-  return (
-    <div
-      className="plot-container"
-      style={{ position: 'relative', height: height, width: width }}
-      onContextMenu={handleCanvasContextMenu}
-    >
-      <Line ref={chartRef} data={chartData} options={options} />
-    </div>
-  );
+return (
+  <div
+    className="plot-container"
+    style={{ position: 'relative', height: height, width: width }}
+    onContextMenu={handleCanvasContextMenu}
+  >
+    <Line ref={chartRef} data={chartData} options={options} />
+  </div>
+);
 });
 
 export default Plot;

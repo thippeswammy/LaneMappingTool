@@ -29,7 +29,7 @@ nodes_path = os.path.join(graph_dir, 'graph_nodes.npy')
 edges_path = os.path.join(graph_dir, 'graph_edges.npy')
 
 # These files must exist in your 'original_data_path' folder
-files_path_ = ["lane-01.npy","lane-2.npy"]
+files_path_ = ["lane-01.npy", "lane-2.npy"]
 files_path = [os.path.join(raw_data_path, i) for i in files_path_]
 
 # Initialize DataLoader
@@ -182,10 +182,12 @@ def perform_operation():
         elif operation == 'add_node':
             x, y, lane_id = params['x'], params['y'], params['lane_id']
             new_node_id = data_manager.add_node(x, y, lane_id)
+            # print("=====", params.get('from_id'), params.get('to_id'))
             if params.get('connect_to') is not None:
                 data_manager.add_edge(params['connect_to'], new_node_id)
 
         elif operation == 'add_edge':
+            print("=====", params['from_id'], params['to_id'])
             from_id, to_id = params['from_id'], params['to_id']
             data_manager.add_edge(from_id, to_id)
 
