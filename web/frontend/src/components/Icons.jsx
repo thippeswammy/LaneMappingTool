@@ -23,6 +23,9 @@ export const IconConnect = ({ size = 20, color = 'currentColor' }) => (
     </svg>
 );
 
+/**
+ * Renders an SVG icon for removing an item.
+ */
 export const IconRemove = ({ size = 20, color = 'currentColor' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="3 6 5 6 21 6"></polyline>
@@ -32,6 +35,9 @@ export const IconRemove = ({ size = 20, color = 'currentColor' }) => (
     </svg>
 );
 
+/**
+ * Renders an SVG icon with customizable size and color.
+ */
 export const IconReverse = ({ size = 20, color = 'currentColor' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="16 3 21 3 21 8"></polyline>
@@ -50,6 +56,9 @@ export const IconSave = ({ size = 20, color = 'currentColor' }) => (
     </svg>
 );
 
+/**
+ * Renders an SVG icon representing a home.
+ */
 export const IconHome = ({ size = 20, color = 'currentColor' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -57,6 +66,9 @@ export const IconHome = ({ size = 20, color = 'currentColor' }) => (
     </svg>
 );
 
+/**
+ * Renders a zoom icon with customizable size and color.
+ */
 export const IconZoom = ({ size = 20, color = 'currentColor' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8"></circle>
@@ -66,6 +78,9 @@ export const IconZoom = ({ size = 20, color = 'currentColor' }) => (
     </svg>
 );
 
+/**
+ * Renders an SVG icon representing a pan.
+ */
 export const IconPan = ({ size = 20, color = 'currentColor' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 9l-3 3 3 3"></path>
@@ -77,6 +92,9 @@ export const IconPan = ({ size = 20, color = 'currentColor' }) => (
     </svg>
 );
 
+/**
+ * Renders a cancel icon as an SVG element.
+ */
 export const IconCancel = ({ size = 20, color = 'currentColor' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10"></circle>
@@ -85,6 +103,9 @@ export const IconCancel = ({ size = 20, color = 'currentColor' }) => (
     </svg>
 );
 
+/**
+ * Renders an SVG icon with specified size and color.
+ */
 export const IconCheck = ({ size = 20, color = 'currentColor' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12"></polyline>
