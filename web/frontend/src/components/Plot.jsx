@@ -90,6 +90,18 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     }
   }, [mode]);
 
+  // Imperatively update chart bounds to avoid re-creating options and resetting zoom
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (chart) {
+      chart.options.scales.x.suggestedMin = minX !== Infinity ? minX : undefined;
+      chart.options.scales.x.suggestedMax = maxX !== -Infinity ? maxX : undefined;
+      chart.options.scales.y.suggestedMin = minY !== Infinity ? minY : undefined;
+      chart.options.scales.y.suggestedMax = maxY !== -Infinity ? maxY : undefined;
+      chart.update('none');
+    }
+  }, [minX, maxX, minY, maxY]);
+
   // Performance Optimization: Prepare edge data for a single dataset
   const chartData = useMemo(() => {
     const edgeData = [];
@@ -272,16 +284,12 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       x: {
         type: 'linear',
         position: 'bottom',
-        suggestedMin: minX !== Infinity ? minX : undefined,
-        suggestedMax: maxX !== -Infinity ? maxX : undefined,
       },
       y: {
         type: 'linear',
-        suggestedMin: minY !== Infinity ? minY : undefined,
-        suggestedMax: maxY !== -Infinity ? maxY : undefined,
       }
     }
-  }), [findNearestNode, minX, maxX, minY, maxY]);
+  }), [findNearestNode]);
 
   return (
     <div

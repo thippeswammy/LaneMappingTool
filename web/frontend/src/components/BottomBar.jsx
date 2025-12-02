@@ -3,9 +3,11 @@ import { useStore } from '../store';
 import './Toolbar.css';
 import { IconHome, IconZoom, IconPan } from './Icons';
 
-const BottomBar = ({ onHome, onZoom, onPan }) => {
+const BottomBar = ({ onHome }) => {
     const pointSize = useStore(state => state.pointSize);
     const setPointSize = useStore(state => state.setPointSize);
+    const mode = useStore(state => state.mode);
+    const setMode = useStore(state => state.setMode);
 
     return (
         <div className="bottom-bar-container" style={{
@@ -37,10 +39,12 @@ const BottomBar = ({ onHome, onZoom, onPan }) => {
                 <button className="toolbar-button" onClick={onHome} title="Reset Zoom" style={{ width: 'auto', padding: '8px 12px' }}>
                     <IconHome size={18} /> Home
                 </button>
-                <button className="toolbar-button" onClick={onPan} title="Pan Mode" style={{ width: 'auto', padding: '8px 12px' }}>
-                    <IconPan size={18} /> Pan
-                </button>
-                <button className="toolbar-button" onClick={onZoom} title="Zoom Mode" style={{ width: 'auto', padding: '8px 12px' }}>
+                <button
+                    className={`toolbar-button ${mode === 'zoom' ? 'active' : ''}`}
+                    onClick={() => setMode(mode === 'zoom' ? 'select' : 'zoom')}
+                    title="Zoom Mode (Drag to zoom)"
+                    style={{ width: 'auto', padding: '8px 12px' }}
+                >
                     <IconZoom size={18} /> Zoom
                 </button>
             </div>

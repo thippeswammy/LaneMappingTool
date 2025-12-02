@@ -10,7 +10,7 @@ export const useStore = create((set, get) => ({
   fileNames: [],
   loading: true,
   status: 'Initializing...',
-  mode: 'select', // select, draw, smooth, connect, remove_between, reverse_path
+  mode: 'select', // select, draw, smooth, connect, remove_between, reverse_path, zoom
 
   // Selections & temporary data
   selectedNodeIds: [],
