@@ -15,9 +15,7 @@ function App() {
   const nodes = useStore(state => state.nodes);
   const edges = useStore(state => state.edges);
 
-
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
   const [plotDimensions, setPlotDimensions] = useState({ width: 0, height: 0 });
 
   const plotRef = useRef(null);
@@ -92,18 +90,6 @@ function App() {
     }
   };
 
-  const handleZoom = () => {
-    if (plotRef.current) {
-      plotRef.current.toggleZoom();
-    }
-  };
-
-  const handlePan = () => {
-    if (plotRef.current) {
-      plotRef.current.togglePan();
-    }
-  };
-
   return (
     <div className="app-container" style={{ display: 'flex', height: '100vh', flexDirection: 'row', overflow: 'hidden', background: 'var(--bg-primary)' }}>
       {/* Left Sidebar */}
@@ -146,7 +132,7 @@ function App() {
 
         {/* Bottom Bar */}
         <footer className="bottom-bar" style={{ flexShrink: 0 }}>
-          <BottomBar onHome={handleHome} onZoom={handleZoom} onPan={handlePan} />
+          <BottomBar onHome={handleHome} />
         </footer>
       </div>
     </div>

@@ -1,12 +1,13 @@
 :root {
   --header-height: 60px;
   --sidebar-width: 280px;
-  --primary-bg: #f4f7f6;
-  --secondary-bg: #ffffff;
-  --border-color: #e0e0e0;
-  --text-color: #333;
-  --primary-accent: #007bff;
-  --hover-accent: #0056b3;
+  /* Map to index.css variables */
+  --primary-bg: var(--bg-primary);
+  --secondary-bg: var(--bg-secondary);
+  --border-color: var(--border-color);
+  --text-color: var(--text-primary);
+  --primary-accent: var(--accent-color);
+  --hover-accent: var(--accent-hover);
 }
 
 .app-container {
@@ -59,7 +60,6 @@
 .plot-area {
   flex: 1;
   padding: 20px;
-  background-color: #e9ecef;
   position: relative;
 }
 

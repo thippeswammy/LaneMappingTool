@@ -72,7 +72,8 @@ const Sidebar = () => {
                         background: 'var(--bg-tertiary)',
                         borderRadius: '4px',
                         marginBottom: '10px',
-                        border: '1px solid var(--border-color)'
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-primary)'
                     }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <label style={{ fontSize: '0.8rem' }}>Smoothness: {smoothness}</label>

@@ -33,7 +33,6 @@ const BottomBar = ({ onHome }) => {
                     />
                 </div>
             </div>
-
             {/* Navigation Controls */}
             <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="toolbar-button" onClick={onHome} title="Reset Zoom" style={{ width: 'auto', padding: '8px 12px' }}>
@@ -42,8 +41,9 @@ const BottomBar = ({ onHome }) => {
                 <button
                     className={`toolbar-button ${mode === 'zoom' ? 'active' : ''}`}
                     onClick={() => setMode(mode === 'zoom' ? 'select' : 'zoom')}
-                    title="Zoom Mode (Drag to zoom)"
+                    title="Zoom Disabled"
                     style={{ width: 'auto', padding: '8px 12px' }}
+                    disabled={true}
                 >
                     <IconZoom size={18} /> Zoom
                 </button>
