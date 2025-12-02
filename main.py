@@ -21,48 +21,27 @@ def main():
     """
     base_path = os.getcwd()
     files_dir = os.path.join(base_path, 'files')
-    original_data_path = os.path.join(base_path, 'lanes','TEMP1')
+    original_data_path = os.path.join(base_path, 'lanes', 'TEMP1')
+
+    # Paths for saved working state
+    nodes_path = os.path.join(files_dir, 'graph_nodes.npy')
+    edges_path = os.path.join(files_dir, 'graph_edges.npy')
 
     # These files must exist in your 'original_data_path' folder
     files_path_ = ["lane-0.npy"]
-
-    nodes_path = os.path.join(files_dir, 'graph_nodes.npy')
-    edges_path = os.path.join(files_dir, 'graph_edges.npy')
     files_path = [os.path.join(original_data_path, i) for i in files_path_]
-    # Initialize variables
-    final_nodes = np.array([])
-    final_edges = np.array([])
-    file_names = []
-    D = 1.0
 
-    #  Load Saved Working Data
-    if os.path.exists(nodes_path) and os.path.exists(edges_path):
-        print("Loading saved working files...")
-        saved_nodes = np.load(nodes_path)
-        saved_edges = np.load(edges_path)
+    # Initialize DataLoader
+    loader = DataLoader(original_data_path)
 
-        # Calculate basic D from saved data
-        if saved_nodes.size > 0:
-            p2d = saved_nodes[:, 1:3]
-            dists = np.sqrt(((p2d[:, None] - p2d[None, :]) ** 2).sum(axis=-1))
-            D = np.max(dists) if dists.size > 0 else 1.0
+    # Load Saved Working Data (Graph Nodes/Edges)
+    final_nodes, final_edges, file_names, D = loader.load_graph_data(nodes_path, edges_path)
 
-            # Reconstruct file names for saved data
-            unique_lanes = np.unique(saved_nodes[:, 4]).astype(int)
-            file_names = [f"Edited Lane {i}" for i in unique_lanes]
-
-        final_nodes = saved_nodes
-        final_edges = saved_edges
-        print(f"Loaded edited data: {len(final_nodes)} nodes.")
-    else:
-        print("No working files found. Starting clean.")
-
-    # Load new Raw Data and Merge
+    # Load New Raw Data and Merge
     if files_path:
         print(f"Attempting to merge {len(files_path)} new raw files...")
-        loader = DataLoader(original_data_path)
 
-        # Calculate ID offset
+        # Calculate ID offsets to prevent collision with saved graph data
         start_id_offset = 0
         lane_id_offset = 0
 
@@ -72,14 +51,14 @@ def main():
             # Start Lane IDs after the highest existing Lane ID
             lane_id_offset = int(np.max(final_nodes[:, 4])) + 1
 
-        # Load specific new files with offset
+        # Load specific new files with offset using the SAME loader
         new_nodes, new_edges, new_names = loader.load_data(
-            specific_files=files_path,
+            specific_files=files_path_,
             start_id=start_id_offset
         )
 
         if new_nodes.size > 0:
-            # Adjust Lane IDs for the new nodes to avoid color conflict
+            # Adjust Lane IDs for the new nodes to avoid color/logic conflict
             new_nodes[:, 4] += lane_id_offset
 
             # Merge Data
@@ -87,7 +66,7 @@ def main():
                 final_nodes = np.vstack([final_nodes, new_nodes])
                 final_edges = np.vstack([final_edges, new_edges])
                 file_names.extend(new_names)
-                # Update D
+                # Update D to be the max of existing D and new loader D
                 D = max(D, loader.D)
             else:
                 final_nodes = new_nodes
@@ -103,7 +82,7 @@ def main():
         print("No data loaded at all.")
         return
 
-    # Initialize Managers
+        # Initialize Managers
     data_manager = DataManager(final_nodes, final_edges, file_names)
     event_handler = EventHandler(data_manager)
     plot_manager = PlotManager(final_nodes, final_edges, file_names, D, data_manager, event_handler)

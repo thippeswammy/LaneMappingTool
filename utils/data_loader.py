@@ -15,8 +15,47 @@ class DataLoader:
         self.D = None
         self.file_order = file_order
 
+    def load_graph_data(self, nodes_path, edges_path):
+        """
+        Loads existing graph state (nodes and edges) from specific paths.
+        Distinguishes between raw point data and processed graph data.
+        """
+        nodes = np.array([])
+        edges = np.array([])
+        file_names = []
+        D = 1.0
+
+        if os.path.exists(nodes_path) and os.path.exists(edges_path):
+            print(f"Loading saved working files from:\n  {nodes_path}\n  {edges_path}")
+            try:
+                nodes = np.load(nodes_path)
+                edges = np.load(edges_path)
+
+                # Calculate basic D (Max Euclidean distance) from saved data
+                if nodes.size > 0:
+                    p2d = nodes[:, 1:3]  # x, y columns
+                    # vectorized distance calculation
+                    dists = np.sqrt(((p2d[:, None] - p2d[None, :]) ** 2).sum(axis=-1))
+                    D = np.max(dists) if dists.size > 0 else 1.0
+
+                    # Reconstruct file names based on unique lane IDs (col 4)
+                    unique_lanes = np.unique(nodes[:, 4]).astype(int)
+                    # We assume names are generic since original filenames aren't saved in the numpy array
+                    file_names = [f"Edited Lane {i}" for i in unique_lanes]
+
+                print(f"Loaded edited data: {len(nodes)} nodes.")
+            except Exception as e:
+                print(f"Error loading graph data: {e}")
+                nodes = np.array([])
+                edges = np.array([])
+        else:
+            print("No working files found (graph_nodes/edges).")
+
+        self.D = D  # Update local D
+        return nodes, edges, file_names, D
+
     def load_data(self, specific_files=None, start_id=0):
-        """Load and process .npy files from the specified directory.
+        """Load and process RAW .npy  files from the specified directory.
         
         This function retrieves all .npy files from the directory specified by
         `self.directory`.  It processes each file to extract points, constructs nodes
@@ -112,15 +151,14 @@ class DataLoader:
         all_nodes = np.vstack(nodes_list)
         all_edges = np.vstack(edges_list)
 
-        # Calculate D
+        # Calculate D for raw data
         if all_nodes.size > 0:
             points_2d = all_nodes[:, 1:3]
             distances = np.sqrt(((points_2d[:, None] - points_2d[None, :]) ** 2).sum(axis=-1))
-            self.D = np.max(distances) if distances.size > 0 else 1.0
-        else:
-            self.D = 1.0
+            current_D = np.max(distances) if distances.size > 0 else 1.0
+            self.D = max(self.D, current_D)
 
         self.file_order = file_names
-        print(f"Loaded {len(file_names)} files, total nodes: {all_nodes.shape[0]}")
+        print(f"Loaded {len(file_names)} raw files, total nodes: {all_nodes.shape[0]}")
 
         return all_nodes, all_edges, file_names
