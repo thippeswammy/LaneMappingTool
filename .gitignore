@@ -10,3 +10,4 @@
 utils/__pycache__/
 web/backend/__pycache__/
 /web/backend/workspace/
+/files_test/*.npy
