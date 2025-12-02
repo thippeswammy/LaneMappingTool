@@ -7,7 +7,7 @@ import { useStore } from '../store';
 // Register Chart.js components
 Chart.register(...registerables, zoomPlugin);
 
-const Plot = forwardRef(({ nodes, edges }, ref) => {
+const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   console.log("Plot component rendering", { nodesCount: nodes?.length, edgesCount: edges?.length });
   const mode = useStore(state => state.mode);
   const handleNodeClick = useStore(state => state.handleNodeClick);
@@ -286,7 +286,7 @@ const Plot = forwardRef(({ nodes, edges }, ref) => {
   return (
     <div
       className="plot-container"
-      style={{ position: 'relative', height: '100%', width: '100%' }}
+      style={{ position: 'relative', height: height, width: width }}
       onContextMenu={handleCanvasContextMenu}
     >
       <Line ref={chartRef} data={chartData} options={options} />

@@ -41,16 +41,23 @@ const Sidebar = () => {
                 <button className={getButtonClass('draw')} onClick={() => setMode('draw')}>
                     <IconDraw /> Draw Path
                 </button>
+                <button className="toolbar-button" onClick={() => setMode('select')} disabled={mode === 'select' && selectedNodeIds.length === 0}>
+                    <IconCancel /> Cancel / Select
+                </button>
+                <button className="toolbar-button" onClick={() => setSelectedNodeIds([])} disabled={selectedNodeIds.length === 0}>
+                    <IconCancel /> Clear Selection ({selectedNodeIds.length})
+                </button>
+            </div>
+
+            <div className="sidebar-section">
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Operations</h4>
+
                 <button className={getButtonClass('connect')} onClick={() => setMode('connect')}>
                     <IconConnect /> Connect Nodes
                 </button>
                 <button className={getButtonClass('remove_between')} onClick={() => setMode('remove_between')}>
                     <IconRemove /> Remove Between
                 </button>
-            </div>
-
-            <div className="sidebar-section">
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Operations</h4>
 
                 <button className={getButtonClass('smooth')} onClick={() => setMode('smooth')}>
                     <IconSmooth /> Smooth Path
@@ -97,16 +104,6 @@ const Sidebar = () => {
 
                 <button className={getButtonClass('reverse_path')} onClick={() => setMode('reverse_path')}>
                     <IconReverse /> Reverse Path
-                </button>
-            </div>
-
-            <div className="sidebar-section">
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Selection</h4>
-                <button className="toolbar-button" onClick={() => setMode('select')} disabled={mode === 'select' && selectedNodeIds.length === 0}>
-                    <IconCancel /> Cancel / Select
-                </button>
-                <button className="toolbar-button" onClick={() => setSelectedNodeIds([])} disabled={selectedNodeIds.length === 0}>
-                    Clear Selection ({selectedNodeIds.length})
                 </button>
             </div>
 

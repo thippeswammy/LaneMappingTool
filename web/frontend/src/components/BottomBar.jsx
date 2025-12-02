@@ -5,9 +5,7 @@ import { IconHome, IconZoom, IconPan } from './Icons';
 
 const BottomBar = ({ onHome, onZoom, onPan }) => {
     const pointSize = useStore(state => state.pointSize);
-    const plotWidth = useStore(state => state.plotWidth);
     const setPointSize = useStore(state => state.setPointSize);
-    const setPlotWidth = useStore(state => state.setPlotWidth);
 
     return (
         <div className="bottom-bar-container" style={{
@@ -29,18 +27,6 @@ const BottomBar = ({ onHome, onZoom, onPan }) => {
                         step="1"
                         value={pointSize}
                         onChange={(e) => setPointSize(parseInt(e.target.value))}
-                        style={{ width: '100px' }}
-                    />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Plot Width: {plotWidth}%</label>
-                    <input
-                        type="range"
-                        min="95"
-                        max="200"
-                        step="1"
-                        value={plotWidth}
-                        onChange={(e) => setPlotWidth(parseInt(e.target.value))}
                         style={{ width: '100px' }}
                     />
                 </div>
