@@ -5,6 +5,15 @@ import Sidebar from './components/Sidebar';
 import BottomBar from './components/BottomBar';
 import './App.css';
 
+/**
+ * Renders the App component, managing state and keyboard interactions.
+ *
+ * The App component fetches initial data on mount, sets up keyboard shortcuts for various operations,
+ * and renders the UI including a sidebar, header, plot area, and bottom bar. It utilizes Zustand for state management
+ * and handles user interactions such as drawing, deleting, and zooming through keyboard events.
+ *
+ * @returns {JSX.Element} The rendered App component.
+ */
 function App() {
   console.log("App component rendering");
   // Get state and actions from the Zustand store
