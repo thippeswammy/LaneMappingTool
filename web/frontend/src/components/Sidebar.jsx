@@ -5,6 +5,13 @@ import {
     IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel
 } from './Icons';
 
+/**
+ * Renders the sidebar component for tool selection and operations.
+ *
+ * The Sidebar component utilizes various state values and functions from the store,
+ * allowing users to select tools, adjust parameters for smoothing, and manage node selections.
+ * It dynamically updates the UI based on the current mode and provides controls for saving data.
+ */
 const Sidebar = () => {
     const mode = useStore(state => state.mode);
     const setMode = useStore(state => state.setMode);
