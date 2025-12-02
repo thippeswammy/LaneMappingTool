@@ -5,9 +5,14 @@
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
+
+*.log
 /files
 /lanes
+/__pycache__/
 utils/__pycache__/
+tests/__pycache__/
 web/backend/__pycache__/
+web/backend/utils/__pycache__/
 /web/backend/workspace/
 /files_test/*.npy
