@@ -113,7 +113,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         {
           label: 'Edges',
           data: edgeData,
-          borderColor: 'rgba(0, 0, 0, 0.2)',
+          borderColor: 'rgba(200, 200, 200, 0.8)',
           borderWidth: 1,
           pointRadius: 0,
           showLine: true,
@@ -152,10 +152,10 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ...(drawPoints && drawPoints.length > 0 ? [{
           label: 'Draw Preview',
           data: drawPoints,
-          borderColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent black
+          borderColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white
           borderWidth: 2,
           pointRadius: 3,
-          pointBackgroundColor: 'rgba(0, 0, 0, 0.5)',
+          pointBackgroundColor: 'rgba(255, 255, 255, 0.8)',
           showLine: true,
           type: 'line',
           spanGaps: false,
