@@ -5,6 +5,14 @@ import {
     IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel
 } from './Icons';
 
+/**
+ * Renders the sidebar component for tool and operation selection.
+ *
+ * The Sidebar component utilizes various state values and functions from the store, including mode management,
+ * data saving, and smoothness settings. It provides buttons for drawing, selecting, connecting, and smoothing paths,
+ * along with input controls for adjusting smoothness and weight when in smooth mode. The layout is responsive and
+ * styled for usability.
+ */
 const Sidebar = () => {
     const mode = useStore(state => state.mode);
     const setMode = useStore(state => state.setMode);
