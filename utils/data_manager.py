@@ -34,7 +34,9 @@ class DataManager:
     def add_node(self, x, y, original_lane_id):
         try:
             new_point_id = self._get_new_point_id()
-            new_node = np.array([[new_point_id, x, y, 0.0, original_lane_id]])
+            # Node: [point_id, x, y, yaw, zone, width, indicator]
+            # original_lane_id maps to zone
+            new_node = np.array([[new_point_id, x, y, 0.0, original_lane_id, 0.0, 0.0]])
 
             if self.nodes.size > 0:
                 self.nodes = np.vstack([self.nodes, new_node])
@@ -203,11 +205,12 @@ class DataManager:
             node_mask = np.isin(self.nodes[:, 0], point_ids)
 
             if np.any(node_mask):
+                # Update zone (col 4)
                 self.nodes[node_mask, 4] = new_original_lane_id
                 self.history.append((self.nodes.copy(), self.edges.copy()))
                 self.redo_stack = []
                 self._auto_save_backup()
-                print(f"Changed original lane ID for {np.sum(node_mask)} nodes to {new_original_lane_id}")
+                print(f"Changed zone (original lane ID) for {np.sum(node_mask)} nodes to {new_original_lane_id}")
             else:
                 print("No matching nodes found to change ID.")
 
@@ -242,6 +245,9 @@ class DataManager:
                 x = node_data[1]
                 y = node_data[2]
                 yaw = node_data[3]
+                zone = node_data[4]
+                width = node_data[5]
+                indicator = node_data[6]
 
                 node_coords[t] = (x, y)
 
@@ -250,9 +256,9 @@ class DataManager:
                     x=x,
                     y=y,
                     yaw=yaw,
-                    zone=0,
-                    width=0,
-                    indicator=0
+                    zone=zone,
+                    width=width,
+                    indicator=indicator
                 )
 
         if self.edges.size > 0:
@@ -328,8 +334,8 @@ class DataManager:
         """Save nodes and edges to files and create a backup."""
         try:
             os.makedirs("./files", exist_ok=True)
-            nodes_filename = "./files/WorkingNodes.npy"
-            edges_filename = "./files/WorkingEdges.npy"
+            nodes_filename = "./files/graph_nodes.npy"
+            edges_filename = "./files/graph_edges.npy"
 
             np.save(nodes_filename, self.nodes)
             np.save(edges_filename, self.edges)

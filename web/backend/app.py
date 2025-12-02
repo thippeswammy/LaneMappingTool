@@ -29,7 +29,7 @@ nodes_path = os.path.join(graph_dir, 'graph_nodes.npy')
 edges_path = os.path.join(graph_dir, 'graph_edges.npy')
 
 # These files must exist in your 'original_data_path' folder
-files_path_ = ["lane-30.npy"]
+files_path_ = ["lane-0.npy","lane-1.npy"]
 files_path = [os.path.join(raw_data_path, i) for i in files_path_]
 
 # Initialize DataLoader

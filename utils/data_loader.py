@@ -12,7 +12,7 @@ class DataLoader:
         if not os.path.isdir(directory):
             raise ValueError(f"Directory does not exist: {directory}")
         self.directory = directory
-        self.D = None
+        self.D = 1.0  # Initialize D to 1.0 default
         self.file_order = file_order
 
     def load_graph_data(self, nodes_path, edges_path):
@@ -31,6 +31,14 @@ class DataLoader:
                 nodes = np.load(nodes_path)
                 edges = np.load(edges_path)
 
+                # Migration: If nodes has 5 columns, pad to 7 columns
+                if nodes.size > 0 and nodes.shape[1] == 5:
+                    print("Migrating nodes from 5 columns to 7 columns...")
+                    # New columns: width (col 5), indicator (col 6) initialized to 0
+                    # Existing col 4 is original_lane_id which maps to zone
+                    padding = np.zeros((nodes.shape[0], 2))
+                    nodes = np.hstack([nodes, padding])
+
                 # Calculate basic D (Max Euclidean distance) from saved data
                 if nodes.size > 0:
                     p2d = nodes[:, 1:3]  # x, y columns
@@ -38,7 +46,7 @@ class DataLoader:
                     dists = np.sqrt(((p2d[:, None] - p2d[None, :]) ** 2).sum(axis=-1))
                     D = np.max(dists) if dists.size > 0 else 1.0
 
-                    # Reconstruct file names based on unique lane IDs (col 4)
+                    # Reconstruct file names based on unique lane IDs (col 4 - zone)
                     unique_lanes = np.unique(nodes[:, 4]).astype(int)
                     # We assume names are generic since original filenames aren't saved in the numpy array
                     file_names = [f"Edited Lane {i}" for i in unique_lanes]
@@ -112,8 +120,8 @@ class DataLoader:
 
                 N = points.shape[0]
 
-                # Nodes: [point_id, x, y, yaw, original_lane_id]
-                nodes = np.zeros((N, 5))
+                # Nodes: [point_id, x, y, yaw, zone, width, indicator]
+                nodes = np.zeros((N, 7))
                 edges = np.zeros((N - 1, 2), dtype=int)
 
                 current_lane_point_ids = []
@@ -122,7 +130,9 @@ class DataLoader:
                 # Leave yaw (col 3) as 0.0 for now
 
                 # Important: If we are appending, we might want to offset the lane_id too,
+                # Map lane_idx to zone (col 4)
                 nodes[:, 4] = lane_idx
+                # width (col 5) and indicator (col 6) are 0 by default
 
                 # Assign globally unique point_ids starting from start_id
                 for i in range(N):
