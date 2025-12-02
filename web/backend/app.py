@@ -310,6 +310,18 @@ def unload_data_endpoint():
 
 @app.route('/api/unload_graph', methods=['POST'])
 def unload_graph_endpoint():
+    """Unload graph data associated with specific files.
+    
+    This function identifies files related to the graph that start with "Edited
+    Lane" and attempts to remove them using the data_manager. If no such files are
+    found, it returns a success message along with the current nodes, edges, and
+    file names. In case of any errors during the unloading process, it captures the
+    exception and returns an error message.
+    
+    Returns:
+        flask.Response: A JSON response indicating the status of the operation, along with nodes,
+            edges, and file names.
+    """
     try:
         # Identify files associated with the graph (Edited Lane ...)
         graph_files = [f for f in data_manager.file_names if f and f.startswith("Edited Lane")]
@@ -334,6 +346,7 @@ def unload_graph_endpoint():
 
 @app.route('/api/clear', methods=['POST'])
 def clear_data_endpoint():
+    """Clears the data and returns the status of the operation."""
     try:
         data_manager.clear_data()
         return jsonify({
