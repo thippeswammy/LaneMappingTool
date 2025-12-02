@@ -119,6 +119,14 @@ def save_data():
 
 @app.route('/api/smooth', methods=['POST'])
 def smooth_path_endpoint():
+    """Smooths a path between two nodes and returns updated node data.
+    
+    This endpoint processes a POST request to smooth a path defined by  start and
+    end node IDs. It retrieves the path using the  find_path function and applies
+    smoothing via the smooth_segment  function. If successful, it prepares and
+    returns the updated node  data, including yaw calculations for each point. In
+    case of errors,  appropriate error messages are returned.
+    """
     try:
         data = request.get_json()
         start_id = int(data.get('start_id'))
