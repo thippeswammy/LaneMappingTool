@@ -2,6 +2,9 @@ import React from 'react';
 import { useStore } from '../store';
 import './Toolbar.css'; // Reusing Toolbar styles for now
 
+/**
+ * Renders the sidebar component with various mode buttons and controls.
+ */
 const Sidebar = () => {
     const mode = useStore(state => state.mode);
     const setMode = useStore(state => state.setMode);
