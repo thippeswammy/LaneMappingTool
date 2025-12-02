@@ -5,7 +5,7 @@ import numpy as np
 # Adjust path to import from the parent project
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../web/backend')))
 
-from curve_utils import find_path, smooth_segment
+from utils.curve_utils import find_path, smooth_segment
 
 def test_smooth_robustness():
     print("Testing Smooth Operation Robustness...")

@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 
 from utils.data_loader import DataLoader
 from utils.data_manager import DataManager
-from web.backend.curve_utils import find_path, smooth_segment
+from web.backend.utils.curve_utils import find_path, smooth_segment
 
 # --- App Setup ---
 app = Flask(__name__)
@@ -29,7 +29,7 @@ nodes_path = os.path.join(graph_dir, 'graph_nodes.npy')
 edges_path = os.path.join(graph_dir, 'graph_edges.npy')
 
 # These files must exist in your 'original_data_path' folder
-files_path_ = ["lane-0.npy","lane-1.npy"]
+files_path_ = ["lane-01.npy","lane-2.npy"]
 files_path = [os.path.join(raw_data_path, i) for i in files_path_]
 
 # Initialize DataLoader
