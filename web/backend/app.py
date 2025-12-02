@@ -27,8 +27,8 @@ lanes_root = os.path.join(project_root, 'lanes')
 raw_data_path = os.path.join(lanes_root, 'TEMP1')
 
 # Paths for saved working state
-nodes_path = os.path.join(graph_dir, 'graph_nodes1.npy')
-edges_path = os.path.join(graph_dir, 'graph_edges1.npy')
+nodes_path = os.path.join(graph_dir, 'graph_nodes0.npy')
+edges_path = os.path.join(graph_dir, 'graph_edges0.npy')
 
 # These files must exist in your 'original_data_path' folder
 files_path_ = []  # No default files
