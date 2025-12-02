@@ -140,10 +140,10 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           backgroundColor: nodes ? nodes.map(node => {
             if (selectedNodeIds.includes(node[0])) return 'red';
             if (operationStartNodeId === node[0]) return 'blue';
-            return 'rgba(75,192,192,1)';
+            return 'rgba(0,255,255,1)';
           }) : [],
           pointRadius: pointSize, // Use dynamic point size
-          pointHitRadius: 15, // Increased hit radius for easier selection
+          pointHitRadius: 10, // Increased hit radius for easier selection
           type: 'scatter',
         },
 

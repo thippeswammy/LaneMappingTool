@@ -21,14 +21,21 @@ const BottomBar = ({ onHome }) => {
             {/* View Settings */}
             <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Point Size: {pointSize}</label>
+                    <label
+                        style={{
+                            fontSize: '0.9rem',
+                            color: 'var(--text-secondary)'
+                        }}
+                    >
+                        Point Size: {pointSize}
+                    </label>
                     <input
                         type="range"
-                        min="1"
-                        max="20"
-                        step="1"
+                        min="0.1"
+                        max="5"
+                        step="0.1"
                         value={pointSize}
-                        onChange={(e) => setPointSize(parseInt(e.target.value))}
+                        onChange={(e) => setPointSize(parseFloat(e.target.value))}
                         style={{ width: '100px' }}
                     />
                 </div>
