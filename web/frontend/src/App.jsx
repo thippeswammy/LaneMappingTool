@@ -6,6 +6,13 @@ import BottomBar from './components/BottomBar';
 import { IconMenu } from './components/Icons';
 import './App.css';
 
+/**
+ * Renders the main application component with state management and event handling.
+ *
+ * The App component utilizes Zustand for state management, fetching initial data on mount, and handling keyboard shortcuts for user interactions. It also manages the layout and resizing of the plot area using ResizeObserver, and provides functionality for zooming and panning the plot. The sidebar can be toggled for navigation, and the status of the application is displayed in the header.
+ *
+ * @returns {JSX.Element} The rendered application component.
+ */
 function App() {
   console.log("App component rendering");
   // Get state and actions from the Zustand store
