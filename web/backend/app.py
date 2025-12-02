@@ -67,6 +67,7 @@ def get_data():
 
 @app.route('/api/save', methods=['POST'])
 def save_data():
+    """Saves the nodes and edges data from a POST request."""
     try:
         data = request.get_json()
         nodes_array = np.array(data['nodes'])
@@ -84,7 +85,19 @@ def save_data():
 
 @app.route('/api/files', methods=['GET'])
 def get_files():
-    """List available raw data files and saved graph files."""
+    """List available raw data files and saved graph files.
+    
+    This function retrieves and lists the raw data files from a specified
+    subdirectory and the saved graph files from another directory. It handles both
+    absolute and relative paths for the subdirectories, defaults to predefined
+    directories when necessary, and checks for the existence of these paths before
+    attempting to list their contents. The results are returned in a JSON format,
+    including the paths and available subdirectories.
+    
+    Returns:
+        flask.Response: A JSON response containing lists of raw files, saved files, and relevant
+            directory information.
+    """
     try:
         # Get requested subdirectory for raw files, default to TEMP1
         subdir = request.args.get('subdir', 'TEMP1')
@@ -282,6 +295,17 @@ def load_data_endpoint():
 
 @app.route('/api/unload', methods=['POST'])
 def unload_data_endpoint():
+    """Handles the unloading of data files via a POST request.
+    
+    This function processes a request to unload a data file specified by  the
+    'filename' key in the JSON payload. It checks for the presence of  the
+    filename, attempts to remove the file using the data_manager, and  returns the
+    current state of nodes, edges, and file names if successful.  In case of
+    errors, appropriate error messages are returned.
+    
+    Returns:
+        JSON response indicating the success or failure of the operation.
+    """
     try:
         data = request.json
         filename = data.get('filename')
