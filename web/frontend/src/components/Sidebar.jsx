@@ -41,6 +41,12 @@ const Sidebar = () => {
                 <button className={getButtonClass('draw')} onClick={() => setMode('draw')}>
                     <IconDraw /> Draw Path
                 </button>
+                <button className={getButtonClass('brush_select')} onClick={() => setMode('brush_select')}>
+                    <IconDraw /> Brush Select
+                </button>
+                <button className={getButtonClass('box_select')} onClick={() => setMode('box_select')}>
+                    <IconDraw /> Box Select
+                </button>
                 <button className="toolbar-button" onClick={() => setMode('select')} disabled={mode === 'select' && selectedNodeIds.length === 0}>
                     <IconCancel /> Cancel / Select
                 </button>
@@ -48,6 +54,18 @@ const Sidebar = () => {
                     <IconCancel /> Clear Selection ({selectedNodeIds.length})
                 </button>
             </div>
+
+            {selectedNodeIds.length > 0 && (
+                <div className="sidebar-section">
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Batch Operations</h4>
+                    <button className="toolbar-button" onClick={() => performOperation('delete_points', { point_ids: selectedNodeIds })}>
+                        <IconRemove /> Delete Selected ({selectedNodeIds.length})
+                    </button>
+                    <button className="toolbar-button" onClick={() => performOperation('copy_points', { point_ids: selectedNodeIds })}>
+                        <IconSave /> Copy Selected ({selectedNodeIds.length})
+                    </button>
+                </div>
+            )}
 
             <div className="sidebar-section">
                 <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Operations</h4>
@@ -111,7 +129,10 @@ const Sidebar = () => {
             <div style={{ flex: 1 }}></div>
 
             <div className="sidebar-section">
-                <button className="toolbar-button" onClick={saveData} style={{ marginTop: 'auto' }}>
+                <button className="toolbar-button" onClick={() => useStore.getState().setFileLoaderOpen(true)}>
+                    <IconSave /> Load Data
+                </button>
+                <button className="toolbar-button" onClick={saveData} style={{ marginTop: '10px' }}>
                     <IconSave /> Save Data
                 </button>
             </div>

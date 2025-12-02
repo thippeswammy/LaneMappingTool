@@ -3,6 +3,7 @@ import { useStore } from './store';
 import Plot from './components/Plot';
 import Sidebar from './components/Sidebar';
 import BottomBar from './components/BottomBar';
+import FileLoader from './components/FileLoader';
 import { IconMenu } from './components/Icons';
 import './App.css';
 
@@ -14,6 +15,8 @@ function App() {
   const fetchData = useStore(state => state.fetchData);
   const nodes = useStore(state => state.nodes);
   const edges = useStore(state => state.edges);
+  const isFileLoaderOpen = useStore(state => state.isFileLoaderOpen);
+  const setFileLoaderOpen = useStore(state => state.setFileLoaderOpen);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [plotDimensions, setPlotDimensions] = useState({ width: 0, height: 0 });
@@ -135,6 +138,10 @@ function App() {
           <BottomBar onHome={handleHome} />
         </footer>
       </div>
+
+      {isFileLoaderOpen && (
+        <FileLoader onClose={() => setFileLoaderOpen(false)} />
+      )}
     </div>
   );
 }

@@ -3,12 +3,10 @@ import pickle
 
 import matplotlib.pyplot as plt
 import networkx as nx
-# Import the Button widget
 from matplotlib.widgets import Button
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Adjust this join if your folder structure is different
 graph_file_path = os.path.join(BASE_DIR, "workspace", "output.pickle")
 
 

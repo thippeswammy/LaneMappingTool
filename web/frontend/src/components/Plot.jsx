@@ -18,6 +18,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const drawPoints = useStore(state => state.drawPoints);
   const addDrawPoint = useStore(state => state.addDrawPoint);
   const pointSize = useStore(state => state.pointSize);
+  const setSelectedNodeIds = useStore(state => state.setSelectedNodeIds);
 
   // Refs for state access in callbacks to avoid re-creating options
   const nodesRef = useRef(nodes);
@@ -26,6 +27,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const performOperationRef = useRef(performOperation);
   const handleNodeClickRef = useRef(handleNodeClick);
   const addDrawPointRef = useRef(addDrawPoint);
+  const setSelectedNodeIdsRef = useRef(setSelectedNodeIds);
 
   // Persistent bounds to prevent axis shrinking
   const boundsRef = useRef({ minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
@@ -58,7 +60,8 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     performOperationRef.current = performOperation;
     handleNodeClickRef.current = handleNodeClick;
     addDrawPointRef.current = addDrawPoint;
-  }, [nodes, mode, selectedNodeIds, performOperation, handleNodeClick, addDrawPoint]);
+    setSelectedNodeIdsRef.current = setSelectedNodeIds;
+  }, [nodes, mode, selectedNodeIds, performOperation, handleNodeClick, addDrawPoint, setSelectedNodeIds]);
 
   const chartRef = useRef(null);
   const lastDrawnNodeId = useRef(null);
@@ -146,6 +149,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           showLine: true,
           type: 'line',
           spanGaps: false,
+          order: -2
         }] : []),
         ...(drawPoints && drawPoints.length > 0 ? [{
           label: 'Draw Preview',
@@ -157,6 +161,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           showLine: true,
           type: 'line',
           spanGaps: false,
+          order: -2
         }] : []),
       ]
     };
@@ -268,12 +273,151 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     }
   }, [findNearestNode]);
 
+  // Selection State
+  const [selectionBox, setSelectionBox] = React.useState(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef(null);
+
+  const handleCanvasMouseDown = useCallback((event) => {
+    const currentMode = modeRef.current;
+    if (currentMode !== 'brush_select' && currentMode !== 'box_select') return;
+
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const rect = chart.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const xData = chart.scales.x.getValueForPixel(x);
+    const yData = chart.scales.y.getValueForPixel(y);
+
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: xData, y: yData, pixelX: x, pixelY: y };
+
+    if (currentMode === 'box_select') {
+      setSelectionBox({ startX: xData, startY: yData, endX: xData, endY: yData });
+    } else if (currentMode === 'brush_select') {
+      // Initial click in brush mode also selects
+      const result = findNearestNode(xData, yData);
+      if (result && result.node && result.dist < 5.0) { // Threshold
+        const nodeId = result.node[0];
+        const currentSelected = selectedNodeIdsRef.current;
+        if (!currentSelected.includes(nodeId)) {
+          handleNodeClickRef.current(nodeId, true); // true for multi-select
+        }
+      }
+    }
+  }, [findNearestNode]);
+
+  const handleCanvasMouseMove = useCallback((event) => {
+    if (!isDraggingRef.current) return;
+    const currentMode = modeRef.current;
+    if (currentMode !== 'brush_select' && currentMode !== 'box_select') return;
+
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const rect = chart.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const xData = chart.scales.x.getValueForPixel(x);
+    const yData = chart.scales.y.getValueForPixel(y);
+
+    if (currentMode === 'box_select') {
+      setSelectionBox(prev => ({ ...prev, endX: xData, endY: yData }));
+    } else if (currentMode === 'brush_select') {
+      const result = findNearestNode(xData, yData);
+      if (result && result.node && result.dist < 5.0) { // Threshold
+        const nodeId = result.node[0];
+        const currentSelected = selectedNodeIdsRef.current;
+        if (!currentSelected.includes(nodeId)) {
+          handleNodeClickRef.current(nodeId, true); // true for multi-select
+        }
+      }
+    }
+  }, [findNearestNode]);
+
+  const handleCanvasMouseUp = useCallback((event) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    const currentMode = modeRef.current;
+
+    if (currentMode === 'box_select' && selectionBox) {
+      // Finalize box selection
+      const { startX, startY, endX, endY } = selectionBox;
+      const minX = Math.min(startX, endX);
+      const maxX = Math.max(startX, endX);
+      const minY = Math.min(startY, endY);
+      const maxY = Math.max(startY, endY);
+
+      const currentNodes = nodesRef.current;
+      const newSelectedIds = [];
+
+      currentNodes.forEach(node => {
+        const nx = node[1];
+        const ny = node[2];
+        if (nx >= minX && nx <= maxX && ny >= minY && ny <= maxY) {
+          newSelectedIds.push(node[0]);
+        }
+      });
+
+      // Update selection
+      if (event.shiftKey) {
+        // Add to existing
+        const currentSelected = selectedNodeIdsRef.current;
+        const combined = [...new Set([...currentSelected, ...newSelectedIds])];
+        setSelectedNodeIdsRef.current(combined);
+      } else {
+        // Replace
+        setSelectedNodeIdsRef.current(newSelectedIds);
+      }
+
+      setSelectionBox(null);
+    }
+    dragStartRef.current = null;
+  }, [selectionBox]);
+
+  // Add selection box to datasets if it exists
+  const chartDataWithSelection = useMemo(() => {
+    const data = chartData;
+    if (selectionBox) {
+      // Create a rectangle dataset
+      const { startX, startY, endX, endY } = selectionBox;
+      const boxData = [
+        { x: startX, y: startY },
+        { x: endX, y: startY },
+        { x: endX, y: endY },
+        { x: startX, y: endY },
+        { x: startX, y: startY }
+      ];
+
+      return {
+        ...data,
+        datasets: [
+          ...data.datasets,
+          {
+            label: 'Selection Box',
+            data: boxData,
+            borderColor: 'rgba(255, 255, 0, 0.8)',
+            borderWidth: 1,
+            borderDash: [5, 5],
+            fill: true,
+            backgroundColor: 'rgba(255, 255, 0, 0.1)',
+            type: 'line',
+            pointRadius: 0,
+            order: -1 // Draw on top
+          }
+        ]
+      };
+    }
+    return data;
+  }, [chartData, selectionBox]);
+
   const options = useMemo(() => ({
     responsive: true,
     animation: false,
     maintainAspectRatio: false,
-    // We handle onClick natively on the canvas now
-    events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'], // Ensure click is listened to by Chart.js for tooltips etc if needed, but we have our own handler
+    events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove', 'mousedown', 'mouseup'],
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -289,7 +433,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       },
       zoom: {
         pan: {
-          enabled: true,
+          enabled: mode !== 'brush_select' && mode !== 'box_select', // Disable pan in selection modes
           mode: 'xy',
         },
         zoom: {
@@ -313,17 +457,20 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ticks: { color: '#aaa' }
       }
     }
-  }), []);
+  }), [mode, minX, maxX, minY, maxY]);
 
   return (
     <div
       className="plot-container"
       style={{ position: 'relative', height: height, width: width }}
       onContextMenu={handleCanvasContextMenu}
+      onMouseDown={handleCanvasMouseDown}
+      onMouseMove={handleCanvasMouseMove}
+      onMouseUp={handleCanvasMouseUp}
     >
       <Line
         ref={chartRef}
-        data={chartData}
+        data={chartDataWithSelection}
         options={options}
         onClick={handleCanvasClick}
       />

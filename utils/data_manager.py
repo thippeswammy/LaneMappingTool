@@ -197,6 +197,70 @@ class DataManager:
         except Exception as e:
             print(f"Error deleting points: {e}")
 
+    def copy_points(self, point_ids_to_copy):
+        """Copy specified points and their internal edges."""
+        if not point_ids_to_copy:
+            return
+        try:
+            point_ids = set(point_ids_to_copy)
+            
+            # Find nodes to copy
+            node_mask = np.isin(self.nodes[:, 0], list(point_ids))
+            nodes_to_copy = self.nodes[node_mask]
+            
+            if nodes_to_copy.size == 0:
+                print("No nodes found to copy.")
+                return
+
+            # Map old IDs to new IDs
+            id_map = {}
+            new_nodes_list = []
+            
+            offset_x = 2.0
+            offset_y = 2.0
+
+            for node in nodes_to_copy:
+                old_id = int(node[0])
+                new_id = self._get_new_point_id()
+                id_map[old_id] = new_id
+                
+                new_node = node.copy()
+                new_node[0] = new_id
+                new_node[1] += offset_x # X
+                new_node[2] += offset_y # Y
+                
+                new_nodes_list.append(new_node)
+
+            if not new_nodes_list:
+                return
+
+            # Add new nodes
+            new_nodes_arr = np.array(new_nodes_list)
+            self.nodes = np.vstack([self.nodes, new_nodes_arr])
+
+            # Copy edges where both endpoints are in the selection
+            new_edges_list = []
+            if self.edges.size > 0:
+                for edge in self.edges:
+                    u, v = int(edge[0]), int(edge[1])
+                    if u in point_ids and v in point_ids:
+                        if u in id_map and v in id_map:
+                            new_u = id_map[u]
+                            new_v = id_map[v]
+                            new_edges_list.append([new_u, new_v])
+            
+            if new_edges_list:
+                new_edges_arr = np.array(new_edges_list)
+                self.edges = np.vstack([self.edges, new_edges_arr])
+
+            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.redo_stack = []
+            self._auto_save_backup()
+            print(f"Copied {len(nodes_to_copy)} nodes and {len(new_edges_list)} edges.")
+
+        except Exception as e:
+            print(f"Error copying points: {e}")
+
     def change_ids(self, point_ids, new_original_lane_id):
         if not point_ids:
             return

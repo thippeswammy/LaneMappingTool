@@ -8,9 +8,11 @@ export const useStore = create((set, get) => ({
   nodes: [],
   edges: [],
   fileNames: [],
+  availableFiles: { raw_files: [], saved_files: [], raw_path: '', saved_path: '' },
   loading: true,
   status: 'Initializing...',
-  mode: 'select', // select, draw, smooth, connect, remove_between, reverse_path, zoom
+  mode: 'select', // select, draw, smooth, connect, remove_between, reverse_path, zoom, brush_select, box_select
+  isFileLoaderOpen: false,
 
   // Selections & temporary data
   selectedNodeIds: [],
@@ -60,6 +62,37 @@ export const useStore = create((set, get) => ({
     }
   },
 
+  fetchFiles: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/files`);
+      set({ availableFiles: response.data });
+    } catch (error) {
+      console.error("Error fetching files:", error);
+    }
+  },
+
+  loadData: async (rawFiles, savedNodesFile, savedEdgesFile) => {
+    try {
+      set({ loading: true, status: 'Loading selected files...' });
+      const response = await axios.post(`${API_URL}/api/load`, {
+        raw_files: rawFiles,
+        saved_nodes_file: savedNodesFile,
+        saved_edges_file: savedEdgesFile
+      });
+      const { nodes, edges, file_names } = response.data;
+      set({
+        nodes: nodes || [],
+        edges: edges || [],
+        fileNames: file_names || [],
+        loading: false,
+        status: 'Data loaded successfully.'
+      });
+    } catch (error) {
+      console.error("Error loading data:", error);
+      set({ loading: false, status: 'Error loading data.' });
+    }
+  },
+
   performOperation: async (operation, params = {}) => {
     try {
       set({ status: `Executing: ${operation}...` });
@@ -72,7 +105,7 @@ export const useStore = create((set, get) => ({
         selectedNodeIds: [],
         operationStartNodeId: null,
       });
-      if (['remove_between', 'reverse_path', 'add_edge'].includes(operation)) {
+      if (['remove_between', 'reverse_path', 'add_edge', 'copy_points', 'delete_points'].includes(operation)) {
         set({ mode: 'select' });
       }
     } catch (error) {
@@ -92,6 +125,10 @@ export const useStore = create((set, get) => ({
       smoothEndNodeId: null,
       drawPoints: [],
     });
+  },
+
+  setFileLoaderOpen: (isOpen) => {
+    set({ isFileLoaderOpen: isOpen });
   },
 
   setSelectedNodeIds: (ids) => {

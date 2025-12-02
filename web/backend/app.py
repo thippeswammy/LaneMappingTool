@@ -117,6 +117,120 @@ def save_data():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/api/files', methods=['GET'])
+def get_files():
+    """List available raw data files and saved graph files."""
+    try:
+        # List raw data files
+        raw_files = []
+        if os.path.exists(raw_data_path):
+            raw_files = [f for f in os.listdir(raw_data_path) if f.endswith('.npy')]
+
+        # List saved graph files
+        saved_files = []
+        if os.path.exists(graph_dir):
+            saved_files = [f for f in os.listdir(graph_dir) if f.endswith('.npy')]
+
+        return jsonify({
+            'raw_files': raw_files,
+            'saved_files': saved_files,
+            'raw_path': raw_data_path,
+            'saved_path': graph_dir
+        })
+    except Exception as e:
+        print(f"Error listing files: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/load', methods=['POST'])
+def load_data_endpoint():
+    """Load selected raw files and/or saved graph files."""
+    global data_manager
+    try:
+        data = request.get_json()
+        raw_files = data.get('raw_files', [])
+        saved_nodes_file = data.get('saved_nodes_file')
+        saved_edges_file = data.get('saved_edges_file')
+
+        print(f"Loading data: raw={raw_files}, nodes={saved_nodes_file}, edges={saved_edges_file}")
+
+        # Initialize empty
+        final_nodes = np.array([])
+        final_edges = np.array([])
+        file_names = []
+        D = 0
+
+        # 1. Load Saved Graph Data if requested
+        if saved_nodes_file and saved_edges_file:
+            nodes_path_full = os.path.join(graph_dir, saved_nodes_file)
+            edges_path_full = os.path.join(graph_dir, saved_edges_file)
+            
+            if os.path.exists(nodes_path_full) and os.path.exists(edges_path_full):
+                final_nodes, final_edges, file_names, D = loader.load_graph_data(nodes_path_full, edges_path_full)
+                print(f"Loaded saved graph: {final_nodes.shape[0]} nodes")
+            else:
+                print("Saved graph files not found.")
+
+        # 2. Load Raw Data if requested
+        if raw_files:
+            # Calculate offsets
+            start_id_offset = 0
+            lane_id_offset = 0
+
+            if final_nodes.size > 0:
+                start_id_offset = int(np.max(final_nodes[:, 0])) + 1
+                lane_id_offset = int(np.max(final_nodes[:, 4])) + 1
+
+            # Load specific new files
+            # Note: loader.load_data expects full paths or relative to its base? 
+            # Looking at existing code: files_path = [os.path.join(raw_data_path, i) for i in files_path_]
+            # loader.load_data takes specific_files which are just names if they are in the base path?
+            # Let's check DataLoader.load_data signature or usage.
+            # Usage in line 56: specific_files=files_path_ (names only)
+            
+            new_nodes, new_edges, new_names = loader.load_data(
+                specific_files=raw_files,
+                start_id=start_id_offset
+            )
+
+            if new_nodes.size > 0:
+                # Adjust Lane IDs
+                new_nodes[:, 4] += lane_id_offset
+
+                # Merge
+                if final_nodes.size > 0:
+                    final_nodes = np.vstack([final_nodes, new_nodes])
+                    final_edges = np.vstack([final_edges, new_edges])
+                    file_names.extend(new_names)
+                    D = max(D, loader.D)
+                else:
+                    final_nodes = new_nodes
+                    final_edges = new_edges
+                    file_names = new_names
+                    D = loader.D
+                
+                print(f"Merged raw files. Total: {final_nodes.shape[0]} nodes.")
+
+        # Update DataManager
+        if final_nodes.size == 0:
+             # Initialize empty to avoid errors
+            final_nodes = np.array([])
+            final_edges = np.array([])
+        
+        data_manager = DataManager(final_nodes, final_edges, file_names)
+        
+        return jsonify({
+            'status': 'success',
+            'nodes': data_manager.nodes.tolist() if data_manager.nodes.size > 0 else [],
+            'edges': data_manager.edges.tolist() if data_manager.edges.size > 0 else [],
+            'file_names': data_manager.file_names
+        })
+
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @app.route('/api/smooth', methods=['POST'])
 def smooth_path_endpoint():
     try:
@@ -194,6 +308,10 @@ def perform_operation():
         elif operation == 'delete_points':
             point_ids = params['point_ids']
             data_manager.delete_points(point_ids)
+
+        elif operation == 'copy_points':
+            point_ids = params['point_ids']
+            data_manager.copy_points(point_ids)
 
         elif operation == 'break_links':
             point_id = params['point_id']
