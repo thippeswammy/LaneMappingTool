@@ -50,7 +50,6 @@ def test_load_data(client):
     # For now, let's assume the basic structure test is enough for this unit test.
 
 def test_unload_data(client):
-    """Test unloading a specific file."""
     # First load a file (mocking existence or using a known one if possible)
     # Since we can't guarantee 'lane-01.npy' exists in test env without setup,
     # we might need to mock os.path.exists or just rely on the fact that 
@@ -64,6 +63,7 @@ def test_unload_data(client):
     # Or just use the API.
     
     # Assuming 'lane-20.npy' exists as per app.py default
+    """Test unloading a specific file."""
     load_payload = {
         'raw_files': ['lane-20.npy']
     }
@@ -109,8 +109,8 @@ def test_directory_selection(client):
     # Verify loader path updated (indirectly via success)
 
 def test_custom_directory_selection(client):
-    """Test using an absolute path for directory selection."""
     # We need a valid absolute path. Let's use the current working directory + lanes/TEMP1
+    """Test directory selection using an absolute path."""
     abs_path = os.path.abspath(os.path.join('lanes', 'TEMP1'))
     
     # List files using absolute path
