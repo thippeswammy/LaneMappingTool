@@ -5,6 +5,7 @@ from web.backend.app import app, data_manager
 
 @pytest.fixture
 def client():
+    """Create a test client for the application."""
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
