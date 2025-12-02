@@ -1,0 +1,8 @@
+{
+    "operation": "add_node",
+    "params": {
+        "x": 100,
+        "y": 200,
+        "lane_id": 0
+    }
+}

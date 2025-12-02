@@ -31,8 +31,6 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const boundsRef = useRef({ minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
 
   // Synchronously update bounds based on current nodes to ensure options are stable
-  // We do this during render to ensure the values used in useMemo are up to date
-  // and to avoid an extra render cycle from useEffect.
   if (nodes && nodes.length > 0) {
     let { minX, maxX, minY, maxY } = boundsRef.current;
     let updated = false;
@@ -73,9 +71,6 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       }
     },
     togglePan: () => {
-      // Implementation depends on how we want to toggle. 
-      // For now, we might just rely on default behavior or toggle plugin options if needed.
-      // Chart.js zoom plugin usually has pan enabled by default if configured.
       console.log("Pan toggled (placeholder)");
     },
     toggleZoom: () => {
@@ -84,13 +79,12 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   }));
 
   useEffect(() => {
-    // Reset last drawn node when switching out of draw mode
     if (mode !== 'draw') {
       lastDrawnNodeId.current = null;
     }
   }, [mode]);
 
-  // Imperatively update chart bounds to avoid re-creating options and resetting zoom
+  // Imperatively update chart bounds
   useEffect(() => {
     const chart = chartRef.current;
     if (chart) {
@@ -102,7 +96,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     }
   }, [minX, maxX, minY, maxY]);
 
-  // Performance Optimization: Prepare edge data for a single dataset
+  // Performance Optimization: Prepare edge data
   const chartData = useMemo(() => {
     const edgeData = [];
     if (nodes && edges) {
@@ -113,7 +107,6 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         if (fromNode && toNode) {
           edgeData.push({ x: fromNode[1], y: fromNode[2] });
           edgeData.push({ x: toNode[1], y: toNode[2] });
-          // Add a break in the line using NaN
           edgeData.push({ x: NaN, y: NaN });
         }
       });
@@ -121,7 +114,6 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
 
     return {
       datasets: [
-        // Edges (single dataset for performance)
         {
           label: 'Edges',
           data: edgeData,
@@ -130,10 +122,8 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           pointRadius: 0,
           showLine: true,
           type: 'line',
-          spanGaps: false, // Important for showing breaks
+          spanGaps: false,
         },
-
-        // Nodes
         {
           label: 'Nodes',
           data: nodes ? nodes.map(node => ({ x: node[1], y: node[2], id: node[0] })) : [],
@@ -142,12 +132,10 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
             if (operationStartNodeId === node[0]) return 'blue';
             return 'rgba(0,255,255,1)';
           }) : [],
-          pointRadius: pointSize, // Use dynamic point size
-          pointHitRadius: 10, // Increased hit radius for easier selection
+          pointRadius: pointSize,
+          pointHitRadius: 10,
           type: 'scatter',
         },
-
-        // Smoothing Preview
         ...(smoothingPreview ? [{
           label: 'Smooth Preview',
           data: smoothingPreview.map(p => ({ x: p[1], y: p[2] })),
@@ -159,12 +147,10 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           type: 'line',
           spanGaps: false,
         }] : []),
-
-        // Draw Preview (Temporary Points)
         ...(drawPoints && drawPoints.length > 0 ? [{
           label: 'Draw Preview',
           data: drawPoints,
-          borderColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white
+          borderColor: 'rgba(255, 255, 255, 0.8)',
           borderWidth: 2,
           pointRadius: 3,
           pointBackgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -190,10 +176,8 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         const nodeId = currentNodes[element.index][0];
 
         if (event.ctrlKey || event.metaKey) {
-          // Ctrl + Right Click = Delete Points
           performOperationRef.current('delete_points', { point_ids: [nodeId] });
         } else {
-          // Right Click = Break Links
           performOperationRef.current('break_links', { point_id: nodeId });
         }
       }
@@ -218,27 +202,133 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     return { node: nearestNode, dist: minDist };
   }, []);
 
+  // Native Click Handler passed to the Line component (which renders the canvas)
+  const handleCanvasClick = useCallback((event) => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    // We use the native event or the React synthetic event.
+    // React synthetic event has .nativeEvent, but properties like clientX are on the synthetic event too.
+    // event.button === 0 is Left Click.
+
+    const rect = chart.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    const xData = xScale.getValueForPixel(x);
+    const yData = yScale.getValueForPixel(y);
+
+    const currentMode = modeRef.current;
+
+    console.log("Canvas Click (Native):", {
+      button: event.button,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      xData, yData,
+      mode: currentMode
+    });
+
+    if (currentMode === 'draw') {
+      addDrawPointRef.current({ x: xData, y: yData });
+    } else {
+      // Check if we clicked on an existing element using Chart.js helper
+      // We need to use the native event for getElementsAtEventForMode if possible, 
+      // or just pass the synthetic event which Chart.js handles.
+      const elements = chart.getElementsAtEventForMode(event.nativeEvent || event, 'nearest', { intersect: true }, true);
+
+      if (elements.length > 0) {
+        const element = elements[0];
+        if (element.datasetIndex === 1) { // Nodes dataset
+          const currentNodes = nodesRef.current;
+          const nodeId = currentNodes[element.index][0];
+          // Normal click on node -> Select
+          // Shift + Click -> Multi-select (handled in handleNodeClick)
+          handleNodeClickRef.current(nodeId, event.shiftKey);
+          return;
+        }
+      }
+
+      // If no element clicked, check for Ctrl + Click (Add Node)
+      // Explicitly check for Left Click (button 0) and Ctrl key
+      if (event.button === 0 && (event.ctrlKey || event.metaKey)) {
+        const result = findNearestNode(xData, yData);
+        const CONNECTION_THRESHOLD = 5.0;
+
+        if (result && result.node && result.dist < CONNECTION_THRESHOLD) {
+          const nearestNode = result.node;
+          const nearestNodeId = nearestNode[0];
+          const zone = nearestNode[4];
+          performOperationRef.current('add_node', { x: xData, y: yData, lane_id: zone, connect_to: nearestNodeId });
+        } else {
+          performOperationRef.current('add_node', { x: xData, y: yData, lane_id: 0, connect_to: null });
+        }
+      }
+    }
+  }, [findNearestNode]);
+
   const options = useMemo(() => ({
     responsive: true,
     animation: false,
     maintainAspectRatio: false,
-    onClick: async (event, elements) => {
-      const chart = chartRef.current;
-      if (!chart) return;
-      type: 'linear',
+    // We handle onClick natively on the canvas now
+    events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'], // Ensure click is listened to by Chart.js for tooltips etc if needed, but we have our own handler
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function (context) {
+            if (context.dataset.label === 'Nodes') {
+              const point = context.raw;
+              return `Node ID: ${point.id} (X: ${point.x.toFixed(2)}, Y: ${point.y.toFixed(2)})`;
+            }
+            return null;
+          }
+        }
+      },
+      zoom: {
+        pan: {
+          enabled: true,
+          mode: 'xy',
+        },
+        zoom: {
+          wheel: { enabled: true },
+          pinch: { enabled: true },
+          mode: 'xy',
+        }
       }
-  }
-  }), [findNearestNode]);
+    },
+    scales: {
+      x: {
+        type: 'linear',
+        position: 'bottom',
+        grid: { color: '#444' },
+        ticks: { color: '#aaa' }
+      },
+      y: {
+        type: 'linear',
+        position: 'left',
+        grid: { color: '#444' },
+        ticks: { color: '#aaa' }
+      }
+    }
+  }), []);
 
-return (
-  <div
-    className="plot-container"
-    style={{ position: 'relative', height: height, width: width }}
-    onContextMenu={handleCanvasContextMenu}
-  >
-    <Line ref={chartRef} data={chartData} options={options} />
-  </div>
-);
+  return (
+    <div
+      className="plot-container"
+      style={{ position: 'relative', height: height, width: width }}
+      onContextMenu={handleCanvasContextMenu}
+    >
+      <Line
+        ref={chartRef}
+        data={chartData}
+        options={options}
+        onClick={handleCanvasClick}
+      />
+    </div>
+  );
 });
 
 export default Plot;
