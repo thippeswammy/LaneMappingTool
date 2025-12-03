@@ -500,6 +500,7 @@ class EventHandler:
         self.update_button_states()
 
     def save_data(self, event):
+        """Saves data using the data manager and updates the status."""
         filename = self.data_manager.save_by_matplotlib()
         if filename:
             print(f"Saved to {filename}")
