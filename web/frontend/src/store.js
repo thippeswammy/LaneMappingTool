@@ -70,7 +70,10 @@ export const useStore = create((set, get) => ({
       if (subdir) params.subdir = subdir;
       if (savedSubdir) params.saved_subdir = savedSubdir;
 
+      console.log("Fetching files with params:", params);
       const response = await axios.get(`${API_URL}/api/files`, { params });
+      console.log("Files response:", response.data);
+
       set({ availableFiles: response.data });
       if (subdir) {
         set({ currentRawDir: subdir });
@@ -142,32 +145,23 @@ export const useStore = create((set, get) => ({
     }
   },
 
-  deleteTempFile: async (filename) => {
+  resetTempFile: async (filename, rawDir) => {
     try {
-      set({ status: `Deleting temp file for ${filename}...` });
-      await axios.post(`${API_URL}/api/delete_temp_file`, { filename });
-      set({ status: `Deleted temp file for ${filename}.` });
+      set({ status: `Resetting temp file for ${filename}...` });
+      await axios.post(`${API_URL}/api/reset_temp_file`, { filename, raw_dir: rawDir });
+      set({ status: `Reset temp file for ${filename}.` });
     } catch (error) {
-      console.error("Error deleting temp file:", error);
-      set({ status: 'Error deleting temp file.' });
+      console.error("Error resetting temp file:", error);
+      set({ status: 'Error resetting temp file.' });
     }
   },
 
   refreshLane: async (filename) => {
     try {
-      const { unloadData, deleteTempFile, loadData, currentRawDir, currentSavedDir } = get();
-
-      // 1. Unload the current data for this file
+      const { unloadData, resetTempFile, currentRawDir } = get();
       await unloadData(filename);
-
-      // 2. Delete the temp file
-      await deleteTempFile(filename);
-
-      // 3. Reload the file (which will now pull from raw source)
-      await loadData([filename], null, null, currentRawDir, currentSavedDir);
-
-      set({ status: `Refreshed ${filename} (Original Data Loaded).` });
-
+      await resetTempFile(filename, currentRawDir);
+      set({ status: `Refreshed ${filename} (Reset to Original). Please reload.` });
     } catch (error) {
       console.error("Error refreshing lane:", error);
       set({ status: 'Error refreshing lane.' });

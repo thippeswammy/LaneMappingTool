@@ -55,16 +55,17 @@ class DataManager:
 
     def add_edge(self, from_point_id, to_point_id):
         try:
-            if np.any((self.edges[:, 0] == from_point_id) & (self.edges[:, 1] == to_point_id)):
-                print(f"Edge from {from_point_id} to {to_point_id} already exists.")
-                return
-
-            new_edge = np.array([[from_point_id, to_point_id]], dtype=int)
-
             if self.edges.size > 0:
+                if self.edges.ndim == 1:
+                     self.edges = self.edges.reshape(-1, 2)
+                if np.any((self.edges[:, 0] == from_point_id) & (self.edges[:, 1] == to_point_id)):
+                    print(f"Edge from {from_point_id} to {to_point_id} already exists.")
+                    return
+
+                new_edge = np.array([[from_point_id, to_point_id]], dtype=int)
                 self.edges = np.vstack([self.edges, new_edge])
             else:
-                self.edges = new_edge
+                self.edges = np.array([[from_point_id, to_point_id]], dtype=int)
 
             from_node_mask = self.nodes[:, 0] == from_point_id
             to_node_mask = self.nodes[:, 0] == to_point_id
