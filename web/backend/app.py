@@ -25,6 +25,7 @@ project_root = os.path.abspath(os.path.join(base_dir, '../..'))
 graph_dir = os.path.join(base_dir, "workspace")
 lanes_root = os.path.join(project_root, 'lanes')
 raw_data_path = os.path.join(lanes_root, 'TEMP1')
+TEMP_LANES_DIR = os.path.join(graph_dir, "temp_lanes")
 
 # Paths for saved working state
 nodes_path = os.path.join(graph_dir, 'graph_nodes0.npy')
@@ -76,6 +77,9 @@ def save_data():
         data_manager.edges = edges_array
 
         data_manager.save_by_web(os.path.join(base_dir, "workspace"))
+        
+        # Also save individual edited lanes to temp dir
+        data_manager.save_temp_lanes(TEMP_LANES_DIR)
 
         return jsonify({'status': 'success', 'message': 'Data saved successfully.'})
     except Exception as e:
@@ -237,17 +241,91 @@ def load_data_endpoint():
 
                 if final_nodes.size > 0:
                     start_id_offset = int(np.max(final_nodes[:, 0])) + 1
-                    lane_id_offset = int(np.max(final_nodes[:, 4])) + 1
+                
+                # Fix: lane_id_offset should always be the current number of loaded files (including Nones)
+                # to ensure index alignment with file_names list.
+                lane_id_offset = len(file_names)
 
-                new_nodes, new_edges, new_names = loader.load_data(
-                    specific_files=files_to_load,
-                    start_id=start_id_offset
-                )
+                # RE-IMPLEMENTATION of Temp File Loading Logic
+                # Iterate files_to_load. Check if temp exists.
+                # If yes, load from temp. If no, load from raw.
+                # Then merge.
+                
+                loaded_nodes_list = []
+                loaded_edges_list = []
+                loaded_names_list = []
+                
+                current_pid = start_id_offset
+                
+                for i, filename in enumerate(files_to_load):
+                    temp_path = os.path.join(TEMP_LANES_DIR, filename)
+                    raw_path = os.path.join(loader.directory, filename)
+                    
+                    load_source = raw_path
+                    is_temp = False
+                    
+                    if os.path.exists(temp_path):
+                        print(f"Loading {filename} from TEMP: {temp_path}")
+                        load_source = temp_path
+                        is_temp = True
+                    elif os.path.exists(raw_path):
+                        print(f"Loading {filename} from RAW: {raw_path}")
+                        load_source = raw_path
+                    else:
+                        print(f"File not found: {filename}")
+                        continue
+                        
+                    try:
+                        points = np.load(load_source)
+                        if points.size == 0: continue
+                        
+                        if len(points.shape) == 1:
+                            points = points.reshape(-1, points.shape[0])
+                            
+                        N = points.shape[0]
+                        nodes = np.zeros((N, 7))
+                        edges = np.zeros((N - 1, 2), dtype=int)
+                        
+                        if is_temp and points.shape[1] >= 7:
+                            nodes[:, :] = points[:, 0:7]
+                            nodes[:, 4] = i # Zone ID relative to this batch
+                        else:
+                            nodes[:, 1:3] = points[:, 0:2]
+                            nodes[:, 4] = i
+                            
+                        # Assign IDs
+                        current_lane_pids = []
+                        for k in range(N):
+                            nodes[k, 0] = current_pid + k
+                            current_lane_pids.append(current_pid + k)
+                        
+                        # Edges - reconstruct sequentially
+                        for k in range(N - 1):
+                            edges[k, 0] = current_lane_pids[k]
+                            edges[k, 1] = current_lane_pids[k + 1]
+                            
+                        loaded_nodes_list.append(nodes)
+                        loaded_edges_list.append(edges)
+                        loaded_names_list.append(filename)
+                        
+                        current_pid += N
+                        
+                    except Exception as e:
+                        print(f"Error loading {filename}: {e}")
+                
+                if loaded_nodes_list:
+                    new_nodes = np.vstack(loaded_nodes_list)
+                    new_edges = np.vstack(loaded_edges_list)
+                    new_names = loaded_names_list
+                    
+                    # Adjust Lane IDs (offset by existing max lane id)
+                    new_nodes[:, 4] += lane_id_offset
+                else:
+                    new_nodes = np.array([])
+                    new_edges = np.array([])
+                    new_names = []
 
                 if new_nodes.size > 0:
-                    # Adjust Lane IDs
-                    new_nodes[:, 4] += lane_id_offset
-
                     # Merge
                     if final_nodes.size > 0:
                         final_nodes = np.vstack([final_nodes, new_nodes])
@@ -291,6 +369,13 @@ def unload_data_endpoint():
         if not filename:
             return jsonify({'status': 'error', 'message': 'No filename provided'}), 400
 
+        # Save the specific lane to temp before unloading
+        # We need to save ONLY this lane. save_temp_lanes saves ALL lanes.
+        # But that's fine, or we can optimize.
+        # Let's just save all for now to be safe, or better, implement save_single_temp_lane?
+        # save_temp_lanes iterates all zones. It's fast enough.
+        data_manager.save_temp_lanes(TEMP_LANES_DIR)
+
         success = data_manager.remove_file(filename)
 
         if success:
@@ -332,19 +417,7 @@ def unload_graph_endpoint():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-@app.route('/api/clear', methods=['POST'])
-def clear_data_endpoint():
-    try:
-        data_manager.clear_data()
-        return jsonify({
-            'status': 'success',
-            'nodes': [],
-            'edges': [],
-            'file_names': []
-        })
-    except Exception as e:
-        print(f"Error clearing data: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 
 @app.route('/api/smooth', methods=['POST'])
@@ -474,6 +547,9 @@ def perform_operation():
         else:
             return jsonify({'status': 'error', 'message': f'Unknown operation: {operation}'}), 400
 
+        # Auto-save temp lanes after any operation
+        data_manager.save_temp_lanes(TEMP_LANES_DIR)
+
         return jsonify({
             'status': 'success',
             'nodes': data_manager.nodes.tolist(),
@@ -481,6 +557,29 @@ def perform_operation():
         })
     except Exception as e:
         print(f"Error performing operation '{operation}': {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+
+@app.route('/api/delete_temp_file', methods=['POST'])
+def delete_temp_file_endpoint():
+    try:
+        data = request.json
+        filename = data.get('filename')
+        
+        if not filename:
+            return jsonify({'status': 'error', 'message': 'No filename provided'}), 400
+            
+        temp_path = os.path.join(TEMP_LANES_DIR, filename)
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            print(f"Deleted temp file: {temp_path}")
+            return jsonify({'status': 'success', 'message': f'Deleted temp file for {filename}'})
+        else:
+            return jsonify({'status': 'success', 'message': 'Temp file not found (already original?)'})
+            
+    except Exception as e:
+        print(f"Error deleting temp file: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 

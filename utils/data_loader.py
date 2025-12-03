@@ -126,13 +126,24 @@ class DataLoader:
 
                 current_lane_point_ids = []
 
-                nodes[:, 1:3] = points[:, 0:2]
-                # Leave yaw (col 3) as 0.0 for now
-
-                # Important: If we are appending, we might want to offset the lane_id too,
-                # Map lane_idx to zone (col 4)
-                nodes[:, 4] = lane_idx
-                # width (col 5) and indicator (col 6) are 0 by default
+                if points.shape[1] >= 7:
+                    # Loaded from a temp file (edited data)
+                    # Copy all attributes
+                    nodes[:, :] = points[:, 0:7]
+                    # We still need to re-assign point_ids to ensure uniqueness in THIS session
+                    # But we keep other attributes (yaw, width, indicator)
+                    # NOTE: zone (col 4) might need to be updated to lane_idx if we want to enforce order?
+                    # But if we are reloading a specific file, we probably want to keep its identity.
+                    # However, the loader assigns lane_idx based on file order.
+                    # Let's overwrite zone with lane_idx to be consistent with how the app manages zones.
+                    nodes[:, 4] = lane_idx
+                else:
+                    # Raw data (x, y)
+                    nodes[:, 1:3] = points[:, 0:2]
+                    # Leave yaw (col 3) as 0.0 for now
+                    # Map lane_idx to zone (col 4)
+                    nodes[:, 4] = lane_idx
+                    # width (col 5) and indicator (col 6) are 0 by default
 
                 # Assign globally unique point_ids starting from start_id
                 for i in range(N):

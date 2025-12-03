@@ -135,9 +135,6 @@ const Sidebar = () => {
                 <button className="toolbar-button" onClick={saveData} style={{ marginTop: '10px' }}>
                     <IconSave /> Save Data
                 </button>
-                <button className="toolbar-button" onClick={useStore.getState().clearAllData} style={{ marginTop: '10px', background: '#d32f2f' }}>
-                    <IconCancel /> Clear All Data
-                </button>
             </div>
         </div>
     );

@@ -574,3 +574,39 @@ class DataManager:
         except Exception as e:
             print(f"Error removing file {filename}: {e}")
             return False
+
+    def save_temp_lanes(self, output_dir):
+        """Save each lane (zone) to a separate .npy file in the output directory."""
+        try:
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
+            # Identify unique zones
+            if self.nodes.size == 0:
+                return
+
+            unique_zones = np.unique(self.nodes[:, 4]).astype(int)
+
+            for zone_id in unique_zones:
+                # Get filename for this zone
+                if zone_id < len(self.file_names):
+                    filename = self.file_names[zone_id]
+                    if filename is None:
+                        continue # Skip removed files
+                else:
+                    # Fallback if file_names is out of sync (shouldn't happen if managed correctly)
+                    filename = f"temp_lane_{zone_id}.npy"
+
+                # Extract nodes for this zone
+                zone_mask = self.nodes[:, 4] == zone_id
+                zone_nodes = self.nodes[zone_mask]
+
+                # Save full node data (7 columns)
+                # [point_id, x, y, yaw, zone, width, indicator]
+                save_path = os.path.join(output_dir, filename)
+                np.save(save_path, zone_nodes)
+                print(f"Saved temp file for {filename} to {save_path}")
+
+        except Exception as e:
+            print(f"Error saving temp lanes: {e}")
+

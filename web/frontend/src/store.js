@@ -125,30 +125,6 @@ export const useStore = create((set, get) => ({
     }
   },
 
-  clearAllData: async () => {
-    if (!window.confirm("Are you sure you want to clear ALL data? This cannot be undone.")) {
-      return;
-    }
-    try {
-      set({ loading: true, status: 'Clearing all data...' });
-      const response = await axios.post(`${API_URL}/api/clear`);
-      set({
-        nodes: response.data.nodes,
-        edges: response.data.edges,
-        fileNames: response.data.file_names,
-        loading: false,
-        status: 'All data cleared.'
-      });
-
-      // Refresh file list to update checkboxes (though they should just be unchecked now)
-      get().fetchFiles(get().currentRawDir);
-
-    } catch (error) {
-      console.error("Error clearing data:", error);
-      set({ loading: false, status: 'Error clearing data.' });
-    }
-  },
-
   unloadGraph: async () => {
     try {
       set({ loading: true, status: 'Unloading graph data...' });
@@ -163,6 +139,38 @@ export const useStore = create((set, get) => ({
     } catch (error) {
       console.error("Error unloading graph data:", error);
       set({ loading: false, status: 'Error unloading graph data.' });
+    }
+  },
+
+  deleteTempFile: async (filename) => {
+    try {
+      set({ status: `Deleting temp file for ${filename}...` });
+      await axios.post(`${API_URL}/api/delete_temp_file`, { filename });
+      set({ status: `Deleted temp file for ${filename}.` });
+    } catch (error) {
+      console.error("Error deleting temp file:", error);
+      set({ status: 'Error deleting temp file.' });
+    }
+  },
+
+  refreshLane: async (filename) => {
+    try {
+      const { unloadData, deleteTempFile, loadData, currentRawDir, currentSavedDir } = get();
+
+      // 1. Unload the current data for this file
+      await unloadData(filename);
+
+      // 2. Delete the temp file
+      await deleteTempFile(filename);
+
+      // 3. Reload the file (which will now pull from raw source)
+      await loadData([filename], null, null, currentRawDir, currentSavedDir);
+
+      set({ status: `Refreshed ${filename} (Original Data Loaded).` });
+
+    } catch (error) {
+      console.error("Error refreshing lane:", error);
+      set({ status: 'Error refreshing lane.' });
     }
   },
 

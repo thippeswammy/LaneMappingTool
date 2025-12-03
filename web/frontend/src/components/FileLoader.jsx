@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
-import { IconSave, IconCheck, IconCancel } from './Icons';
+import { IconSave, IconCheck, IconCancel, IconRefresh } from './Icons';
 
 const FileLoader = ({ onClose }) => {
     const availableFiles = useStore(state => state.availableFiles);
     const fetchFiles = useStore(state => state.fetchFiles);
     const loadData = useStore(state => state.loadData);
     const unloadData = useStore(state => state.unloadData);
+    const refreshLane = useStore(state => state.refreshLane);
     const loadedFileNames = useStore(state => state.fileNames);
     const currentRawDir = useStore(state => state.currentRawDir);
     const currentSavedDir = useStore(state => state.currentSavedDir);
@@ -205,6 +206,26 @@ const FileLoader = ({ onClose }) => {
                                             >
                                                 {file} {isLoaded && "(Loaded)"}
                                             </label>
+                                            {isLoaded && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (window.confirm(`Are you sure you want to refresh ${file}? This will discard unsaved edits.`)) {
+                                                            refreshLane(file);
+                                                        }
+                                                    }}
+                                                    title="Refresh (Discard edits and reload original)"
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        color: 'var(--text-secondary)',
+                                                        cursor: 'pointer',
+                                                        padding: '2px'
+                                                    }}
+                                                >
+                                                    <IconRefresh size={14} />
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })
