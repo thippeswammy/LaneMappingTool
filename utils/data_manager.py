@@ -18,7 +18,7 @@ class DataManager:
         else:
             self._next_point_id = 0
 
-        self.history = [(self.nodes.copy(), self.edges.copy())]
+        self.history = [(self.nodes.copy(), self.edges.copy(), list(self.file_names))]
         self.redo_stack = []
 
         self.last_backup = time.time()
@@ -43,7 +43,7 @@ class DataManager:
             else:
                 self.nodes = new_node
 
-            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
             self.redo_stack = []
             self._auto_save_backup()
             print(f"Added node {new_point_id}: ({x:.2f}, {y:.2f}, lane_id={original_lane_id})")
@@ -79,7 +79,7 @@ class DataManager:
                 yaw = np.arctan2(dy, dx)
                 self.nodes[from_node_mask, 3] = yaw
 
-            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
             self.redo_stack = []
             self._auto_save_backup()
             print(f"Added edge from {from_point_id} to {to_point_id}")
@@ -155,7 +155,6 @@ class DataManager:
 
             # Apply the mask
             self.edges = self.edges[keep_mask]
-
             # Add the new reversed edges
             if edges_to_add:
                 edges_to_add_np = np.array(edges_to_add, dtype=int)
@@ -165,7 +164,7 @@ class DataManager:
             self._update_yaws(edges_to_add)
 
             # Save to history
-            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
             self.redo_stack = []
             self._auto_save_backup()
 
@@ -173,7 +172,6 @@ class DataManager:
 
         except Exception as e:
             print(f"Error reversing path: {e}")
-
     def delete_points(self, point_ids_to_delete):
         """Delete specified points and their associated edges from the graph."""
         if not point_ids_to_delete:
@@ -190,7 +188,7 @@ class DataManager:
                 edge_mask_combined = edge_mask_from & edge_mask_to
                 self.edges = self.edges[edge_mask_combined]
 
-            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
             self.redo_stack = []
             self._auto_save_backup()
             print(f"Deleted {len(point_ids)} nodes and associated edges")
@@ -254,7 +252,7 @@ class DataManager:
                 new_edges_arr = np.array(new_edges_list)
                 self.edges = np.vstack([self.edges, new_edges_arr])
 
-            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
             self.redo_stack = []
             self._auto_save_backup()
             print(f"Copied {len(nodes_to_copy)} nodes and {len(new_edges_list)} edges.")
@@ -272,7 +270,7 @@ class DataManager:
             if np.any(node_mask):
                 # Update zone (col 4)
                 self.nodes[node_mask, 4] = new_original_lane_id
-                self.history.append((self.nodes.copy(), self.edges.copy()))
+                self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
                 self.redo_stack = []
                 self._auto_save_backup()
                 print(f"Changed zone (original lane ID) for {np.sum(node_mask)} nodes to {new_original_lane_id}")
@@ -363,7 +361,15 @@ class DataManager:
 
             self.redo_stack.append(self.history.pop())
 
-            nodes_copy, edges_copy = self.history[-1]
+            # Handle both 2-item (old) and 3-item (new) history tuples
+            state = self.history[-1]
+            if len(state) == 3:
+                nodes_copy, edges_copy, file_names_copy = state
+                self.file_names = list(file_names_copy)
+            else:
+                nodes_copy, edges_copy = state
+                # Keep existing file_names if not in history (fallback)
+
             self.nodes = nodes_copy.copy()
             self.edges = edges_copy.copy()
 
@@ -381,11 +387,17 @@ class DataManager:
                 print("Nothing to redo")
                 return self.nodes, self.edges, False
 
-            nodes_copy, edges_copy = self.redo_stack.pop()
+            state = self.redo_stack.pop()
+            self.history.append(state)
+
+            if len(state) == 3:
+                nodes_copy, edges_copy, file_names_copy = state
+                self.file_names = list(file_names_copy)
+            else:
+                nodes_copy, edges_copy = state
+
             self.nodes = nodes_copy.copy()
             self.edges = edges_copy.copy()
-
-            self.history.append((self.nodes.copy(), self.edges.copy()))
 
             self._auto_save_backup()
             print("Redo performed")
@@ -728,10 +740,10 @@ class DataManager:
                     if new_parts:
                         split_map[filename] = new_parts
             
-            if changes_made:
-                self.history.append((self.nodes.copy(), self.edges.copy()))
-                self.redo_stack = []
-                self._auto_save_backup()
+            # if changes_made:
+            #     self.history.append((self.nodes.copy(), self.edges.copy()))
+            #     self.redo_stack = []
+            #     self._auto_save_backup()
                 
             return split_map
 
@@ -777,6 +789,28 @@ class DataManager:
                 np.save(save_path, zone_nodes)
                 print(f"Saved temp file for {filename} to {save_path}")
             
+            # Cleanup stale split files
+            # If a file exists in output_dir that looks like a split part of an active file
+            # but is NOT in self.file_names, it is stale (e.g. from Undo).
+            try:
+                existing_files = os.listdir(output_dir)
+                active_files = set([f for f in self.file_names if f is not None])
+                
+                for fname in existing_files:
+                    if fname not in active_files and fname.endswith(".npy"):
+                        # Check if it is a split part of an active file
+                        for active_file in active_files:
+                            active_base = os.path.splitext(active_file)[0]
+                            if fname.startswith(active_base + "_"):
+                                print(f"Deleting stale split file: {fname}")
+                                try:
+                                    os.remove(os.path.join(output_dir, fname))
+                                except OSError as e:
+                                    print(f"Error deleting {fname}: {e}")
+                                break
+            except Exception as e:
+                print(f"Error cleaning up stale files: {e}")
+
             return split_map, merged_files
 
         except Exception as e:
