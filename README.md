@@ -1,77 +1,87 @@
 # Lane Mapping & Visualization Tool
 
-A Python-based GUI tool designed for visualizing, editing, and refining lane graph data for autonomous vehicle navigation. This tool allows for the creation of directed graphs from raw waypoint data (`.npy`), enabling complex operations like path smoothing, connection management, and direction reversal.
+A comprehensive tool for visualizing, editing, and refining lane graph data for autonomous vehicle navigation. This project has evolved from a desktop Python GUI to a modern Web Application with a React frontend and a Flask backend.
 
 ## 🚀 Features
 
-* **Graph-Based Data Model:** Treats lanes as nodes and edges, supporting complex junctions (Y-splits, merges) rather than just linear lists.
-* **Bidirectional Editing:** Algorithms for smoothing and pathfinding work in both forward and reverse directions.
-* **Advanced Curve Smoothing:** Uses B-Spline interpolation (`scipy.interpolate`) to smooth jagged paths between selected nodes with adjustable weight and smoothness factors.
-* **Path Management:**
-    * **Connect Nodes:** Link disjointed paths or create loops.
-    * **Remove Between:** Automatically find the path between two nodes and delete all intermediate points.
-    * **Reverse Path:** Intelligent pathfinding to reverse the direction of edges along a selected route.
-* **NetworkX Integration:** Exports the final graph as a NetworkX `.pickle` file with attributes (`id`,`x`, `y`, `yaw`, `zone`,`width`, `indicator`) suitable for autonomous navigation stacks.
-* **Session Resume:** Automatically detects and loads saved working files (`WorkingNodes.npy`) to resume editing sessions.
+*   **Web-Based Interface:** Modern, responsive UI built with React and Vite.
+*   **Graph-Based Data Model:** Treats lanes as nodes and edges, supporting complex junctions.
+*   **Bidirectional Editing:** Algorithms for smoothing and pathfinding work in both forward and reverse directions.
+*   **Advanced Curve Smoothing:** B-Spline interpolation for smooth path generation.
+*   **Interactive Plotting:** D3.js-like interactivity using Recharts/Visx (or similar) on the frontend, backed by Matplotlib logic on the backend.
+*   **Session Persistence:** Automatically saves and loads working sessions.
 
-## 🛠️ Installation
+## 🛠️ Quick Start
 
-Ensure you have Python installed. Install the required dependencies:
+### Prerequisites
+
+*   **Python 3.8+**
+*   **Node.js 16+**
+
+### 1. Backend Setup
+
+Navigate to the backend directory and install dependencies:
 
 ```bash
-pip install numpy matplotlib networkx scipy
-````
+cd web/backend
+# Create a virtual environment (optional but recommended)
+python -m venv venv
+# Activate venv:
+# Windows: venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Start the Flask server:
+
+```bash
+python app.py
+```
+The backend will run on `http://localhost:5000`.
+
+### 2. Frontend Setup
+
+Open a new terminal, navigate to the frontend directory, and install dependencies:
+
+```bash
+cd web/frontend
+npm install
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+The application will be accessible at `http://localhost:5173` (or the port shown in the terminal).
 
 ## 📂 Project Structure
 
 ```text
 LaneMappingTool
-├── originalData/          # Place raw lane-X.npy files here
-├── files/                 # Output location for saved WorkingNodes/Edges and output.pickle
-├── utils/
-│   ├── data_loader.py     # Loads raw .npy files
-│   ├── data_manager.py    # Manages the Node/Edge graph structure
-│   ├── event_handler.py   # Handles mouse/keyboard inputs and state machine
-│   ├── plot_manager.py    # Matplotlib plotting logic
-│   └── curve_manager.py   # B-Spline smoothing and pathfinding algorithms
-├── main.py                # Entry point for the application
-└── network_view3.py       # Viewer script to validate the exported pickle graph
+├── web/
+│   ├── backend/           # Flask API & Python logic
+│   │   ├── app.py         # Main entry point
+│   │   ├── utils/         # Core logic (data, plotting, curves)
+│   │   └── ...
+│   └── frontend/          # React Application
+│       ├── src/           # Components & State
+│       └── ...
+├── originalData/          # Raw .npy files
+├── files/                 # Output files
+└── ...
 ```
 
-## 🎮 Controls & Usage
+## 🎮 Controls
 
-### Basic Interaction
-
-| Action | Control | Description |
-| :--- | :--- | :--- |
-| **Select Node** | `Left Click` | Highlights a single node. |
-| **Add Node** | `Ctrl` + `Left Click` | Adds a new node at the cursor location, connected to the previously selected node. |
-| **Delete Node** | `Right Click` | Deletes the clicked node and its connections. |
-| **Break Connection**| `Ctrl` + `Right Click`| Deletes all **incoming** edges to the clicked node (breaks the path). |
-| **Area Select** | `Ctrl` + `S` + `Drag` | Selects multiple nodes within a rectangle. |
-| **Pan/Zoom** | Mouse Wheel / Drag | Standard Matplotlib navigation. |
-
-### Editing Modes (Buttons)
-
-  * **Draw:** Click repeatedly to sketch a new lane. Press `Enter` to finalize and commit the lane to the graph.
-  * **Smooth:**
-    1.  Click **"Smooth"**.
-    2.  Click the **Start Node**.
-    3.  Click the **End Node**.
-    4.  Adjust the **Smoothness** and **Weight** sliders to see a real-time blue preview line.
-    5.  Click **"Confirm Smooth"** to apply changes.
-  * **Connect Nodes:** Select two disjoint nodes to create a directed edge between them.
-  * **Remove Between:** Select a Start and End node. The tool finds the path between them and deletes all intermediate nodes.
-  * **Reverse Path:** Select a Start and End node. The tool reverses the direction of all edges along that path.
-
-## 💾 Data Output
-
-When you click **Save**, the tool generates three files in the `files/` directory:
-
-1.  **`WorkingNodes.npy`**: Numpy array containing `[id,x, y, yaw, zone,width, indicator]`. Used to resume editing. # Need to fix
-2.  **`WorkingEdges.npy`**: Numpy array containing `[from_id, to_id]`. Used to resume editing.
-3.  **`output.pickle`**: A serialized `networkx.DiGraph` object.
-      * **Nodes:** Contain attributes `id`,`x`, `y`, `yaw`, `zone`,`width`, `indicator`.
+*   **Left Click:** Select Node
+*   **Ctrl + Left Click:** Add Node / Connect to existing
+*   **Right Click:** Delete Node
+*   **Ctrl + Right Click:** Break Connection
+*   **Ctrl + Drag:** Multi-select (Brush/Box)
+*   **Scroll:** Zoom
+*   **Drag:** Pan
 
 ## 📝 Author
 

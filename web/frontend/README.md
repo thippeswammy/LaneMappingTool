@@ -1,16 +1,47 @@
-# React + Vite
+# Lane Mapping Tool - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This directory contains the React-based frontend for the Lane Mapping Tool. It provides an interactive interface for visualizing and editing lane graphs.
 
-Currently, two official plugins are available:
+## 🔧 Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
 
-## React Compiler
+*   Node.js 16 or higher
+*   npm (Node Package Manager)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Installation
 
-## Expanding the ESLint configuration
+1.  Navigate to this directory:
+    ```bash
+    cd web/frontend
+    ```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+
+## 🚀 Development
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The application will be accessible at `http://localhost:5173` (or the port shown in the terminal). Ensure the backend server is running on port 5000 for full functionality.
+
+## 📜 Scripts
+
+*   `npm run dev`: Starts the development server.
+*   `npm run build`: Builds the application for production.
+*   `npm run lint`: Runs ESLint to check for code quality issues.
+*   `npm run preview`: Previews the production build locally.
+
+## 🧩 Key Components
+
+*   `src/App.jsx`: Main application layout and state management.
+*   `src/components/Plot.jsx`: Handles the D3/SVG visualization of the lane graph.
+*   `src/components/Sidebar.jsx`: Controls for editing modes and settings.
+*   `src/components/BottomBar.jsx`: Additional controls and status information.
+*   `src/store.js`: Centralized state management (if applicable) or API interaction logic.
