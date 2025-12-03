@@ -543,6 +543,18 @@ def reset_temp_file_endpoint():
 
 @app.route('/api/operation', methods=['POST'])
 def perform_operation():
+    """Perform a specified operation on the data manager.
+    
+    This function handles various operations such as adding or deleting nodes and
+    edges, applying updates, and managing the history of changes. It processes
+    incoming JSON requests, executes the corresponding operation based on the
+    provided parameters, and returns the updated state of nodes and edges. Error
+    handling is implemented to manage exceptions and provide appropriate responses.
+    
+    Returns:
+        Response: A JSON response containing the status of the operation and the current state of
+            nodes and edges.
+    """
     try:
         data = request.json
         operation = data.get('operation')
