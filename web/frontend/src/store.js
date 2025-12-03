@@ -144,41 +144,6 @@ export const useStore = create((set, get) => ({
 
   deleteTempFile: async (filename) => {
     try {
-      set({ status: `Deleting temp file for ${filename}...` });
-      await axios.post(`${API_URL}/api/delete_temp_file`, { filename });
-      set({ status: `Deleted temp file for ${filename}.` });
-    } catch (error) {
-      console.error("Error deleting temp file:", error);
-      set({ status: 'Error deleting temp file.' });
-    }
-  },
-
-  refreshLane: async (filename) => {
-    try {
-      const { unloadData, deleteTempFile, loadData, currentRawDir, currentSavedDir } = get();
-
-      // 1. Unload the current data for this file
-      await unloadData(filename);
-
-      // 2. Delete the temp file
-      await deleteTempFile(filename);
-
-      // 3. Reload the file (which will now pull from raw source)
-      await loadData([filename], null, null, currentRawDir, currentSavedDir);
-
-      set({ status: `Refreshed ${filename} (Original Data Loaded).` });
-
-    } catch (error) {
-      console.error("Error refreshing lane:", error);
-      set({ status: 'Error refreshing lane.' });
-    }
-  },
-
-  performOperation: async (operation, params = {}) => {
-    try {
-      set({ status: `Executing: ${operation}...` });
-      const response = await axios.post(`${API_URL}/api/operation`, { operation, params });
-      const { nodes, edges } = response.data;
       set({
         nodes,
         edges,

@@ -210,8 +210,9 @@ const FileLoader = ({ onClose }) => {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (window.confirm(`Are you sure you want to refresh ${file}? This will discard unsaved edits.`)) {
+                                                        if (window.confirm(`Are you sure you want to refresh ${file}? This will unload the file and discard unsaved edits.`)) {
                                                             refreshLane(file);
+                                                            setSelectedRawFiles(prev => prev.filter(f => f !== file));
                                                         }
                                                     }}
                                                     title="Refresh (Discard edits and reload original)"

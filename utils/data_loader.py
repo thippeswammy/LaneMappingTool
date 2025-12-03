@@ -81,7 +81,7 @@ class DataLoader:
                 - np.ndarray: An array of edges.
                 - list: A list of file names processed.
         """
-        if specific_files:
+        if specific_files is not None:
             # Use the list provided by the user
             files = [f for f in specific_files if os.path.exists(os.path.join(self.directory, f))]
             if len(files) != len(specific_files):
