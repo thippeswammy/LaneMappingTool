@@ -2,6 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { IconSave, IconCheck, IconCancel, IconRefresh } from './Icons';
 
+/**
+ * Component for loading files and managing data directories.
+ *
+ * This component fetches available files and allows users to select raw or saved data files for loading.
+ * It manages custom directory paths and handles the loading and unloading of data based on user interactions.
+ * The component also provides a user interface for toggling between raw and saved data views, and for confirming file selections.
+ *
+ * @param {Object} props - The component properties.
+ * @param {Function} props.onClose - Callback function to close the file loader.
+ */
 const FileLoader = ({ onClose }) => {
     const availableFiles = useStore(state => state.availableFiles);
     const fetchFiles = useStore(state => state.fetchFiles);
