@@ -415,11 +415,8 @@ def unload_data_endpoint():
         files_to_remove = [filename]
         
         # Also remove any files that were merged away during this save
-        with open("debug_app_merge.log", "a") as f:
-            f.write(f"Unload called for {filename}. Merged files: {merged_files}\n")
-
         if merged_files:
-            print(f"DEBUG: Files merged away: {merged_files}")
+            print(f"Files merged away: {merged_files}")
             for mf in merged_files:
                 if mf not in files_to_remove:
                     files_to_remove.append(mf)
@@ -628,7 +625,19 @@ def perform_operation():
             return jsonify({'status': 'error', 'message': f'Unknown operation: {operation}'}), 400
         
         # Auto-save temp lanes after operation
-        data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        split_map, merged_files = data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        
+        # Handle merged files (delete them)
+        if merged_files:
+            print(f"Files merged away during operation: {merged_files}")
+            for mf in merged_files:
+                fpath = os.path.join(TEMP_LANES_DIR, mf)
+                if os.path.exists(fpath):
+                    try:
+                        os.remove(fpath)
+                        print(f"Deleted merged-away file: {fpath}")
+                    except Exception as e:
+                        print(f"Error deleting merged file {fpath}: {e}")
 
         return jsonify({
             'status': 'success',

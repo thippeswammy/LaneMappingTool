@@ -618,9 +618,6 @@ class DataManager:
                     # Record the file to be deleted
                     if source_zone < len(self.file_names):
                         fname = self.file_names[source_zone]
-                        with open("debug_merge.log", "a") as f:
-                            f.write(f"Merging zone {source_zone} ({fname}) into {target_zone}\n")
-                        
                         if fname and fname not in merged_files:
                             merged_files.append(fname)
                         
@@ -783,8 +780,6 @@ class DataManager:
             return split_map, merged_files
 
         except Exception as e:
-            with open("debug_merge_error.log", "a") as f:
-                f.write(f"Error saving temp lanes: {e}\n")
             print(f"Error saving temp lanes: {e}")
             return {}, []
 
