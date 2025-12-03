@@ -142,8 +142,34 @@ export const useStore = create((set, get) => ({
     }
   },
 
-  deleteTempFile: async (filename) => {
+  resetTempFile: async (filename, rawDir) => {
     try {
+      set({ status: `Resetting temp file for ${filename}...` });
+      await axios.post(`${API_URL}/api/reset_temp_file`, { filename, raw_dir: rawDir });
+      set({ status: `Reset temp file for ${filename}.` });
+    } catch (error) {
+      console.error("Error resetting temp file:", error);
+      set({ status: 'Error resetting temp file.' });
+    }
+  },
+
+  refreshLane: async (filename) => {
+    try {
+      const { unloadData, resetTempFile, currentRawDir } = get();
+      await unloadData(filename);
+      await resetTempFile(filename, currentRawDir);
+      set({ status: `Refreshed ${filename} (Reset to Original). Please reload.` });
+    } catch (error) {
+      console.error("Error refreshing lane:", error);
+      set({ status: 'Error refreshing lane.' });
+    }
+  },
+
+  performOperation: async (operation, params = {}) => {
+    try {
+      set({ status: `Executing: ${operation}...` });
+      const response = await axios.post(`${API_URL}/api/operation`, { operation, params });
+      const { nodes, edges } = response.data;
       set({
         nodes,
         edges,

@@ -78,10 +78,21 @@ def save_data():
 
         data_manager.save_by_web(os.path.join(base_dir, "workspace"))
         
-        # Also save individual edited lanes to temp dir
-        data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        # Save temp lanes
+        split_map, merged_files = data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        
+        if merged_files:
+            print(f"Files merged away during save: {merged_files}")
+            for mf in merged_files:
+                fpath = os.path.join(TEMP_LANES_DIR, mf)
+                if os.path.exists(fpath):
+                    try:
+                        os.remove(fpath)
+                        print(f"Deleted merged-away file: {fpath}")
+                    except Exception as e:
+                        print(f"Error deleting merged file {fpath}: {e}")
 
-        return jsonify({'status': 'success', 'message': 'Data saved successfully.'})
+        return jsonify({'status': 'success', 'message': 'Data saved successfully'})
     except Exception as e:
         print(f"Error saving data: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -138,6 +149,12 @@ def get_files():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+import shutil
+
+# ... (imports)
+
+# ... (existing code)
+
 @app.route('/api/load', methods=['POST'])
 def load_data_endpoint():
     """Load selected raw files and/or saved graph files."""
@@ -168,6 +185,7 @@ def load_data_endpoint():
 
         # Initialize with current data if NOT loading a saved graph
         if saved_nodes_file and saved_edges_file:
+            # ... (saved graph loading logic remains same)
             # We are loading a saved graph, so we start fresh
             final_nodes = np.array([])
             final_edges = np.array([])
@@ -235,22 +253,41 @@ def load_data_endpoint():
                 print("All selected files are already loaded.")
             else:
                 print(f"Loading new files: {files_to_load}")
+                
+                # Expand files_to_load to include split parts from TEMP_LANES_DIR
+                expanded_files_to_load = []
+                for filename in files_to_load:
+                    expanded_files_to_load.append(filename)
+                    
+                    # Check for split parts
+                    if os.path.exists(TEMP_LANES_DIR):
+                        base_name, ext = os.path.splitext(filename)
+                        prefix = f"{base_name}_"
+                        
+                        for f in os.listdir(TEMP_LANES_DIR):
+                            if f.startswith(prefix) and f.endswith(ext):
+                                # Avoid duplicates if already in request (unlikely but safe)
+                                if f not in expanded_files_to_load and f not in existing_files:
+                                    expanded_files_to_load.append(f)
+                                    print(f"Auto-loading split part: {f}")
+                
+                files_to_load = expanded_files_to_load
+                
                 # Calculate offsets
                 start_id_offset = 0
                 lane_id_offset = 0
 
                 if final_nodes.size > 0:
                     start_id_offset = int(np.max(final_nodes[:, 0])) + 1
-                
-                # Fix: lane_id_offset should always be the current number of loaded files (including Nones)
-                # to ensure index alignment with file_names list.
-                lane_id_offset = len(file_names)
+                    lane_id_offset = len(file_names)
+                else:
+                    start_id_offset = 0
+                    lane_id_offset = 0
 
-                # RE-IMPLEMENTATION of Temp File Loading Logic
-                # Iterate files_to_load. Check if temp exists.
-                # If yes, load from temp. If no, load from raw.
-                # Then merge.
-                
+                # Ensure TEMP_LANES_DIR exists
+                if not os.path.exists(TEMP_LANES_DIR):
+                    os.makedirs(TEMP_LANES_DIR)
+
                 loaded_nodes_list = []
                 loaded_edges_list = []
                 loaded_names_list = []
@@ -261,19 +298,19 @@ def load_data_endpoint():
                     temp_path = os.path.join(TEMP_LANES_DIR, filename)
                     raw_path = os.path.join(loader.directory, filename)
                     
-                    load_source = raw_path
-                    is_temp = False
+                    # COPY-ON-LOAD LOGIC:
+                    # If temp file doesn't exist, copy from raw.
+                    if not os.path.exists(temp_path):
+                        if os.path.exists(raw_path):
+                            print(f"Copying {filename} to temp: {raw_path} -> {temp_path}")
+                            shutil.copy2(raw_path, temp_path)
+                        else:
+                            print(f"File not found in raw dir: {raw_path}")
+                            continue
                     
-                    if os.path.exists(temp_path):
-                        print(f"Loading {filename} from TEMP: {temp_path}")
-                        load_source = temp_path
-                        is_temp = True
-                    elif os.path.exists(raw_path):
-                        print(f"Loading {filename} from RAW: {raw_path}")
-                        load_source = raw_path
-                    else:
-                        print(f"File not found: {filename}")
-                        continue
+                    # ALWAYS load from temp
+                    load_source = temp_path
+                    print(f"Loading {filename} from TEMP: {temp_path}")
                         
                     try:
                         points = np.load(load_source)
@@ -286,7 +323,8 @@ def load_data_endpoint():
                         nodes = np.zeros((N, 7))
                         edges = np.zeros((N - 1, 2), dtype=int)
                         
-                        if is_temp and points.shape[1] >= 7:
+                        # Temp files should have 7 columns if edited, but might be raw copy (2 cols)
+                        if points.shape[1] >= 7:
                             nodes[:, :] = points[:, 0:7]
                             nodes[:, 4] = i # Zone ID relative to this batch
                         else:
@@ -362,6 +400,7 @@ def load_data_endpoint():
 
 @app.route('/api/unload', methods=['POST'])
 def unload_data_endpoint():
+    # ... (unload logic remains mostly same, ensure save_temp_lanes is called)
     try:
         data = request.json
         filename = data.get('filename')
@@ -369,217 +408,311 @@ def unload_data_endpoint():
         if not filename:
             return jsonify({'status': 'error', 'message': 'No filename provided'}), 400
 
-        # Save the specific lane to temp before unloading
-        # We need to save ONLY this lane. save_temp_lanes saves ALL lanes.
-        # But that's fine, or we can optimize.
-        # Let's just save all for now to be safe, or better, implement save_single_temp_lane?
-        # save_temp_lanes iterates all zones. It's fast enough.
-        data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        # Save temp lanes (this might trigger splits or merges)
+        split_map, merged_files = data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        
+        # Identify files to remove: the file itself AND any split parts
+        files_to_remove = [filename]
+        
+        # Also remove any files that were merged away during this save
+        if merged_files:
+            print(f"Files merged away: {merged_files}")
+            for mf in merged_files:
+                if mf not in files_to_remove:
+                    files_to_remove.append(mf)
+                
+                # Delete from disk to prevent duplicate loading
+                fpath = os.path.join(TEMP_LANES_DIR, mf)
+                if os.path.exists(fpath):
+                    try:
+                        os.remove(fpath)
+                        print(f"Deleted merged-away file from disk: {fpath}")
+                    except Exception as e:
+                        print(f"Error deleting merged file {fpath}: {e}")
+        
+        base_name, ext = os.path.splitext(filename)
+        # Prefix is base_name + "_", e.g. "lane0_"
+        # But we need to be careful not to match "lane0_1" with "lane0_10" if we just check prefix?
+        # Actually, the logic in DataManager appends _{idx}.
+        # So we look for files that start with f"{base_name}_" and end with ext.
+        prefix = f"{base_name}_"
+        
+        # Look for derived files in currently loaded files
+        for f in data_manager.file_names:
+            if f and f.startswith(prefix) and f.endswith(ext):
+                # Ensure it's a split part (digits after prefix)
+                # e.g. lane0_1.npy. Suffix is "1".
+                # lane0_1_1.npy. Suffix is "1_1"? No, base_name of lane0_1 is lane0_1.
+                # So if we unload lane0, we want lane0_1, lane0_2.
+                # If we unload lane0_1, we want lane0_1_1, lane0_1_2.
+                # This prefix logic handles one level of recursion relative to the unloaded file.
+                # But what if we unload lane0, and lane0_1_1 exists?
+                # lane0_1_1 starts with lane0_. So it matches.
+                # So recursively all descendants should be matched.
+                if f not in files_to_remove:
+                    files_to_remove.append(f)
+        
+        if len(files_to_remove) > 1:
+            print(f"Unloading {filename} and its derived parts: {files_to_remove}")
 
-        success = data_manager.remove_file(filename)
+        success = True
+        for f in files_to_remove:
+            if not data_manager.remove_file(f):
+                # Don't fail completely if a part fails, but log it
+                print(f"Failed to remove {f}")
+                # If the main file fails, that's a problem, but we continue to try others
 
-        if success:
-            return jsonify({
-                'status': 'success',
-                'nodes': data_manager.nodes.tolist(),
-                'edges': data_manager.edges.tolist(),
-                'file_names': [f for f in data_manager.file_names if f is not None]
-            })
-        else:
-            return jsonify({'status': 'error', 'message': 'Failed to remove file'}), 500
+        # We consider success if at least the main file was processed (or attempted)
+        # But remove_file returns False if file not found.
+        # Let's return success if we finished the loop.
+        
+        return jsonify({
+            'status': 'success',
+            'nodes': data_manager.nodes.tolist(),
+            'edges': data_manager.edges.tolist(),
+            'file_names': [f for f in data_manager.file_names if f is not None],
+            'debug_files_to_remove': files_to_remove
+        })
+
 
     except Exception as e:
         print(f"Error unloading data: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-@app.route('/api/unload_graph', methods=['POST'])
-def unload_graph_endpoint():
+@app.route('/api/reset_temp_file', methods=['POST'])
+def reset_temp_file_endpoint():
+    """Overwrite the temp file with the original raw file."""
     try:
-        # Identify files associated with the graph (Edited Lane ...)
-        graph_files = [f for f in data_manager.file_names if f and f.startswith("Edited Lane")]
+        data = request.json
+        filename = data.get('filename')
+        raw_dir = data.get('raw_dir') # We need to know where the original is
         
-        if not graph_files:
-             return jsonify({'status': 'success', 'message': 'No graph data to unload.', 'nodes': data_manager.nodes.tolist(), 'edges': data_manager.edges.tolist(), 'file_names': data_manager.file_names})
+        if not filename:
+            return jsonify({'status': 'error', 'message': 'No filename provided'}), 400
+            
+        # Determine raw path
+        if raw_dir:
+             if os.path.isabs(raw_dir):
+                raw_path = os.path.join(raw_dir, filename)
+             else:
+                raw_path = os.path.join(lanes_root, raw_dir, filename)
+        else:
+            # Fallback to current loader directory if not specified (might be risky if changed)
+            raw_path = os.path.join(loader.directory, filename)
 
-        for filename in graph_files:
-            data_manager.remove_file(filename)
-
-        return jsonify({
-            'status': 'success',
-            'nodes': data_manager.nodes.tolist() if data_manager.nodes.size > 0 else [],
-            'edges': data_manager.edges.tolist() if data_manager.edges.size > 0 else [],
-            'file_names': [f for f in data_manager.file_names if f is not None]
-        })
-
+        temp_path = os.path.join(TEMP_LANES_DIR, filename)
+        
+        if os.path.exists(raw_path):
+            # Ensure temp dir exists
+            if not os.path.exists(TEMP_LANES_DIR):
+                os.makedirs(TEMP_LANES_DIR)
+                
+            shutil.copy2(raw_path, temp_path)
+            print(f"Reset temp file: {raw_path} -> {temp_path}")
+            
+            # Also delete any split parts (sub-lanes)
+            # Pattern: filename_X.npy
+            base_name, ext = os.path.splitext(filename)
+            prefix = f"{base_name}_"
+            
+            deleted_parts = []
+            if os.path.exists(TEMP_LANES_DIR):
+                for f in os.listdir(TEMP_LANES_DIR):
+                    if f.startswith(prefix) and f.endswith(ext):
+                        # Check if it's a derived part (has digits after prefix)
+                        # e.g. lane0_1.npy
+                        part_path = os.path.join(TEMP_LANES_DIR, f)
+                        try:
+                            os.remove(part_path)
+                            deleted_parts.append(f)
+                        except Exception as e:
+                            print(f"Error deleting split part {f}: {e}")
+            
+            if deleted_parts:
+                print(f"Deleted split parts for {filename}: {deleted_parts}")
+            
+            return jsonify({'status': 'success', 'message': f'Reset temp file for {filename} and deleted {len(deleted_parts)} sub-lanes.'})
+        else:
+            return jsonify({'status': 'error', 'message': f'Original file not found at {raw_path}'}), 404
+            
     except Exception as e:
-        print(f"Error unloading graph data: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-
-
-
-
-@app.route('/api/smooth', methods=['POST'])
-def smooth_path_endpoint():
-    try:
-        data = request.get_json()
-        start_id = int(data.get('start_id'))
-        end_id = int(data.get('end_id'))
-        smoothness = float(data.get('smoothness', 1.0))
-        weight = float(data.get('weight', 1.0))
-
-        path_ids = find_path(data_manager.edges, start_id, end_id)
-        if not path_ids:
-            return jsonify({'status': 'error', 'message': 'No path found between nodes.'}), 404
-
-        new_points_xy = smooth_segment(data_manager.nodes, data_manager.edges, path_ids, smoothness, weight)
-        if new_points_xy is None:
-            return jsonify({'status': 'error',
-                            'message': 'Smoothing failed. Path may be too short, contain duplicates, or be invalid for B-Spline.'}), 400
-
-        # Prepare the updated node data to be returned to the frontend
-        updated_nodes_preview = []
-        for i, point_id in enumerate(path_ids):
-            node_mask = (data_manager.nodes[:, 0] == point_id)
-            if np.any(node_mask):
-                original_node = data_manager.nodes[node_mask][0]
-                new_node = original_node.copy()
-                new_node[1:3] = new_points_xy[i]
-
-                # Calculate Yaw
-                if i < len(new_points_xy) - 1:
-                    dx = new_points_xy[i + 1, 0] - new_points_xy[i, 0]
-                    dy = new_points_xy[i + 1, 1] - new_points_xy[i, 1]
-                    new_node[3] = np.arctan2(dy, dx)
-                elif i > 0:
-                    # Last point inherits yaw from the previous one in the preview
-                    new_node[3] = updated_nodes_preview[i - 1][3]
-
-                updated_nodes_preview.append(new_node.tolist())
-
-        return jsonify({
-            'status': 'success',
-            'updated_nodes': updated_nodes_preview
-        })
-
-    except Exception as e:
-        print(f"Error during smoothing: {e}")
+        print(f"Error resetting temp file: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/api/operation', methods=['POST'])
 def perform_operation():
     try:
-        data = request.get_json()
+        data = request.json
         operation = data.get('operation')
-        params = data.get('params')
+        params = data.get('params', {})
 
-        if operation == 'apply_updates':
-            nodes_array = np.array(params['nodes'])
-            edges_array = np.array(params['edges'])
-            data_manager.nodes = nodes_array
-            data_manager.edges = edges_array
-            data_manager.history.append((data_manager.nodes.copy(), data_manager.edges.copy()))
+        if not operation:
+            return jsonify({'status': 'error', 'message': 'No operation specified'}), 400
 
-        elif operation == 'add_node':
-            x, y, lane_id = params['x'], params['y'], params['lane_id']
-            new_node_id = data_manager.add_node(x, y, lane_id)
-            print("add_node", params.get('from_id'), params.get('to_id'))
-            if params.get('connect_to') is not None:
-                data_manager.add_edge(params['connect_to'], new_node_id)
-
+        if operation == 'add_node':
+            x = params.get('x')
+            y = params.get('y')
+            lane_id = params.get('lane_id')
+            connect_to = params.get('connect_to')
+            
+            new_id = data_manager.add_node(x, y, lane_id)
+            if connect_to is not None and new_id is not None:
+                data_manager.add_edge(connect_to, new_id)
+                
         elif operation == 'add_edge':
-            print("add_edge", params['from_id'], params['to_id'])
-            from_id, to_id = params['from_id'], params['to_id']
-            data_manager.add_edge(from_id, to_id)
-
+            data_manager.add_edge(params.get('from_id'), params.get('to_id'))
+            
         elif operation == 'delete_points':
-            point_ids = params['point_ids']
-            data_manager.delete_points(point_ids)
+            data_manager.delete_points(params.get('point_ids'))
+            
+        elif operation == 'break_links':
+            data_manager.delete_edges_for_node(params.get('point_id'))
+            
+        elif operation == 'reverse_path':
+            start_id = params.get('start_id')
+            end_id = params.get('end_id')
+            path = find_path(data_manager.edges, start_id, end_id)
+            if path:
+                data_manager.reverse_path(path)
+            else:
+                return jsonify({'status': 'error', 'message': 'No path found'}), 400
+                
+        elif operation == 'remove_between':
+            start_id = params.get('start_id')
+            end_id = params.get('end_id')
+            path = find_path(data_manager.edges, start_id, end_id)
+            if path:
+                # Delete nodes strictly between start and end
+                if len(path) > 2:
+                    to_delete = path[1:-1]
+                    data_manager.delete_points(to_delete)
+            else:
+                 return jsonify({'status': 'error', 'message': 'No path found'}), 400
 
         elif operation == 'copy_points':
-            point_ids = params['point_ids']
-            data_manager.copy_points(point_ids)
-
-        elif operation == 'break_links':
-            point_id = params['point_id']
-            data_manager.delete_edges_for_node(point_id)
-
-        elif operation == 'reverse_path':
-            start_id, end_id = params['start_id'], params['end_id']
-            path_ids = find_path(data_manager.edges, start_id, end_id)
-            if path_ids:
-                data_manager.reverse_path(path_ids)
-            else:
-                return jsonify({'status': 'error', 'message': 'No path found'}), 404
-
-        elif operation == 'remove_between':
-            start_id, end_id = params['start_id'], params['end_id']
-            path_ids = find_path(data_manager.edges, start_id, end_id)
-            if path_ids and len(path_ids) > 2:
-                points_to_delete = path_ids[1:-1]
-                data_manager.delete_points(points_to_delete)
+            data_manager.copy_points(params.get('point_ids'))
+            
+        elif operation == 'batch_add_nodes':
+            points = params.get('points')
+            lane_id = params.get('lane_id')
+            connect_id = params.get('connect_to_start_id')
+            
+            for pt in points:
+                new_id = data_manager.add_node(pt['x'], pt['y'], lane_id)
+                if connect_id is not None:
+                    data_manager.add_edge(connect_id, new_id)
+                connect_id = new_id # Chain them
+                
+        elif operation == 'apply_updates':
+            nodes_data = params.get('nodes')
+            edges_data = params.get('edges')
+            if nodes_data:
+                data_manager.nodes = np.array(nodes_data)
+            if edges_data:
+                data_manager.edges = np.array(edges_data)
+            data_manager.history.append((data_manager.nodes.copy(), data_manager.edges.copy()))
+            data_manager._auto_save_backup()
 
         elif operation == 'undo':
             data_manager.undo()
-
+            
         elif operation == 'redo':
             data_manager.redo()
 
-        elif operation == 'batch_add_nodes':
-            points = params.get('points', [])
-            lane_id = params.get('lane_id', 0)
-            connect_to_start_id = params.get('connect_to_start_id')
-
-            previous_node_id = connect_to_start_id
-            new_node_ids = []
-
-            for point in points:
-                x, y = point['x'], point['y']
-                new_node_id = data_manager.add_node(x, y, lane_id)
-                new_node_ids.append(new_node_id)
-
-                if previous_node_id is not None:
-                    data_manager.add_edge(previous_node_id, new_node_id)
-                previous_node_id = new_node_id
-
         else:
             return jsonify({'status': 'error', 'message': f'Unknown operation: {operation}'}), 400
-
-        # Auto-save temp lanes after any operation
-        data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        
+        # Auto-save temp lanes after operation
+        split_map, merged_files = data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        
+        # Handle merged files (delete them)
+        if merged_files:
+            print(f"Files merged away during operation: {merged_files}")
+            for mf in merged_files:
+                fpath = os.path.join(TEMP_LANES_DIR, mf)
+                if os.path.exists(fpath):
+                    try:
+                        os.remove(fpath)
+                        print(f"Deleted merged-away file: {fpath}")
+                    except Exception as e:
+                        print(f"Error deleting merged file {fpath}: {e}")
 
         return jsonify({
             'status': 'success',
-            'nodes': data_manager.nodes.tolist(),
-            'edges': data_manager.edges.tolist()
+            'nodes': data_manager.nodes.tolist() if data_manager.nodes.size > 0 else [],
+            'edges': data_manager.edges.tolist() if data_manager.edges.size > 0 else [],
+            'message': f'Operation {operation} successful'
         })
     except Exception as e:
-        print(f"Error performing operation '{operation}': {e}")
+        print(f"Error performing operation {operation}: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-
-@app.route('/api/delete_temp_file', methods=['POST'])
-def delete_temp_file_endpoint():
+@app.route('/api/smooth', methods=['POST'])
+def smooth_path_endpoint():
     try:
         data = request.json
-        filename = data.get('filename')
+        start_id = data.get('start_id')
+        end_id = data.get('end_id')
+        smoothness = float(data.get('smoothness', 1.0))
+        weight = float(data.get('weight', 0.5))
+
+        if start_id is None or end_id is None:
+            return jsonify({'status': 'error', 'message': 'Start and end IDs required'}), 400
+
+        # Find path
+        path_indices = find_path(data_manager.edges, start_id, end_id)
+        if not path_indices:
+             return jsonify({'status': 'error', 'message': 'No path found between selected nodes'}), 400
+
+        # Get points
+        # path_indices is list of IDs. We need to map to indices in data_manager.nodes?
+        # No, data_manager.nodes is (N, 7). We need to find rows where col 0 is in path_indices.
+        # But find_path returns IDs.
         
-        if not filename:
-            return jsonify({'status': 'error', 'message': 'No filename provided'}), 400
-            
-        temp_path = os.path.join(TEMP_LANES_DIR, filename)
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-            print(f"Deleted temp file: {temp_path}")
-            return jsonify({'status': 'success', 'message': f'Deleted temp file for {filename}'})
-        else:
-            return jsonify({'status': 'success', 'message': 'Temp file not found (already original?)'})
-            
+        # smooth_segment expects nodes array and path_ids
+        smoothed_points = smooth_segment(data_manager.nodes, data_manager.edges, path_indices, smoothness, weight)
+        
+        if smoothed_points is None:
+            return jsonify({'status': 'error', 'message': 'Smoothing failed'}), 400
+
+        # Reconstruct full node data for preview
+        preview_nodes = []
+        # We assume smoothed_points corresponds 1-to-1 with path_indices
+        for i, pid in enumerate(path_indices):
+             # Find original node data
+             node_mask = data_manager.nodes[:, 0] == pid
+             if np.any(node_mask):
+                 original_node = data_manager.nodes[node_mask][0].copy()
+                 # Update X, Y
+                 original_node[1] = smoothed_points[i][0]
+                 original_node[2] = smoothed_points[i][1]
+                 preview_nodes.append(original_node)
+
+        return jsonify({
+            'status': 'success',
+            'updated_nodes': [n.tolist() for n in preview_nodes]
+        })
+
     except Exception as e:
-        print(f"Error deleting temp file: {e}")
+        print(f"Error smoothing path: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/unload_graph', methods=['POST'])
+def unload_graph_endpoint():
+    try:
+        data_manager.clear_data()
+        return jsonify({
+            'status': 'success',
+            'nodes': [],
+            'edges': [],
+            'file_names': []
+        })
+    except Exception as e:
+        print(f"Error unloading graph: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
