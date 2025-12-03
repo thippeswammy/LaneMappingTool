@@ -78,10 +78,21 @@ def save_data():
 
         data_manager.save_by_web(os.path.join(base_dir, "workspace"))
         
-        # Also save individual edited lanes to temp dir
-        data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        # Save temp lanes
+        split_map, merged_files = data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        
+        if merged_files:
+            print(f"Files merged away during save: {merged_files}")
+            for mf in merged_files:
+                fpath = os.path.join(TEMP_LANES_DIR, mf)
+                if os.path.exists(fpath):
+                    try:
+                        os.remove(fpath)
+                        print(f"Deleted merged-away file: {fpath}")
+                    except Exception as e:
+                        print(f"Error deleting merged file {fpath}: {e}")
 
-        return jsonify({'status': 'success', 'message': 'Data saved successfully.'})
+        return jsonify({'status': 'success', 'message': 'Data saved successfully'})
     except Exception as e:
         print(f"Error saving data: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -242,14 +253,36 @@ def load_data_endpoint():
                 print("All selected files are already loaded.")
             else:
                 print(f"Loading new files: {files_to_load}")
+                
+                # Expand files_to_load to include split parts from TEMP_LANES_DIR
+                expanded_files_to_load = []
+                for filename in files_to_load:
+                    expanded_files_to_load.append(filename)
+                    
+                    # Check for split parts
+                    if os.path.exists(TEMP_LANES_DIR):
+                        base_name, ext = os.path.splitext(filename)
+                        prefix = f"{base_name}_"
+                        
+                        for f in os.listdir(TEMP_LANES_DIR):
+                            if f.startswith(prefix) and f.endswith(ext):
+                                # Avoid duplicates if already in request (unlikely but safe)
+                                if f not in expanded_files_to_load and f not in existing_files:
+                                    expanded_files_to_load.append(f)
+                                    print(f"Auto-loading split part: {f}")
+                
+                files_to_load = expanded_files_to_load
+                
                 # Calculate offsets
                 start_id_offset = 0
                 lane_id_offset = 0
 
                 if final_nodes.size > 0:
                     start_id_offset = int(np.max(final_nodes[:, 0])) + 1
-                
-                lane_id_offset = len(file_names)
+                    lane_id_offset = len(file_names)
+                else:
+                    start_id_offset = 0
+                    lane_id_offset = 0
 
                 # Ensure TEMP_LANES_DIR exists
                 if not os.path.exists(TEMP_LANES_DIR):
@@ -375,19 +408,75 @@ def unload_data_endpoint():
         if not filename:
             return jsonify({'status': 'error', 'message': 'No filename provided'}), 400
 
-        data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        # Save temp lanes (this might trigger splits or merges)
+        split_map, merged_files = data_manager.save_temp_lanes(TEMP_LANES_DIR)
+        
+        # Identify files to remove: the file itself AND any split parts
+        files_to_remove = [filename]
+        
+        # Also remove any files that were merged away during this save
+        with open("debug_app_merge.log", "a") as f:
+            f.write(f"Unload called for {filename}. Merged files: {merged_files}\n")
 
-        success = data_manager.remove_file(filename)
+        if merged_files:
+            print(f"DEBUG: Files merged away: {merged_files}")
+            for mf in merged_files:
+                if mf not in files_to_remove:
+                    files_to_remove.append(mf)
+                
+                # Delete from disk to prevent duplicate loading
+                fpath = os.path.join(TEMP_LANES_DIR, mf)
+                if os.path.exists(fpath):
+                    try:
+                        os.remove(fpath)
+                        print(f"Deleted merged-away file from disk: {fpath}")
+                    except Exception as e:
+                        print(f"Error deleting merged file {fpath}: {e}")
+        
+        base_name, ext = os.path.splitext(filename)
+        # Prefix is base_name + "_", e.g. "lane0_"
+        # But we need to be careful not to match "lane0_1" with "lane0_10" if we just check prefix?
+        # Actually, the logic in DataManager appends _{idx}.
+        # So we look for files that start with f"{base_name}_" and end with ext.
+        prefix = f"{base_name}_"
+        
+        # Look for derived files in currently loaded files
+        for f in data_manager.file_names:
+            if f and f.startswith(prefix) and f.endswith(ext):
+                # Ensure it's a split part (digits after prefix)
+                # e.g. lane0_1.npy. Suffix is "1".
+                # lane0_1_1.npy. Suffix is "1_1"? No, base_name of lane0_1 is lane0_1.
+                # So if we unload lane0, we want lane0_1, lane0_2.
+                # If we unload lane0_1, we want lane0_1_1, lane0_1_2.
+                # This prefix logic handles one level of recursion relative to the unloaded file.
+                # But what if we unload lane0, and lane0_1_1 exists?
+                # lane0_1_1 starts with lane0_. So it matches.
+                # So recursively all descendants should be matched.
+                if f not in files_to_remove:
+                    files_to_remove.append(f)
+        
+        if len(files_to_remove) > 1:
+            print(f"Unloading {filename} and its derived parts: {files_to_remove}")
 
-        if success:
-            return jsonify({
-                'status': 'success',
-                'nodes': data_manager.nodes.tolist(),
-                'edges': data_manager.edges.tolist(),
-                'file_names': [f for f in data_manager.file_names if f is not None]
-            })
-        else:
-            return jsonify({'status': 'error', 'message': 'Failed to remove file'}), 500
+        success = True
+        for f in files_to_remove:
+            if not data_manager.remove_file(f):
+                # Don't fail completely if a part fails, but log it
+                print(f"Failed to remove {f}")
+                # If the main file fails, that's a problem, but we continue to try others
+
+        # We consider success if at least the main file was processed (or attempted)
+        # But remove_file returns False if file not found.
+        # Let's return success if we finished the loop.
+        
+        return jsonify({
+            'status': 'success',
+            'nodes': data_manager.nodes.tolist(),
+            'edges': data_manager.edges.tolist(),
+            'file_names': [f for f in data_manager.file_names if f is not None],
+            'debug_files_to_remove': files_to_remove
+        })
+
 
     except Exception as e:
         print(f"Error unloading data: {e}")
@@ -424,7 +513,29 @@ def reset_temp_file_endpoint():
                 
             shutil.copy2(raw_path, temp_path)
             print(f"Reset temp file: {raw_path} -> {temp_path}")
-            return jsonify({'status': 'success', 'message': f'Reset temp file for {filename}'})
+            
+            # Also delete any split parts (sub-lanes)
+            # Pattern: filename_X.npy
+            base_name, ext = os.path.splitext(filename)
+            prefix = f"{base_name}_"
+            
+            deleted_parts = []
+            if os.path.exists(TEMP_LANES_DIR):
+                for f in os.listdir(TEMP_LANES_DIR):
+                    if f.startswith(prefix) and f.endswith(ext):
+                        # Check if it's a derived part (has digits after prefix)
+                        # e.g. lane0_1.npy
+                        part_path = os.path.join(TEMP_LANES_DIR, f)
+                        try:
+                            os.remove(part_path)
+                            deleted_parts.append(f)
+                        except Exception as e:
+                            print(f"Error deleting split part {f}: {e}")
+            
+            if deleted_parts:
+                print(f"Deleted split parts for {filename}: {deleted_parts}")
+            
+            return jsonify({'status': 'success', 'message': f'Reset temp file for {filename} and deleted {len(deleted_parts)} sub-lanes.'})
         else:
             return jsonify({'status': 'error', 'message': f'Original file not found at {raw_path}'}), 404
             

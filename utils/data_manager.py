@@ -576,15 +576,187 @@ class DataManager:
             print(f"Error removing file {filename}: {e}")
             return False
 
+    def merge_connected_lanes(self):
+        """
+        Identify edges connecting different zones and merge them.
+        Returns a list of filenames that were merged away (and should be deleted).
+        """
+        if self.edges.size == 0 or self.nodes.size == 0:
+            return []
+
+        merged_files = []
+        
+        # Iterate until no more merges occur (transitive merges)
+        while True:
+            merged_in_pass = False
+            
+            # Create a map of point_id to zone_id for quick lookup
+            # nodes column 0 is point_id, column 4 is zone_id
+            point_to_zone = {int(row[0]): int(row[4]) for row in self.nodes}
+            
+            # Check each edge
+            for edge in self.edges:
+                u, v = int(edge[0]), int(edge[1])
+                
+                if u not in point_to_zone or v not in point_to_zone:
+                    continue
+                    
+                zone_u = point_to_zone[u]
+                zone_v = point_to_zone[v]
+                
+                if zone_u != zone_v:
+                    # Found a connection between different zones! Merge them.
+                    # Merge the higher zone ID into the lower one (usually keeps the original file)
+                    # Exception: if one is None (shouldn't happen for active nodes)
+                    
+                    target_zone = min(zone_u, zone_v)
+                    source_zone = max(zone_u, zone_v)
+                    
+                    # Update nodes
+                    self.nodes[self.nodes[:, 4] == source_zone, 4] = target_zone
+                    
+                    # Record the file to be deleted
+                    if source_zone < len(self.file_names):
+                        fname = self.file_names[source_zone]
+                        with open("debug_merge.log", "a") as f:
+                            f.write(f"Merging zone {source_zone} ({fname}) into {target_zone}\n")
+                        
+                        if fname and fname not in merged_files:
+                            merged_files.append(fname)
+                        
+                        # Mark as removed in file_names
+                        self.file_names[source_zone] = None
+                        
+                    print(f"Merged Zone {source_zone} into Zone {target_zone}")
+                    merged_in_pass = True
+                    break # Restart loop to refresh point_to_zone map
+            
+            if not merged_in_pass:
+                break
+                
+        return merged_files
+
+    def split_disconnected_lanes(self):
+        """
+        Check each zone (lane) for disconnected components.
+        If a zone is split, keep the largest component as the original,
+        and assign new zone IDs and filenames to the smaller components.
+        Returns a dict mapping original filename -> list of new filenames created.
+        """
+        try:
+            split_map = {} # {original_filename: [new_filename1, new_filename2]}
+            
+            if self.nodes.size == 0:
+                return split_map
+
+            unique_zones = np.unique(self.nodes[:, 4]).astype(int)
+            changes_made = False
+            
+            # We need to iterate over a copy because we might append to unique_zones implicitly by adding new zones
+            # But actually we just need to process the current set of zones.
+            
+            # Map edges to zones for faster lookup
+            # An edge belongs to a zone if both its nodes belong to that zone.
+            # If nodes are in different zones, it's a connection between lanes, not *in* the lane.
+            
+            for zone_id in unique_zones:
+                if zone_id >= len(self.file_names) or self.file_names[zone_id] is None:
+                    continue
+
+                filename = self.file_names[zone_id]
+                
+                # Get nodes in this zone
+                zone_mask = self.nodes[:, 4] == zone_id
+                zone_node_ids = self.nodes[zone_mask, 0]
+                
+                if len(zone_node_ids) < 2:
+                    continue
+
+                # Build a graph for this zone
+                G = nx.Graph() # Undirected for connectivity check
+                G.add_nodes_from(zone_node_ids)
+                
+                # Add edges that are purely within this zone
+                if self.edges.size > 0:
+                    # Vectorized check is hard, let's just iterate relevant edges
+                    # Optimization: Filter edges where both u and v are in zone_node_ids
+                    # This might be slow if many edges. 
+                    # Faster: 
+                    mask_u = np.isin(self.edges[:, 0], zone_node_ids)
+                    mask_v = np.isin(self.edges[:, 1], zone_node_ids)
+                    zone_edges = self.edges[mask_u & mask_v]
+                    
+                    for edge in zone_edges:
+                        G.add_edge(edge[0], edge[1])
+                
+                # Find connected components
+                components = list(nx.connected_components(G))
+                
+                if len(components) > 1:
+                    print(f"Zone {zone_id} ({filename}) is split into {len(components)} parts.")
+                    changes_made = True
+                    
+                    # Sort by size (descending)
+                    components.sort(key=len, reverse=True)
+                    
+                    # Largest component keeps the original zone_id and filename
+                    # Others get new zones
+                    
+                    base_name, ext = os.path.splitext(filename)
+                    
+                    new_parts = []
+                    
+                    for i in range(1, len(components)):
+                        comp_nodes = components[i]
+                        new_zone_id = len(self.file_names)
+                        
+                        # Generate new filename
+                        # Try to find a unique name
+                        part_idx = 1
+                        while True:
+                            new_filename = f"{base_name}_{part_idx}{ext}"
+                            if new_filename not in self.file_names:
+                                break
+                            part_idx += 1
+                        
+                        self.file_names.append(new_filename)
+                        new_parts.append(new_filename)
+                        
+                        # Update nodes to new zone_id
+                        comp_mask = np.isin(self.nodes[:, 0], list(comp_nodes))
+                        self.nodes[comp_mask, 4] = new_zone_id
+                        
+                        print(f"  Moved {len(comp_nodes)} nodes to new zone {new_zone_id} ({new_filename})")
+                    
+                    if new_parts:
+                        split_map[filename] = new_parts
+            
+            if changes_made:
+                self.history.append((self.nodes.copy(), self.edges.copy()))
+                self.redo_stack = []
+                self._auto_save_backup()
+                
+            return split_map
+
+        except Exception as e:
+            print(f"Error splitting disconnected lanes: {e}")
+            return {}
+
     def save_temp_lanes(self, output_dir):
         """Save each lane (zone) to a separate .npy file in the output directory."""
         try:
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
 
+            # 1. Merge connected lanes first
+            merged_files = self.merge_connected_lanes()
+
+            # 2. Check for splits
+            split_map = self.split_disconnected_lanes()
+
             # Identify unique zones
             if self.nodes.size == 0:
-                return
+                return split_map, merged_files
 
             unique_zones = np.unique(self.nodes[:, 4]).astype(int)
 
@@ -607,7 +779,12 @@ class DataManager:
                 save_path = os.path.join(output_dir, filename)
                 np.save(save_path, zone_nodes)
                 print(f"Saved temp file for {filename} to {save_path}")
+            
+            return split_map, merged_files
 
         except Exception as e:
+            with open("debug_merge_error.log", "a") as f:
+                f.write(f"Error saving temp lanes: {e}\n")
             print(f"Error saving temp lanes: {e}")
+            return {}, []
 
