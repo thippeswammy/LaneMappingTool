@@ -15,6 +15,7 @@ def calculate_yaw_diff(yaw1, yaw2):
     return diff
 
 def test_yaw_logic():
+    """Tests the yaw difference calculation for various cases."""
     print("--- Testing Yaw Logic ---")
     
     # Test Case 1: Aligned
@@ -48,6 +49,15 @@ def test_yaw_logic():
     print("Logic tests passed!\n")
 
 def verify_graph_data():
+    """Verify the integrity and alignment of graph data.
+    
+    This function checks for the existence of graph data files, loads the nodes and
+    edges from the specified paths, and verifies the alignment of edges based on
+    the yaw values of the nodes. It calculates the geometric yaw for each edge and
+    compares it with the stored yaw of the source node, counting aligned and
+    misaligned edges. The results are printed, including the total number of edges
+    checked and the percentage of aligned edges.
+    """
     print("--- Verifying Graph Data ---")
     base_dir = os.path.dirname(os.path.abspath(__file__))
     workspace_dir = os.path.join(base_dir, "workspace")
