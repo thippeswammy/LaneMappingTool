@@ -11,7 +11,7 @@ import {
  * The Sidebar component utilizes various state values and functions from the store, including mode management,
  * selection handling, and data saving. It provides buttons for drawing, selecting, connecting, and smoothing paths,
  * along with adjustable parameters for smoothness and weight when in smooth mode. The layout is responsive and
- * styled for usability.
+ * styled for usability, ensuring that user interactions are intuitive and efficient.
  */
 const Sidebar = () => {
     const mode = useStore(state => state.mode);
