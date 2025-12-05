@@ -54,6 +54,18 @@ class DataManager:
             return None
 
     def add_edge(self, from_point_id, to_point_id):
+        """Add an edge between two points in the graph.
+        
+        This method adds an edge from `from_point_id` to `to_point_id` in the graph's
+        edge list.  It first checks if the edge already exists and reshapes the edges
+        array if necessary.  If both nodes exist, it calculates the yaw angle between
+        them and updates the corresponding  node's yaw value. The current state of
+        nodes and edges is saved to history, and a backup  is created automatically.
+        
+        Args:
+            from_point_id: The identifier for the starting point of the edge.
+            to_point_id: The identifier for the ending point of the edge.
+        """
         try:
             if self.edges.size > 0:
                 if self.edges.ndim == 1:
@@ -198,7 +210,17 @@ class DataManager:
             print(f"Error deleting points: {e}")
 
     def copy_points(self, point_ids_to_copy):
-        """Copy specified points and their internal edges."""
+        """Copy specified points and their internal edges.
+        
+        This function copies nodes identified by `point_ids_to_copy`, creating new
+        nodes with updated IDs and adjusted positions. It also copies edges that
+        connect the selected nodes, ensuring that both endpoints of the edges are
+        included in the copy process. The function maintains a history of changes and
+        performs an automatic backup after the operation.
+        
+        Args:
+            point_ids_to_copy (list): A list of point IDs to be copied.
+        """
         if not point_ids_to_copy:
             return
         try:
@@ -541,7 +563,14 @@ class DataManager:
             print(f"Error deleting edges: {e}")
 
     def remove_file(self, filename):
-        """Remove all nodes and edges associated with a specific file (zone)."""
+        """Remove all nodes and edges associated with a specific file (zone).
+        
+        This function checks if the specified filename exists in the loaded files.  If
+        found, it retrieves the corresponding zone ID and identifies all nodes
+        associated with that zone. It then removes these nodes and any edges  connected
+        to them. Finally, it marks the file as removed in the list to  preserve indices
+        for other zones and updates the history for potential  undo operations.
+        """
         try:
             if filename not in self.file_names:
                 print(f"File {filename} not found in loaded files.")
@@ -648,11 +677,18 @@ class DataManager:
         return merged_files
 
     def split_disconnected_lanes(self):
-        """
-        Check each zone (lane) for disconnected components.
-        If a zone is split, keep the largest component as the original,
-        and assign new zone IDs and filenames to the smaller components.
-        Returns a dict mapping original filename -> list of new filenames created.
+        """Check each zone (lane) for disconnected components.
+        
+        This function identifies zones that are split into multiple components and
+        retains the largest component as the original. It assigns new zone IDs and
+        filenames to the smaller components, ensuring that the original filename is
+        mapped to a list of newly created filenames. The function utilizes a graph-
+        based approach to determine connectivity within each zone and handles potential
+        filename conflicts when generating new filenames.
+        
+        Returns:
+            dict: A mapping of the original filename to a list of new filenames created for the
+                smaller components.
         """
         try:
             split_map = {}  # {original_filename: [new_filename1, new_filename2]}
