@@ -21,6 +21,9 @@ const Sidebar = () => {
     const smoothingPreview = useStore(state => state.smoothingPreview);
     const applySmooth = useStore(state => state.applySmooth);
     const cancelSmooth = useStore(state => state.cancelSmooth); // Assuming we might want a cancel specific to smooth, or just general cancel
+    const verifyYaw = useStore(state => state.verifyYaw);
+    const clearVerification = useStore(state => state.clearVerification);
+    const yawVerificationResults = useStore(state => state.yawVerificationResults);
 
     const smoothness = useStore(state => state.smoothness);
     const weight = useStore(state => state.weight);
@@ -132,6 +135,16 @@ const Sidebar = () => {
                 <button className={getButtonClass('reverse_path')} onClick={() => setMode('reverse_path')}>
                     <IconReverse /> Reverse Path
                 </button>
+
+                {!yawVerificationResults ? (
+                    <button className="toolbar-button" onClick={verifyYaw}>
+                        <IconCheck /> Verify Yaw
+                    </button>
+                ) : (
+                    <button className="toolbar-button" onClick={clearVerification} style={{ backgroundColor: 'var(--accent-color)' }}>
+                        <IconCancel /> Clear Verification
+                    </button>
+                )}
             </div>
 
             <div style={{ flex: 1 }}></div>

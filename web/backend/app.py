@@ -728,5 +728,60 @@ def unload_graph_endpoint():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/api/verify_yaw', methods=['POST'])
+def verify_yaw_endpoint():
+    try:
+        nodes = data_manager.nodes
+        edges = data_manager.edges
+        
+        if nodes.size == 0 or edges.size == 0:
+             return jsonify({'status': 'success', 'results': []})
+
+        # Create a map for quick node lookup
+        # Node structure: [point_id, x, y, yaw, zone, width, indicator]
+        node_map = {int(row[0]): row for row in nodes}
+        
+        results = []
+        threshold = 0.4
+
+        for edge in edges:
+            u_id, v_id = int(edge[0]), int(edge[1])
+            
+            if u_id not in node_map or v_id not in node_map:
+                continue
+                
+            u_node = node_map[u_id]
+            v_node = node_map[v_id]
+            
+            # Calculate geometric yaw of the edge
+            dx = v_node[1] - u_node[1]
+            dy = v_node[2] - u_node[2]
+            edge_yaw = np.arctan2(dy, dx)
+            
+            # Compare with stored yaw of the source node (u)
+            stored_yaw = u_node[3]
+            
+            # Calculate diff
+            diff = abs((((stored_yaw - edge_yaw) + np.pi) % (2 * np.pi)) - np.pi)
+            
+            status = 'aligned' if diff < threshold else 'misaligned'
+            
+            results.append({
+                'u': u_id,
+                'v': v_id,
+                'status': status,
+                'diff': float(diff)
+            })
+
+        return jsonify({
+            'status': 'success',
+            'results': results
+        })
+
+    except Exception as e:
+        print(f"Error verifying yaw: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

@@ -18,6 +18,7 @@ export const useStore = create((set, get) => ({
 
   // Selections & temporary data
   selectedNodeIds: [],
+  yawVerificationResults: null,
   operationStartNodeId: null,
   smoothingPreview: null,
   smoothStartNodeId: null,
@@ -165,6 +166,24 @@ export const useStore = create((set, get) => ({
     }
   },
 
+  verifyYaw: async () => {
+    try {
+      set({ status: 'Verifying Yaw...' });
+      const response = await axios.post(`${API_URL}/api/verify_yaw`);
+      set({
+        yawVerificationResults: response.data.results,
+        status: 'Yaw verification complete. Check plot for Red/Green edges.'
+      });
+    } catch (error) {
+      console.error("Error verifying yaw:", error);
+      set({ status: 'Error verifying yaw.' });
+    }
+  },
+
+  clearVerification: () => {
+    set({ yawVerificationResults: null, status: 'Verification cleared.' });
+  },
+
   performOperation: async (operation, params = {}) => {
     try {
       set({ status: `Executing: ${operation}...` });
@@ -196,6 +215,7 @@ export const useStore = create((set, get) => ({
       smoothStartNodeId: null,
       smoothEndNodeId: null,
       drawPoints: [],
+      yawVerificationResults: null, // Clear verification when changing modes
     });
   },
 

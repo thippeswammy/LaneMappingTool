@@ -19,6 +19,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const addDrawPoint = useStore(state => state.addDrawPoint);
   const pointSize = useStore(state => state.pointSize);
   const setSelectedNodeIds = useStore(state => state.setSelectedNodeIds);
+  const yawVerificationResults = useStore(state => state.yawVerificationResults);
 
   // Refs for state access in callbacks to avoid re-creating options
   const nodesRef = useRef(nodes);
@@ -139,6 +140,61 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           type: 'line',
           spanGaps: false,
         },
+        // Verification Datasets
+        ...(yawVerificationResults ? [
+          {
+            label: 'Aligned Edges',
+            data: (() => {
+              const data = [];
+              const nodeMap = new Map(nodes.map(n => [n[0], n]));
+              yawVerificationResults.forEach(res => {
+                if (res.status === 'aligned') {
+                  const u = nodeMap.get(res.u);
+                  const v = nodeMap.get(res.v);
+                  if (u && v) {
+                    data.push({ x: u[1], y: u[2] });
+                    data.push({ x: v[1], y: v[2] });
+                    data.push({ x: NaN, y: NaN });
+                  }
+                }
+              });
+              return data;
+            })(),
+            borderColor: 'rgba(0, 255, 0, 0.8)', // Green
+            borderWidth: 2,
+            pointRadius: 0,
+            showLine: true,
+            type: 'line',
+            spanGaps: false,
+            order: -1
+          },
+          {
+            label: 'Misaligned Edges',
+            data: (() => {
+              const data = [];
+              const nodeMap = new Map(nodes.map(n => [n[0], n]));
+              yawVerificationResults.forEach(res => {
+                if (res.status === 'misaligned') {
+                  const u = nodeMap.get(res.u);
+                  const v = nodeMap.get(res.v);
+                  if (u && v) {
+                    data.push({ x: u[1], y: u[2] });
+                    data.push({ x: v[1], y: v[2] });
+                    data.push({ x: NaN, y: NaN });
+                  }
+                }
+              });
+              return data;
+            })(),
+            borderColor: 'rgba(255, 0, 0, 0.8)', // Red
+            borderWidth: 2,
+            pointRadius: 0,
+            showLine: true,
+            type: 'line',
+            spanGaps: false,
+            order: -1
+          }
+        ] : []),
         {
           label: 'Nodes',
           data: nodes ? nodes.map(node => ({ x: node[1], y: node[2], id: node[0] })) : [],
@@ -177,7 +233,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         }] : []),
       ]
     };
-  }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize]);
+  }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize, yawVerificationResults]);
 
   const handleCanvasContextMenu = useCallback((event) => {
     event.preventDefault();
