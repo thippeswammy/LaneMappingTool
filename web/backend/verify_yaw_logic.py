@@ -19,6 +19,7 @@ def calculate_yaw_diff(yaw1, yaw2):
 
 
 def test_yaw_logic():
+    """Tests the yaw difference calculation for various cases."""
     print("--- Testing Yaw Logic ---")
 
     # Test Case 1: Aligned
@@ -53,6 +54,27 @@ def test_yaw_logic():
 
 
 def visualize_results(nodes, edges, node_map, threshold, workspace_dir):
+    """Generate a visualization of nodes and edges based on yaw alignment.
+    
+    This function creates a scatter plot of nodes and overlays edges  based on
+    their yaw alignment. It distinguishes between aligned and  misaligned edges
+    using a specified threshold. The nodes are plotted  as small gray dots, while
+    aligned edges are shown in green and  misaligned edges in red. The resulting
+    visualization is saved as  "yaw_verification.png" in the specified workspace
+    directory.
+    
+    Args:
+        nodes: A numpy array containing node information, where each
+            row represents a node with its coordinates and yaw.
+        edges: A list of edges, where each edge is represented by a
+            pair of node indices.
+        node_map: A dictionary mapping node IDs to their corresponding
+            information in the nodes array.
+        threshold: A float representing the yaw difference threshold
+            for alignment.
+        workspace_dir: A string representing the directory where the
+            visualization will be saved.
+    """
     print("--- Generating Visualization ---")
     plt.figure(figsize=(12, 10))
 
@@ -113,6 +135,14 @@ def visualize_results(nodes, edges, node_map, threshold, workspace_dir):
 
 
 def verify_graph_data():
+    """Verify the integrity and alignment of graph data.
+    
+    This function checks for the existence of graph data files, loads the nodes and
+    edges, and verifies their alignment based on a specified yaw threshold. It
+    creates a mapping for quick node lookup and counts the number of aligned and
+    misaligned edges. Finally, it visualizes the results and handles any exceptions
+    that may occur during the process.
+    """
     print("--- Verifying Graph Data ---")
     base_dir = os.path.dirname(os.path.abspath(__file__))
     workspace_dir = os.path.join(base_dir, "workspace")
