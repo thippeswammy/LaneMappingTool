@@ -5,6 +5,8 @@ import time
 
 import networkx as nx
 import numpy as np
+import json
+from networkx.readwrite import json_graph
 
 
 class DataManager:
@@ -306,12 +308,12 @@ class DataManager:
         if self.nodes.size > 0:
             for node_data in self.nodes:
                 t = int(node_data[0])
-                x = node_data[1]
-                y = node_data[2]
-                yaw = node_data[3]
-                zone = node_data[4]
-                width = node_data[5]
-                indicator = node_data[6]
+                x = float(node_data[1])
+                y = float(node_data[2])
+                yaw = float(node_data[3])
+                zone = float(node_data[4])
+                width = float(node_data[5])
+                indicator = float(node_data[6])
 
                 node_coords[t] = (x, y)
 
@@ -335,7 +337,7 @@ class DataManager:
                 if u in node_coords and v in node_coords:
                     x1, y1 = node_coords[u]
                     x2, y2 = node_coords[v]
-                    weight = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+                    weight = float(math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2))
 
                 G.add_edge(u, v, weight=weight)
 
@@ -425,9 +427,16 @@ class DataManager:
             G = self._create_networkx_graph()
             pickle_file_path = r"./files/output.pickle"
             with open(pickle_file_path, "wb") as f:
-                pickle.dump(G, f)
+                pickle.dump(G, f, protocol=2)
 
             print(f"Saved NetworkX graph to {pickle_file_path}")
+
+            # Save as JSON for compatibility transfer
+            json_file_path = r"./files/output.json"
+            data = json_graph.node_link_data(G)
+            with open(json_file_path, "w") as f:
+                json.dump(data, f, indent=4)
+            print(f"Saved NetworkX graph as JSON to {json_file_path}")
 
             return nodes_filename
 
@@ -452,9 +461,16 @@ class DataManager:
             G = self._create_networkx_graph()
             pickle_file_path = os.path.join(folder, "output.pickle")
             with open(pickle_file_path, "wb") as f:
-                pickle.dump(G, f)
+                pickle.dump(G, f, protocol=2)
 
             print(f"Saved NetworkX graph to {pickle_file_path}")
+
+            # Save as JSON for compatibility transfer
+            json_file_path = os.path.join(folder, "output.json")
+            data = json_graph.node_link_data(G)
+            with open(json_file_path, "w") as f:
+                json.dump(data, f, indent=4)
+            print(f"Saved NetworkX graph as JSON to {json_file_path}")
         except Exception as e:
             print(f"Error saving data: {e}")
             return None
