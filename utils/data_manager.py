@@ -807,6 +807,7 @@ class DataManager:
 
     def save_temp_lanes(self, output_dir):
         """Save each lane (zone) to a separate .npy file in the output directory."""
+        split_map = {} # Initialize early for compatibility
         try:
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
