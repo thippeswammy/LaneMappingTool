@@ -288,6 +288,42 @@ class DataManager:
         except Exception as e:
             print(f"Error changing IDs: {e}")
 
+    def update_node_properties(self, point_ids, zone=None, indicator=None):
+        """Update properties (zone, indicator) for a list of point IDs."""
+        if not point_ids:
+            return
+        try:
+            point_ids = np.asarray(point_ids, dtype=int)
+            node_mask = np.isin(self.nodes[:, 0], point_ids)
+
+            if not np.any(node_mask):
+                print("No matching nodes found to update properties.")
+                return
+
+            updated = False
+            if zone is not None:
+                self.nodes[node_mask, 4] = int(zone)
+                updated = True
+            
+            if indicator is not None:
+                # Ensure we have enough columns (handle migrations if any, though loader handles it)
+                if self.nodes.shape[1] < 7:
+                     # This shouldn't happen if loader does its job, but safe to expand
+                     padding = np.zeros((self.nodes.shape[0], 7 - self.nodes.shape[1]))
+                     self.nodes = np.hstack([self.nodes, padding])
+                
+                self.nodes[node_mask, 6] = float(indicator)
+                updated = True
+
+            if updated:
+                self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
+                self.redo_stack = []
+                self._auto_save_backup()
+                print(f"Updated properties for {np.sum(node_mask)} nodes: Zone={zone}, Indicator={indicator}")
+
+        except Exception as e:
+            print(f"Error updating node properties: {e}")
+
     def remove_points_above(self, index, lane_id):
         print("Function 'remove_points_above' is not implemented for graph model.")
         pass
@@ -784,8 +820,9 @@ class DataManager:
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
 
-            # 1. Merge connected lanes first
-            merged_files = self.merge_connected_lanes()
+            # 1. Merge connected lanes first -- DISABLED to allow manual zone assignment
+            # merged_files = self.merge_connected_lanes()
+            merged_files = [] 
 
             # 2. Check for splits
             split_map = self.split_disconnected_lanes()

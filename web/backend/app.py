@@ -399,6 +399,7 @@ def load_data_endpoint():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+
 @app.route('/api/unload', methods=['POST'])
 def unload_data_endpoint():
     # ... (unload logic remains mostly same, ensure save_temp_lanes is called)
@@ -634,6 +635,30 @@ def perform_operation():
             
         elif operation == 'redo':
             data_manager.redo()
+
+        elif operation == 'update_node_properties':
+            p_ids = params.get('point_ids')
+            p_zone = params.get('zone')
+            p_ind = params.get('indicator')
+            print(f"DEBUG: update_node_properties called. IDs: {p_ids}, Zone: {p_zone}, Ind: {p_ind}")
+            data_manager.update_node_properties(
+                p_ids,
+                zone=p_zone,
+                indicator=p_ind
+            )
+
+        elif operation == 'get_path':
+            # Helper to get path IDs for selection
+            start_id = params.get('start_id')
+            end_id = params.get('end_id')
+            path = find_path(data_manager.edges, start_id, end_id)
+            if path:
+                 return jsonify({
+                    'status': 'success',
+                    'path_ids': path
+                })
+            else:
+                return jsonify({'status': 'error', 'message': 'No path found'}), 404
 
         else:
             return jsonify({'status': 'error', 'message': f'Unknown operation: {operation}'}), 400

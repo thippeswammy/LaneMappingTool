@@ -216,7 +216,15 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ] : []),
         {
           label: 'Nodes',
-          data: nodes ? nodes.map(node => ({ x: node[1], y: node[2], id: node[0] })) : [],
+          data: nodes ? nodes.map(node => ({
+            x: node[1],
+            y: node[2],
+            id: node[0],
+            yaw: node[3],
+            zone: node[4],
+            width: node[5],
+            indicator: node[6]
+          })) : [],
           backgroundColor: nodes ? nodes.map(node => {
             if (selectedNodeIds.includes(node[0])) return 'red';
             if (operationStartNodeId === node[0]) return 'blue';
@@ -571,7 +579,15 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           label: function (context) {
             if (context.dataset.label === 'Nodes') {
               const point = context.raw;
-              return `Node ID: ${point.id} (X: ${point.x.toFixed(2)}, Y: ${point.y.toFixed(2)})`;
+              return [
+                `Node ID: ${point.id}`,
+                `X: ${point.x.toFixed(2)}`,
+                `Y: ${point.y.toFixed(2)}`,
+                `Yaw: ${point.yaw !== undefined ? point.yaw.toFixed(2) : 'N/A'}`,
+                `Zone: ${point.zone !== undefined ? point.zone : 'N/A'}`,
+                `Width: ${point.width !== undefined ? point.width.toFixed(2) : 'N/A'}`,
+                `Indicator: ${point.indicator !== undefined ? point.indicator : 'N/A'}`
+              ];
             }
             return null;
           }

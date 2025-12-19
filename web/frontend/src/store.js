@@ -13,7 +13,8 @@ export const useStore = create((set, get) => ({
   currentSavedDir: '',
   loading: true,
   status: 'Initializing...',
-  mode: 'select', // select, draw, smooth, connect, remove_between, reverse_path, zoom, brush_select, box_select
+  mode: 'select', // select, select_path, draw, smooth, connect, remove_between, reverse_path, zoom, brush_select, box_select
+  sidebarMode: 'edit', // 'edit' or 'control'
   isFileLoaderOpen: false,
 
   // Selections & temporary data
@@ -194,20 +195,34 @@ export const useStore = create((set, get) => ({
       set({ status: `Executing: ${operation}...` });
       const response = await axios.post(`${API_URL}/api/operation`, { operation, params });
       const { nodes, edges } = response.data;
-      set({
+      set(state => ({
         nodes,
         edges,
         status: `${operation} successful.`,
-        selectedNodeIds: [],
+        selectedNodeIds: operation === 'update_node_properties' ? state.selectedNodeIds : [],
         operationStartNodeId: null,
-      });
+      }));
       if (['remove_between', 'reverse_path', 'add_edge', 'copy_points', 'delete_points'].includes(operation)) {
         set({ mode: 'select' });
+      }
+      // Keep control mode for update_node_properties
+      if (operation === 'update_node_properties') {
+        // Do nothing, stay in control mode
+      } else if (['update_node_properties'].includes(operation)) {
+        // If we wanted to switch back, but we don't.
       }
     } catch (error) {
       console.error(`Error performing operation ${operation}:`, error);
       set({ status: `Error: ${operation} failed.` });
     }
+  },
+
+  updateNodeProperties: async (pointIds, { zone, indicator }) => {
+    await get().performOperation('update_node_properties', {
+      point_ids: pointIds,
+      zone,
+      indicator
+    });
   },
 
   setMode: (mode) => {
@@ -223,6 +238,8 @@ export const useStore = create((set, get) => ({
       yawVerificationResults: null, // Clear verification when changing modes
     });
   },
+
+  setSidebarMode: (sidebarMode) => set({ sidebarMode }),
 
   setFileLoaderOpen: (isOpen) => {
     set({ isFileLoaderOpen: isOpen });
@@ -264,6 +281,31 @@ export const useStore = create((set, get) => ({
           ? []
           : [nodeId]
       }));
+    } else if (mode === 'select_path') {
+      if (!operationStartNodeId) {
+        set({ operationStartNodeId: nodeId, status: `Start node ${nodeId} selected for path.` });
+      } else {
+        if (operationStartNodeId === nodeId) return; // Ignore same node click
+
+        // Fetch path from backend
+        const startId = operationStartNodeId;
+        const endId = nodeId;
+
+        set({ operationStartNodeId: null, status: 'Finding path...' });
+
+        axios.post(`${API_URL}/api/operation`, {
+          operation: 'get_path',
+          params: { start_id: startId, end_id: endId }
+        }).then(response => {
+          if (response.data.status === 'success') {
+            const pathIds = response.data.path_ids;
+            set({ selectedNodeIds: pathIds, status: `Selected ${pathIds.length} nodes in path.`, mode: 'select' });
+          }
+        }).catch(err => {
+          console.error("Error finding path:", err);
+          set({ status: 'Error finding path.', mode: 'select' });
+        });
+      }
     } else if (['smooth', 'remove_between', 'reverse_path', 'connect'].includes(mode)) {
       if (!operationStartNodeId) {
         set({ operationStartNodeId: nodeId, status: `Start node ${nodeId} selected.` });

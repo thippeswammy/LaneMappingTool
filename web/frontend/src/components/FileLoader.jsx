@@ -39,6 +39,25 @@ const FileLoader = ({ onClose }) => {
         fetchFiles();
     }, [fetchFiles]);
 
+    // Update local custom dir state when store updates
+    useEffect(() => {
+        if (availableFiles.subdirs) {
+            const isKnownSubdir = availableFiles.subdirs.includes(currentRawDir);
+            if (!isKnownSubdir && currentRawDir) {
+                setIsCustomDir(true);
+                setCustomPath(currentRawDir);
+            }
+        }
+    }, [currentRawDir, availableFiles.subdirs]);
+
+    // Update local custom saved dir state
+    useEffect(() => {
+        if (currentSavedDir && currentSavedDir !== "CUSTOM") {
+            setIsCustomSavedDir(true);
+            setCustomSavedPath(currentSavedDir);
+        }
+    }, [currentSavedDir]);
+
     // Raw Dir Handlers
     const handleDirChange = (e) => {
         const value = e.target.value;
@@ -77,10 +96,8 @@ const FileLoader = ({ onClose }) => {
 
     const handleRawFileToggle = (fileName) => {
         if (loadedFileNames.includes(fileName)) {
-            // If already loaded, unload it immediately
             unloadData(fileName);
         } else {
-            // Toggle selection for loading
             setSelectedRawFiles(prev => {
                 if (prev.includes(fileName)) {
                     return prev.filter(f => f !== fileName);
@@ -254,14 +271,6 @@ const FileLoader = ({ onClose }) => {
                                     style={{ padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
                                 >
                                     <option value="">Default (files)</option>
-                                    {/* Assuming subdirs are shared or we want to list subdirs of graph_dir? 
-                                        For now, let's just allow Custom Path or Default, as we don't list subdirs of graph_dir in backend yet.
-                                        But we can reuse availableFiles.subdirs if they are relevant, or just stick to Custom/Default.
-                                        Actually, user might want to pick a folder from 'lanes' too?
-                                        Let's just show Custom Path and Default for now, as we didn't implement listing subdirs of graph_dir specifically. 
-                                        Wait, availableFiles.subdirs is for 'lanes'. 
-                                        Let's just allow Custom Path for flexibility.
-                                    */}
                                     <option value="CUSTOM">Custom Path...</option>
                                 </select>
                             </div>
@@ -315,8 +324,6 @@ const FileLoader = ({ onClose }) => {
                                 <button
                                     onClick={() => {
                                         useStore.getState().unloadGraph();
-                                        // Optional: Close loader or stay open? User might want to load something else.
-                                        // Let's keep it open but maybe show a toast? Store handles status update.
                                     }}
                                     style={{
                                         padding: '5px 10px',
