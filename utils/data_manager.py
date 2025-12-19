@@ -710,109 +710,100 @@ class DataManager:
 
     def split_disconnected_lanes(self):
         """
-        Check each zone (lane) for disconnected components.
-        If a zone is split, keep the largest component as the original,
-        and assign new zone IDs and filenames to the smaller components.
-        Returns a dict mapping original filename -> list of new filenames created.
+        In 'Mixed Zone' mode, we do NOT change Zone IDs based on splits.
+        Instead, this method is now responsible for identifying Connected Components
+        and mapping them to filenames, returning a structure for save_temp_lanes to use.
+        
+        Returns:
+            list of (filename, component_nodes_array)
         """
+        import networkx as nx
+        
+        if self.nodes.size == 0:
+            return []
+
         try:
-            split_map = {}  # {original_filename: [new_filename1, new_filename2]}
+            # 1. Build Global Graph
+            G = nx.Graph()
+            G.add_nodes_from(self.nodes[:, 0])
+        
+            if self.edges.size > 0:
+                G.add_edges_from(self.edges)
+            
+            # 2. Find Connected Components
+            components = list(nx.connected_components(G))
+        
+            # 3. Map Components to Filenames
+            # Heuristic: Find which 'original file' these nodes likely belong to.
+            # But we don't have 'original file' stored per node.
+            # We can heuristic by 'current zone' IF we assume most zones map to files.
+            # BUT this is the Mixed Zone refactor, so Zone != File.
+            
+            # New Strategy:
+            # We need to maintain a mapping of Filenames.
+            # Current self.file_names is indexed by Zone ID, which is now useless for file mapping.
+            # Ideally, we'd preserve filenames. 
+            # For now, let's use the 'majority zone' as a hint for the filename, 
+            # or reuse existing filenames if we can match them.
+            
+            # Since we can't perfectly track "which file this node came from" without a new column,
+        # we will:
+        # 1. Sort components by min_node_id (Stability).
+        # 2. Assign filenames: 'lane-{i}.npy' or reuse if we can guess.
+        # To avoid destroying user's file structure (overwriting lane-0 with lane-99),
+        # we can try to respect the 'majority zone' in the component.
+        # If component has mostly Zone 0 -> use 'lane-0.npy' (or whatever file_names[0] was).
+        
+            components.sort(key=lambda c: min(c))
+        
+            save_groups = []
+            used_filenames = set()
+            
+            # Snapshot of old file names map to guess context
+            old_file_names = list(self.file_names) # Index = Zone ID
+        
+            for comp in components:
+                comp_nodes = self.nodes[np.isin(self.nodes[:, 0], list(comp))]
+                
+                # Find majority zone in this component
+                zones, counts = np.unique(comp_nodes[:, 4].astype(int), return_counts=True)
+                if len(zones) > 0:
+                    majority_zone = zones[np.argmax(counts)]
+                    
+                    # Try to get filename from old map
+                    if majority_zone < len(old_file_names) and old_file_names[majority_zone] is not None:
+                        candidate_name = old_file_names[majority_zone]
+                    else:
+                        candidate_name = f"lane-{majority_zone}.npy"
+                else:
+                    candidate_name = "lane-unknown.npy"
+                
+                # Resolve collisions (if multiple components want same filename -> split)
+                final_name = candidate_name
+                if final_name in used_filenames:
+                    base, ext = os.path.splitext(final_name)
+                    idx = 1
+                    while True:
+                        test_name = f"{base}_{idx}{ext}"
+                        if test_name not in used_filenames:
+                            final_name = test_name
+                            break
+                        idx += 1
+                
+                used_filenames.add(final_name)
+                save_groups.append((final_name, comp_nodes))
 
-            if self.nodes.size == 0:
-                return split_map
-
-            unique_zones = np.unique(self.nodes[:, 4]).astype(int)
-            changes_made = False
-
-            # We need to iterate over a copy because we might append to unique_zones implicitly by adding new zones
-            # But actually we just need to process the current set of zones.
-
-            # Map edges to zones for faster lookup
-            # An edge belongs to a zone if both its nodes belong to that zone.
-            # If nodes are in different zones, it's a connection between lanes, not *in* the lane.
-
-            for zone_id in unique_zones:
-                if zone_id >= len(self.file_names) or self.file_names[zone_id] is None:
-                    continue
-
-                filename = self.file_names[zone_id]
-
-                # Get nodes in this zone
-                zone_mask = self.nodes[:, 4] == zone_id
-                zone_node_ids = self.nodes[zone_mask, 0]
-
-                if len(zone_node_ids) < 2:
-                    continue
-
-                # Build a graph for this zone
-                G = nx.Graph()  # Undirected for connectivity check
-                G.add_nodes_from(zone_node_ids)
-
-                # Add edges that are purely within this zone
-                if self.edges.size > 0:
-                    # Vectorized check is hard, let's just iterate relevant edges
-                    # Optimization: Filter edges where both u and v are in zone_node_ids
-                    # This might be slow if many edges. 
-                    # Faster: 
-                    mask_u = np.isin(self.edges[:, 0], zone_node_ids)
-                    mask_v = np.isin(self.edges[:, 1], zone_node_ids)
-                    zone_edges = self.edges[mask_u & mask_v]
-
-                    for edge in zone_edges:
-                        G.add_edge(edge[0], edge[1])
-
-                # Find connected components
-                components = list(nx.connected_components(G))
-
-                if len(components) > 1:
-                    print(f"Zone {zone_id} ({filename}) is split into {len(components)} parts.")
-                    changes_made = True
-
-                    # Sort by size (descending)
-                    components.sort(key=len, reverse=True)
-
-                    # Largest component keeps the original zone_id and filename
-                    # Others get new zones
-
-                    base_name, ext = os.path.splitext(filename)
-
-                    new_parts = []
-
-                    for i in range(1, len(components)):
-                        comp_nodes = components[i]
-                        new_zone_id = len(self.file_names)
-
-                        # Generate new filename
-                        # Try to find a unique name
-                        part_idx = 1
-                        while True:
-                            new_filename = f"{base_name}_{part_idx}{ext}"
-                            if new_filename not in self.file_names:
-                                break
-                            part_idx += 1
-
-                        self.file_names.append(new_filename)
-                        new_parts.append(new_filename)
-
-                        # Update nodes to new zone_id
-                        comp_mask = np.isin(self.nodes[:, 0], list(comp_nodes))
-                        self.nodes[comp_mask, 4] = new_zone_id
-
-                        print(f"  Moved {len(comp_nodes)} nodes to new zone {new_zone_id} ({new_filename})")
-
-                    if new_parts:
-                        split_map[filename] = new_parts
-
-            # if changes_made:
-            #     self.history.append((self.nodes.copy(), self.edges.copy()))
-            #     self.redo_stack = []
-            #     self._auto_save_backup()
-
-            return split_map
+            # Update self.file_names to reflect this new reality? 
+            # Actually in Mixed Mode, self.file_names (Index->Zone) is confusing/deprecated.
+            # We should just rely on these save_groups.
+            
+            return save_groups
 
         except Exception as e:
             print(f"Error splitting disconnected lanes: {e}")
-            return {}
+            return []
+
+
 
     def save_temp_lanes(self, output_dir):
         """Save each lane (zone) to a separate .npy file in the output directory."""
@@ -824,34 +815,26 @@ class DataManager:
             # merged_files = self.merge_connected_lanes()
             merged_files = [] 
 
-            # 2. Check for splits
-            split_map = self.split_disconnected_lanes()
+            # 2. Get save groups (File Name -> Nodes) based on connectivity
+            save_groups = self.split_disconnected_lanes() # Now returns list of (filename, nodes)
 
-            # Identify unique zones
-            if self.nodes.size == 0:
-                return split_map, merged_files
+            if not save_groups:
+                return {}, []
 
-            unique_zones = np.unique(self.nodes[:, 4]).astype(int)
-
-            for zone_id in unique_zones:
-                # Get filename for this zone
-                if zone_id < len(self.file_names):
-                    filename = self.file_names[zone_id]
-                    if filename is None:
-                        continue  # Skip removed files
-                else:
-                    # Fallback if file_names is out of sync (shouldn't happen if managed correctly)
-                    filename = f"temp_lane_{zone_id}.npy"
-
-                # Extract nodes for this zone
-                zone_mask = self.nodes[:, 4] == zone_id
-                zone_nodes = self.nodes[zone_mask]
-
-                # Save full node data (7 columns)
-                # [point_id, x, y, yaw, zone, width, indicator]
-                save_path = os.path.join(output_dir, filename)
-                np.save(save_path, zone_nodes)
-                print(f"Saved temp file for {filename} to {save_path}")
+            # 3. Save each group
+            for filename, group_nodes in save_groups:
+                 # Save full node data (7 columns)
+                 # [point_id, x, y, yaw, zone, width, indicator]
+                 save_path = os.path.join(output_dir, filename)
+                 np.save(save_path, group_nodes)
+                 print(f"Saved temp file for {filename} to {save_path}")
+            
+            # Update file_names list for future reference (though strictly less critical now)
+            # We can try to map back to zones if needed, or just keep a list of active files.
+            # For compatibility with legacy Zone-based lookups, we might want to populate self.file_names
+            # but Zone ID is no longer unique per file.
+            # So let's just update the list of active files for 'stale file' cleanup.
+            active_files = set([name for name, _ in save_groups])
 
             # Cleanup stale split files
             # If a file exists in output_dir that looks like a split part of an active file

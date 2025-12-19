@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { IconSave, IconCheck, IconCancel, IconRefresh } from './Icons';
+import DirectoryBrowser from './DirectoryBrowser';
 
 /**
  * Component for loading files and managing data directories.
@@ -30,6 +31,7 @@ const FileLoader = ({ onClose }) => {
     // Raw Dir State
     const [isCustomDir, setIsCustomDir] = useState(false);
     const [customPath, setCustomPath] = useState('');
+    const [showBrowser, setShowBrowser] = useState(false);
 
     // Saved Dir State
     const [isCustomSavedDir, setIsCustomSavedDir] = useState(false);
@@ -210,6 +212,31 @@ const FileLoader = ({ onClose }) => {
                             <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                 Location: {availableFiles.raw_path}
                             </p>
+
+                            {/* Select All Toggle */}
+                            {availableFiles.raw_files.length > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '5px' }}>
+                                    <input
+                                        type="checkbox"
+                                        id="select-all-raw"
+                                        checked={
+                                            availableFiles.raw_files.filter(f => !loadedFileNames.includes(f)).length > 0 &&
+                                            availableFiles.raw_files.filter(f => !loadedFileNames.includes(f)).every(f => selectedRawFiles.includes(f))
+                                        }
+                                        onChange={(e) => {
+                                            const unloadedFiles = availableFiles.raw_files.filter(f => !loadedFileNames.includes(f));
+                                            if (e.target.checked) {
+                                                setSelectedRawFiles(unloadedFiles);
+                                            } else {
+                                                setSelectedRawFiles([]);
+                                            }
+                                        }}
+                                    />
+                                    <label htmlFor="select-all-raw" style={{ color: 'var(--text-secondary)', fontWeight: 'bold', cursor: 'pointer' }}>
+                                        Select All New Files
+                                    </label>
+                                </div>
+                            )}
                             {availableFiles.raw_files.length === 0 ? (
                                 <p style={{ color: 'var(--text-secondary)' }}>No raw data files found.</p>
                             ) : (
