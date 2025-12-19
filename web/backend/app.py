@@ -150,6 +150,41 @@ def get_files():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/api/list_dirs', methods=['POST'])
+def list_dirs_endpoint():
+    try:
+        data = request.get_json()
+        current_path = data.get('path', '')
+
+        # Default to C drive or root if empty (Windows specific)
+        if not current_path:
+            current_path = 'C:\\'
+
+        if not os.path.exists(current_path):
+            return jsonify({'error': 'Path does not exist', 'current_path': current_path}), 404
+
+        items = os.listdir(current_path)
+        directories = []
+        files = []
+
+        for item in items:
+            full_path = os.path.join(current_path, item)
+            if os.path.isdir(full_path):
+                directories.append(item)
+            elif item.endswith('.npy'): # Filter for relevant files
+                files.append(item)
+
+        return jsonify({
+            'current_path': os.path.abspath(current_path),
+            'directories': sorted(directories),
+            'files': sorted(files),
+            'parent': os.path.dirname(os.path.abspath(current_path))
+        })
+    except Exception as e:
+        print(f"Error listing directories: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 import shutil
 
 # ... (imports)
@@ -327,10 +362,19 @@ def load_data_endpoint():
                         # Temp files should have 7 columns if edited, but might be raw copy (2 cols)
                         if points.shape[1] >= 7:
                             nodes[:, :] = points[:, 0:7]
-                            nodes[:, 4] = i # Zone ID relative to this batch
+                            # CRITICAL CHANGE: Do NOT overwrite zone with 'i' if data exists.
+                            # We trust the saved Zone ID in the file.
+                            # nodes[:, 4] = i  <-- REMOVED override
                         else:
                             nodes[:, 1:3] = points[:, 0:2]
-                            nodes[:, 4] = i
+                            
+                            # Try to infer zone from filename (e.g. 'lane-99.npy' -> 99)
+                            import re
+                            match = re.search(r'(\d+)', filename)
+                            if match:
+                                nodes[:, 4] = int(match.group(1))
+                            else:
+                                nodes[:, 4] = i # Default to file index if no number found
                             
                         # Assign IDs
                         current_lane_pids = []
