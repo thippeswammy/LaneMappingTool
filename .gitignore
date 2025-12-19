@@ -15,4 +15,5 @@ tests/__pycache__/
 web/backend/__pycache__/
 web/backend/utils/__pycache__/
 /web/backend/workspace/
+/web/backend/workspace-Backup/
 /files_test/*.npy

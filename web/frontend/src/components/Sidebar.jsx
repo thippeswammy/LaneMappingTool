@@ -145,7 +145,7 @@ const Sidebar = () => {
                             <IconDraw /> Select Path
                         </button>
                         <button className="toolbar-button" onClick={() => setMode('select')} disabled={mode === 'select' && selectedNodeIds.length === 0}>
-                            <IconCancel /> Cancel / Select
+                            <IconCancel /> Cancel Operation
                         </button>
                         <button className="toolbar-button" onClick={() => setSelectedNodeIds([])} disabled={selectedNodeIds.length === 0}>
                             <IconCancel /> Clear Selection ({selectedNodeIds.length})
