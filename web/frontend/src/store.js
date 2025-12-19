@@ -28,6 +28,11 @@ export const useStore = create((set, get) => ({
   pointSize: 2, // Default point size
   plotWidth: 100, // Default plot width in %
   drawPoints: [], // Temporary points for Draw mode
+  showYaw: false, // Toggle for showing yaw arrows
+
+  // Actions
+  toggleShowYaw: () => set(state => ({ showYaw: !state.showYaw })),
+
 
   // Actions
   setSmoothness: (smoothness) => {

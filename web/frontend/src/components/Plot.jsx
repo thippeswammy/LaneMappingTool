@@ -20,6 +20,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const pointSize = useStore(state => state.pointSize);
   const setSelectedNodeIds = useStore(state => state.setSelectedNodeIds);
   const yawVerificationResults = useStore(state => state.yawVerificationResults);
+  const showYaw = useStore(state => state.showYaw);
 
   // Refs for state access in callbacks to avoid re-creating options
   const nodesRef = useRef(nodes);
@@ -62,7 +63,16 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     handleNodeClickRef.current = handleNodeClick;
     addDrawPointRef.current = addDrawPoint;
     setSelectedNodeIdsRef.current = setSelectedNodeIds;
+    addDrawPointRef.current = addDrawPoint;
+    setSelectedNodeIdsRef.current = setSelectedNodeIds;
   }, [nodes, mode, selectedNodeIds, performOperation, handleNodeClick, addDrawPoint, setSelectedNodeIds]);
+
+  // Keep a ref for showYaw so the plugin can access the latest value without re-creation
+  const showYawRef = useRef(showYaw);
+  useEffect(() => {
+    showYawRef.current = showYaw;
+  }, [showYaw]);
+
 
   const chartRef = useRef(null);
   const lastDrawnNodeId = useRef(null);
@@ -111,6 +121,15 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       }
     }
   }, [mode]);
+
+  // Force update when showYaw toggles to ensure plugin draws/clears
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (chart) {
+      chart.update();
+    }
+  }, [showYaw]);
+
 
   // Performance Optimization: Prepare edge data
   const chartData = useMemo(() => {
@@ -234,6 +253,65 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       ]
     };
   }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize, yawVerificationResults]);
+
+  const yawPlugin = useMemo(() => ({
+    id: 'yawPlugin',
+    afterDatasetsDraw(chart) {
+      if (!showYawRef.current) return;
+
+      const ctx = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+      const currentNodes = nodesRef.current;
+
+      if (!currentNodes) return;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 165, 0, 0.8)'; // Orange
+      ctx.lineWidth = 2;
+      ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
+
+      currentNodes.forEach(node => {
+        const x = xAxis.getPixelForValue(node[1]);
+        const y = yAxis.getPixelForValue(node[2]);
+        const yaw = node[3]; // format: [id, x, y, yaw, ...]
+
+        if (x === undefined || y === undefined) return;
+
+        const arrowLen = 15;
+        const headLen = 5;
+
+        // End point (Flip Y for canvas)
+        const endX = x + arrowLen * Math.cos(yaw);
+        const endY = y - arrowLen * Math.sin(yaw);
+
+        // Draw line
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        // Draw arrow head
+        const angle = Math.atan2(endY - y, endX - x);
+
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(
+          endX - headLen * Math.cos(angle - Math.PI / 6),
+          endY - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+          endX - headLen * Math.cos(angle + Math.PI / 6),
+          endY - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.lineTo(endX, endY);
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+  }), []); // Empty dependencies!
+
 
   const handleCanvasContextMenu = useCallback((event) => {
     event.preventDefault();
@@ -540,6 +618,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ref={chartRef}
         data={chartDataWithSelection}
         options={options}
+        plugins={[yawPlugin]}
         onClick={handleCanvasClick}
       />
     </div>

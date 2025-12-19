@@ -31,6 +31,8 @@ const Sidebar = () => {
     const setWeight = useStore(state => state.setWeight);
     const selectedNodeIds = useStore(state => state.selectedNodeIds);
     const setSelectedNodeIds = useStore(state => state.setSelectedNodeIds);
+    const showYaw = useStore(state => state.showYaw);
+    const toggleShowYaw = useStore(state => state.toggleShowYaw);
 
     const getButtonClass = (buttonMode) => {
         return mode === buttonMode ? 'toolbar-button active' : 'toolbar-button';
@@ -136,15 +138,16 @@ const Sidebar = () => {
                     <IconReverse /> Reverse Path
                 </button>
 
-                {!yawVerificationResults ? (
-                    <button className="toolbar-button" onClick={verifyYaw}>
-                        <IconCheck /> Verify Yaw
-                    </button>
-                ) : (
-                    <button className="toolbar-button" onClick={clearVerification} style={{ backgroundColor: 'var(--accent-color)' }}>
-                        <IconCancel /> Clear Verification
-                    </button>
-                )}
+                <label className="toolbar-button" style={{ justifyContent: 'flex-start', cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={showYaw}
+                        onChange={toggleShowYaw}
+                        style={{ marginRight: '10px' }}
+                    />
+                    Show Yaw
+                </label>
+
             </div>
 
             <div style={{ flex: 1 }}></div>
