@@ -75,6 +75,7 @@ def save_data():
         edges_array = np.array(data['edges'])
         data_manager.nodes = nodes_array
         data_manager.edges = edges_array
+        data_manager.sync_next_id()
 
         data_manager.save_by_web(os.path.join(base_dir, "workspace"))
         
@@ -624,6 +625,7 @@ def perform_operation():
                 data_manager.nodes = np.array(nodes_data)
             if edges_data:
                 data_manager.edges = np.array(edges_data)
+            data_manager.sync_next_id()
             data_manager.history.append((data_manager.nodes.copy(), data_manager.edges.copy()))
             data_manager._auto_save_backup()
 

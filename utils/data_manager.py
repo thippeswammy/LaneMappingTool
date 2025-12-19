@@ -15,10 +15,7 @@ class DataManager:
         self.edges = edges
         self.file_names = file_names
 
-        if self.nodes.size > 0:
-            self._next_point_id = int(np.max(self.nodes[:, 0])) + 1
-        else:
-            self._next_point_id = 0
+        self.sync_next_id()
 
         self.history = [(self.nodes.copy(), self.edges.copy(), list(self.file_names))]
         self.redo_stack = []
@@ -27,6 +24,13 @@ class DataManager:
         self.backup_interval = 300  # 5 minutes
 
         print(f"DataManager initialized with {len(self.nodes)} nodes and {len(self.edges)} edges.")
+
+    def sync_next_id(self):
+        """Synchronize _next_point_id with the current maximum node ID."""
+        if self.nodes.size > 0:
+            self._next_point_id = int(np.max(self.nodes[:, 0])) + 1
+        else:
+            self._next_point_id = 0
 
     def _get_new_point_id(self):
         new_id = self._next_point_id
@@ -193,6 +197,7 @@ class DataManager:
 
             self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
             self.redo_stack = []
+            self.sync_next_id()
             self._auto_save_backup()
             print(f"Deleted {len(point_ids)} nodes and associated edges")
 
@@ -351,6 +356,7 @@ class DataManager:
             self.redo_stack = []
             self.file_names = []
             self._next_point_id = 0
+            self.sync_next_id()
             self._auto_save_backup()
             print("Cleared all nodes and edges")
         except Exception as e:
@@ -376,6 +382,7 @@ class DataManager:
             self.nodes = nodes_copy.copy()
             self.edges = edges_copy.copy()
 
+            self.sync_next_id()
             self._auto_save_backup()
             print("Undo performed")
             return self.nodes, self.edges, True
@@ -402,6 +409,7 @@ class DataManager:
             self.nodes = nodes_copy.copy()
             self.edges = edges_copy.copy()
 
+            self.sync_next_id()
             self._auto_save_backup()
             print("Redo performed")
             return self.nodes, self.edges, True
@@ -598,6 +606,7 @@ class DataManager:
 
             self.history.append((self.nodes.copy(), self.edges.copy()))
             self.redo_stack = []
+            self.sync_next_id()
             self._auto_save_backup()
             print(f"Successfully removed file {filename}.")
             return True
