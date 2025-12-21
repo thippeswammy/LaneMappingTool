@@ -21,6 +21,9 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const setSelectedNodeIds = useStore(state => state.setSelectedNodeIds);
   const yawVerificationResults = useStore(state => state.yawVerificationResults);
   const showYaw = useStore(state => state.showYaw);
+  const showSavedGraph = useStore(state => state.showSavedGraph);
+  const savedNodes = useStore(state => state.savedNodes);
+  const savedEdges = useStore(state => state.savedEdges);
 
   // Refs for state access in callbacks to avoid re-creating options
   const nodesRef = useRef(nodes);
@@ -214,6 +217,50 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
             order: -1
           }
         ] : []),
+
+        // Saved Graph Overlay
+        ...(showSavedGraph ? [
+          {
+            label: 'Saved Edges',
+            data: (() => {
+              const data = [];
+              if (savedNodes && savedEdges) {
+                const nodeMap = new Map(savedNodes.map(n => [n[0], n]));
+                savedEdges.forEach(edge => {
+                  const u = nodeMap.get(edge[0]);
+                  const v = nodeMap.get(edge[1]);
+                  if (u && v) {
+                    data.push({ x: u[1], y: u[2] });
+                    data.push({ x: v[1], y: v[2] });
+                    data.push({ x: NaN, y: NaN });
+                  }
+                });
+              }
+              return data;
+            })(),
+            borderColor: 'rgba(0, 0, 255, 0.5)', // Blue, semi-transparent
+            borderWidth: 2,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            showLine: true,
+            type: 'line',
+            spanGaps: false,
+            order: 0,
+            arrowColor: 'rgba(0, 0, 255, 0.5)' // Custom prop for arrowPlugin
+          },
+          {
+            label: 'Saved Nodes',
+            data: savedNodes ? savedNodes.map(node => ({
+              x: node[1],
+              y: node[2]
+            })) : [],
+            backgroundColor: 'rgba(0, 0, 255, 0.5)',
+            pointRadius: 3,
+            type: 'scatter',
+            order: 0
+          }
+        ] : []),
+
         {
           label: 'Nodes',
           data: nodes ? nodes.map(node => ({
@@ -260,7 +307,75 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         }] : []),
       ]
     };
-  }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize, yawVerificationResults]);
+  }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize, yawVerificationResults, showSavedGraph, savedNodes, savedEdges]);
+
+  const arrowPlugin = useMemo(() => ({
+    id: 'arrowPlugin',
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+
+      chart.data.datasets.forEach((dataset, i) => {
+        if (dataset.arrowColor) {
+          const meta = chart.getDatasetMeta(i);
+          // Only draw if dataset is visible
+          if (!meta.hidden && meta.data.length > 0) {
+            ctx.save();
+            // Use a distinct high-contrast color for arrows if requested, otherwise default to dataset prop
+            // User requested "different color". Let's use Magenta for visibility against the blue line.
+            const arrowColor = 'rgba(255, 0, 255, 1)';
+            ctx.fillStyle = arrowColor;
+            ctx.strokeStyle = arrowColor;
+
+            const data = dataset.data;
+            // Data structure: [{x,y}, {x,y}, {NaN}, {x,y}, {x,y}, {NaN}...]
+            // Step by 3
+            for (let j = 0; j < data.length - 1; j += 3) {
+              const start = data[j];
+              const end = data[j + 1];
+
+              if (!start || !end || isNaN(start.x) || isNaN(end.x)) continue;
+
+              const x1 = xAxis.getPixelForValue(start.x);
+              const y1 = yAxis.getPixelForValue(start.y);
+              const x2 = xAxis.getPixelForValue(end.x);
+              const y2 = yAxis.getPixelForValue(end.y);
+
+              if (x1 === undefined || x2 === undefined) continue;
+
+              // Calculate angle
+              const angle = Math.atan2(y2 - y1, x2 - x1);
+
+              // Offset from the end node to avoid covering it
+              // Saved nodes have radius 3, let's give it 6px clearance
+              const offset = 8;
+
+              // Arrow tip position
+              const tipX = x2 - offset * Math.cos(angle);
+              const tipY = y2 - offset * Math.sin(angle);
+
+              const headLen = 6; // Arrow head length (smaller than point size)
+
+              ctx.beginPath();
+              ctx.moveTo(tipX, tipY);
+              ctx.lineTo(
+                tipX - headLen * Math.cos(angle - Math.PI / 6),
+                tipY - headLen * Math.sin(angle - Math.PI / 6)
+              );
+              ctx.lineTo(
+                tipX - headLen * Math.cos(angle + Math.PI / 6),
+                tipY - headLen * Math.sin(angle + Math.PI / 6)
+              );
+              ctx.lineTo(tipX, tipY);
+              ctx.fill();
+            }
+            ctx.restore();
+          }
+        }
+      });
+    }
+  }), []);
 
   const yawPlugin = useMemo(() => ({
     id: 'yawPlugin',
@@ -634,7 +749,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ref={chartRef}
         data={chartDataWithSelection}
         options={options}
-        plugins={[yawPlugin]}
+        plugins={[yawPlugin, arrowPlugin]}
         onClick={handleCanvasClick}
       />
     </div>

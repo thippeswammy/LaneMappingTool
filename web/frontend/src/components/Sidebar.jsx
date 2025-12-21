@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import './Toolbar.css';
 import {
-    IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel
+    IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel, IconZoom
 } from './Icons';
 
 /**
@@ -230,6 +230,16 @@ const Sidebar = () => {
                                 style={{ marginRight: '10px' }}
                             />
                             Show Yaw
+                        </label>
+
+                        <label className="toolbar-button" style={{ justifyContent: 'flex-start', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={useStore(state => state.showSavedGraph)}
+                                onChange={() => useStore.getState().toggleShowSavedGraph()}
+                                style={{ marginRight: '10px' }}
+                            />
+                            Show Saved Layout
                         </label>
                     </div>
                 </>

@@ -8,10 +8,9 @@
 
 *.log
 /files
-/lanes
+/lanes/KPTO_Test
 /__pycache__/
 utils/__pycache__/
-tests/__pycache__/
 web/backend/__pycache__/
 web/backend/utils/__pycache__/
 /web/backend/workspace/

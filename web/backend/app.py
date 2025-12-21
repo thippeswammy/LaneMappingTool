@@ -1,5 +1,7 @@
 import os
 import sys
+import subprocess
+import json
 
 import numpy as np
 from flask import Flask, jsonify, request
@@ -20,11 +22,11 @@ CORS(app)
 base_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(base_dir, '../..'))
 
-# Data is expected to be in lanes/TEMP1 relative to project root
+# Data is expected to be in lanes/Gitam_lanes relative to project root
 # Default paths as requested
 graph_dir = os.path.join(base_dir, "workspace")
 lanes_root = os.path.join(project_root, 'lanes')
-raw_data_path = os.path.join(lanes_root, 'TEMP1')
+raw_data_path = os.path.join(lanes_root, 'Gitam_lanes')
 TEMP_LANES_DIR = os.path.join(graph_dir, "temp_lanes")
 
 # Paths for saved working state
@@ -103,8 +105,8 @@ def save_data():
 def get_files():
     """List available raw data files and saved graph files."""
     try:
-        # Get requested subdirectory for raw files, default to TEMP1
-        subdir = request.args.get('subdir', 'TEMP1')
+        # Get requested subdirectory for raw files, default to Gitam_lanes
+        subdir = request.args.get('subdir', 'Gitam_lanes')
 
         if os.path.isabs(subdir):
             current_raw_path = subdir
@@ -799,6 +801,23 @@ def unload_graph_endpoint():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/api/visualize_network', methods=['POST'])
+def visualize_network_endpoint():
+    try:
+        script_path = os.path.join(base_dir, "network_view3.py")
+        print(f"Launching visualization script: {script_path}")
+        
+        # Use simple subprocess.Popen to launch it independently
+        # We use sys.executable to ensure we use the same python environment
+        subprocess.Popen([sys.executable, script_path], cwd=base_dir)
+        
+        return jsonify({'status': 'success', 'message': 'Visualization launched'})
+    except Exception as e:
+        print(f"Error launching visualization: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+
 @app.route('/api/verify_yaw', methods=['POST'])
 def verify_yaw_endpoint():
     try:
@@ -851,6 +870,49 @@ def verify_yaw_endpoint():
 
     except Exception as e:
         print(f"Error verifying yaw: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/get_saved_graph', methods=['GET'])
+def get_saved_graph_endpoint():
+    try:
+        json_path = os.path.join(base_dir, "workspace", "output.json")
+        if not os.path.exists(json_path):
+             return jsonify({'status': 'error', 'message': 'Saved graph file (output.json) not found.'}), 404
+             
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+            
+        # Parse JSON graph data back to our format
+        # output.json from json_graph.node_link_data structure:
+        # { "nodes": [ {id:..., x:..., ...} ], "links": [ {source:..., target:..., ...} ] }
+        
+        saved_nodes = []
+        for n in data.get('nodes', []):
+            # We need to map this back to list format [id, x, y, yaw, zone, width, indicator]
+            # Ensure keys verify with DataManager._create_networkx_graph
+            nid = n.get('id')
+            x = n.get('x', 0)
+            y = n.get('y', 0)
+            yaw = n.get('yaw', 0)
+            zone = n.get('zone', 0)
+            width = n.get('width', 3.5)
+            indicator = n.get('indicator', 0)
+            saved_nodes.append([nid, x, y, yaw, zone, width, indicator])
+            
+        saved_edges = []
+        for l in data.get('links', []):
+            source = l.get('source')
+            target = l.get('target')
+            saved_edges.append([source, target])
+            
+        return jsonify({
+            'status': 'success',
+            'nodes': saved_nodes,
+            'edges': saved_edges
+        })
+    except Exception as e:
+        print(f"Error reading saved graph: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 

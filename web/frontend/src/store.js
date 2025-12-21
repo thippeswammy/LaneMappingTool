@@ -8,8 +8,8 @@ export const useStore = create((set, get) => ({
   nodes: [],
   edges: [],
   fileNames: [],
-  availableFiles: { raw_files: [], saved_files: [], raw_path: '', saved_path: '', subdirs: [], current_subdir: 'TEMP1', current_saved_subdir: '' },
-  currentRawDir: 'TEMP1',
+  availableFiles: { raw_files: [], saved_files: [], raw_path: '', saved_path: '', subdirs: [], current_subdir: 'Gitam_lanes', current_saved_subdir: '' },
+  currentRawDir: 'Gitam_lanes',
   currentSavedDir: '',
   loading: true,
   status: 'Initializing...',
@@ -30,6 +30,11 @@ export const useStore = create((set, get) => ({
   plotWidth: 100, // Default plot width in %
   drawPoints: [], // Temporary points for Draw mode
   showYaw: false, // Toggle for showing yaw arrows
+
+  // Saved Graph Overlay
+  savedNodes: [],
+  savedEdges: [],
+  showSavedGraph: false,
 
   // Actions
   toggleShowYaw: () => set(state => ({ showYaw: !state.showYaw })),
@@ -183,6 +188,36 @@ export const useStore = create((set, get) => ({
     } catch (error) {
       console.error("Error verifying yaw:", error);
       set({ status: 'Error verifying yaw.' });
+    }
+  },
+
+  toggleShowSavedGraph: async () => {
+    const { showSavedGraph, savedNodes } = get();
+
+    if (!showSavedGraph) {
+      // Turn ON
+      // If we haven't loaded saved data yet (or want to refresh it), fetch it
+      // We should refresh it every time we toggle on to ensure accuracy
+      try {
+        set({ status: 'Fetching saved graph...' });
+        const response = await axios.get(`${API_URL}/api/get_saved_graph`);
+        if (response.data.status === 'success') {
+          set({
+            savedNodes: response.data.nodes,
+            savedEdges: response.data.edges,
+            showSavedGraph: true,
+            status: 'Saved graph overlay enabled.'
+          });
+        } else {
+          set({ status: 'Error: ' + response.data.message });
+        }
+      } catch (error) {
+        console.error("Error fetching saved graph:", error);
+        set({ status: 'Error fetching saved graph.' });
+      }
+    } else {
+      // Turn OFF
+      set({ showSavedGraph: false, status: 'Saved graph overlay disabled.' });
     }
   },
 
