@@ -477,7 +477,7 @@ class DataManager:
 
             # Save as JSON for compatibility transfer
             json_file_path = r"./files/output.json"
-            data = json_graph.node_link_data(G)
+            data = json_graph.node_link_data(G, edges="links")
             with open(json_file_path, "w") as f:
                 json.dump(data, f, indent=4)
             print(f"Saved NetworkX graph as JSON to {json_file_path}")
@@ -511,7 +511,7 @@ class DataManager:
 
             # Save as JSON for compatibility transfer
             json_file_path = os.path.join(folder, "output.json")
-            data = json_graph.node_link_data(G)
+            data = json_graph.node_link_data(G, edges="links")
             with open(json_file_path, "w") as f:
                 json.dump(data, f, indent=4)
             print(f"Saved NetworkX graph as JSON to {json_file_path}")

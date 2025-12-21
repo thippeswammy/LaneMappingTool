@@ -43,6 +43,9 @@ const Sidebar = () => {
     const nodes = useStore(state => state.nodes);
     const updateNodeProperties = useStore(state => state.updateNodeProperties);
 
+    const showSavedGraph = useStore(state => state.showSavedGraph);
+    const toggleShowSavedGraph = useStore(state => state.toggleShowSavedGraph);
+
     // Local State for Control Mode
     const [zoneVal, setZoneVal] = useState('');
     const [indicatorVal, setIndicatorVal] = useState('1');
@@ -235,8 +238,8 @@ const Sidebar = () => {
                         <label className="toolbar-button" style={{ justifyContent: 'flex-start', cursor: 'pointer' }}>
                             <input
                                 type="checkbox"
-                                checked={useStore(state => state.showSavedGraph)}
-                                onChange={() => useStore.getState().toggleShowSavedGraph()}
+                                checked={showSavedGraph}
+                                onChange={toggleShowSavedGraph}
                                 style={{ marginRight: '10px' }}
                             />
                             Show Saved Layout
