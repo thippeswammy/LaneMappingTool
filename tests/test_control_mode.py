@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 # Adjust path to import from the parent project
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils.data_manager import DataManager
 from web.backend.utils.curve_utils import find_path

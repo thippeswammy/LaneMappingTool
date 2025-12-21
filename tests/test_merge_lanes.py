@@ -6,7 +6,7 @@ import numpy as np
 import time
 
 BASE_URL = "http://127.0.0.1:5001/api"
-TEMP_DIR = os.path.join("workspace", "temp_lanes")
+TEMP_DIR = os.path.join("web", "backend", "workspace", "temp_lanes")
 
 def test_merge():
     # 0. Clean up
