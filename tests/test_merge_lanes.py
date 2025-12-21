@@ -15,7 +15,7 @@ def test_merge():
     
     # 1. Load Data
     print("1. Loading lane-0.npy...")
-    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "TEMP1"}
+    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "Gitam_lanes"}
     requests.post(f"{BASE_URL}/load", json=payload)
     
     # 2. Split lane-0 -> lane-0, lane-0_1
@@ -41,7 +41,7 @@ def test_merge():
 
     # 3. Reload lane-0.npy (should auto-load lane-0_1.npy)
     print("3. Reloading lane-0.npy...")
-    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "TEMP1"}
+    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "Gitam_lanes"}
     resp = requests.post(f"{BASE_URL}/load", json=payload)
     data = resp.json()
     file_names = data['file_names']

@@ -14,7 +14,7 @@ def reproduce():
     
     # 1. Load Data
     print("1. Loading lane-0.npy...")
-    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "TEMP1"}
+    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "Gitam_lanes"}
     resp = requests.post(f"{BASE_URL}/load", json=payload)
     data = resp.json()
     nodes = data['nodes']

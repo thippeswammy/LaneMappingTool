@@ -14,7 +14,7 @@ def test_refresh():
     
     # 1. Load Data
     print("1. Loading lane-0.npy...")
-    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "TEMP1"}
+    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "Gitam_lanes"}
     requests.post(f"{BASE_URL}/load", json=payload)
     
     # 2. Split lane-0 -> lane-0, lane-0_1
@@ -41,7 +41,7 @@ def test_refresh():
     # 3. Reset lane-0.npy (Refresh)
     print("3. Resetting lane-0.npy...")
     # Note: reset_temp_file expects raw_dir to find the original file
-    payload = {"filename": "lane-0.npy", "raw_dir": "TEMP1"}
+    payload = {"filename": "lane-0.npy", "raw_dir": "Gitam_lanes"}
     requests.post(f"{BASE_URL}/reset_temp_file", json=payload)
     
     # Check files

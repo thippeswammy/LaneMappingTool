@@ -14,7 +14,7 @@ def test_recursive():
     
     # 1. Load Data
     print("1. Loading lane-0.npy...")
-    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "TEMP1"}
+    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "Gitam_lanes"}
     requests.post(f"{BASE_URL}/load", json=payload)
     
     # 2. Split lane-0 -> lane-0, lane-0_1
@@ -44,7 +44,7 @@ def test_recursive():
     payload = {"raw_files": ["lane-0_1.npy"], "raw_data_dir": "workspace/temp_lanes"}
     # Note: raw_data_dir needs to point to where lane-0_1.npy is. It's in temp_lanes.
     # But the loader expects a path relative to 'lanes' or absolute.
-    # Let's use absolute path logic or just copy it to TEMP1 for test simplicity?
+    # Let's use absolute path logic or just copy it to Gitam_lanes for test simplicity?
     # Or better, use the 'saved_graph_dir' feature if implemented, or just rely on the fact that 
     # load_data checks temp_lanes first?
     # Actually, load_data checks raw_files in raw_data_dir.

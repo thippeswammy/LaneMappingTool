@@ -14,7 +14,7 @@ def reproduce_load():
     
     # 1. Load Data
     print("1. Loading lane-0.npy...")
-    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "TEMP1"}
+    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "Gitam_lanes"}
     requests.post(f"{BASE_URL}/load", json=payload)
     
     # 2. Split lane-0 -> lane-0, lane-0_1
@@ -40,7 +40,7 @@ def reproduce_load():
 
     # 3. Reload ONLY lane-0.npy
     print("3. Reloading ONLY lane-0.npy...")
-    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "TEMP1"}
+    payload = {"raw_files": ["lane-0.npy"], "raw_data_dir": "Gitam_lanes"}
     resp = requests.post(f"{BASE_URL}/load", json=payload)
     
     data = resp.json()

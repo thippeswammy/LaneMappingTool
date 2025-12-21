@@ -21,7 +21,7 @@ def main():
     """
     base_path = os.getcwd()
     graph_dir = os.path.join(base_path, 'files')
-    raw_data_path = os.path.join(base_path, 'lanes', 'TEMP1')
+    raw_data_path = os.path.join(base_path, 'lanes', 'Gitam_lanes')
 
     # Paths for saved working state
     nodes_path = os.path.join(graph_dir, 'graph_nodes.npy')
