@@ -1,15 +1,19 @@
 # Lane Mapping & Visualization Tool
 
-A comprehensive tool for visualizing, editing, and refining lane graph data for autonomous vehicle navigation. This project has evolved from a desktop Python GUI to a modern Web Application with a React frontend and a Flask backend.
+A comprehensive tool for visualizing, editing, and refining lane graph data for autonomous vehicle navigation. This project has evolved from a desktop Python GUI to a modern Web Application with a React frontend and a Flask backend. It allows users to manage lane networks, smooth paths using splines, and verify graph connectivity.
 
 ## 🚀 Features
 
 *   **Web-Based Interface:** Modern, responsive UI built with React and Vite.
 *   **Graph-Based Data Model:** Treats lanes as nodes and edges, supporting complex junctions.
 *   **Bidirectional Editing:** Algorithms for smoothing and pathfinding work in both forward and reverse directions.
-*   **Advanced Curve Smoothing:** B-Spline interpolation for smooth path generation.
-*   **Interactive Plotting:** D3.js-like interactivity using Recharts/Visx (or similar) on the frontend, backed by Matplotlib logic on the backend.
+*   **Advanced Curve Smoothing:** B-Spline interpolation for smooth path generation with adjustable smoothness and weights.
+*   **Interactive Plotting:** High-performance canvas-based plotting (Chart.js) with zoom, pan, and selection capabilities.
 *   **Session Persistence:** Automatically saves and loads working sessions.
+*   **Zone Editing:** Modify lane IDs (zones) and indicators for selected nodes in bulk.
+*   **Multi-file Merging:** Seamlessly load multiple raw data files into a single unified workspace.
+*   **Undo/Redo History:** Robust history management for all graph operations.
+*   **Yaw Verification:** Visual tools to verify the alignment of node yaw with edge direction.
 
 ## 🛠️ Quick Start
 
@@ -62,26 +66,39 @@ The application will be accessible at `http://localhost:5173` (or the port shown
 LaneMappingTool
 ├── web/
 │   ├── backend/           # Flask API & Python logic
-│   │   ├── app.py         # Main entry point
+│   │   ├── app.py         # Main entry point, API routes
 │   │   ├── utils/         # Core logic (data, plotting, curves)
 │   │   └── ...
 │   └── frontend/          # React Application
 │       ├── src/           # Components & State
+│       ├── README.md      # Frontend documentation
 │       └── ...
-├── originalData/          # Raw .npy files
-├── files/                 # Output files
+├── lanes/                 # Raw input data (.npy files)
+├── workspace/             # Working directory for saved sessions
 └── ...
 ```
 
 ## 🎮 Controls
 
-*   **Left Click:** Select Node
-*   **Ctrl + Left Click:** Add Node / Connect to existing
-*   **Right Click:** Delete Node
-*   **Ctrl + Right Click:** Break Connection
-*   **Ctrl + Drag:** Multi-select (Brush/Box)
-*   **Scroll:** Zoom
-*   **Drag:** Pan
+### Mouse Interactions
+*   **Left Click:** Select a single Node.
+*   **Shift + Left Click:** Add Node to selection (Multi-select).
+*   **Ctrl + Left Click:** Add a new Node. If clicked near an existing node, it connects to it.
+*   **Right Click:** (Context Menu) Options to delete node or break links.
+*   **Drag (Background):** Pan the view.
+*   **Scroll:** Zoom in/out.
+
+### Keyboard Shortcuts
+*   **`d`**: Switch to **Draw Mode** (Click to place points, Enter to finish).
+*   **`Delete` / `Backspace`**: Delete currently selected nodes.
+*   **`Ctrl + Z`**: Undo last operation.
+*   **`Ctrl + Y`**: Redo last undone operation.
+*   **`Esc`**: Cancel current operation (e.g., drawing) or clear selection.
+*   **`Enter`**: Confirm action (e.g., in Draw mode).
+
+### Selection Modes (Sidebar)
+*   **Box Select:** Click and drag to select nodes within a rectangular area.
+*   **Path Select:** Click two nodes to select the shortest path between them.
 
 ## 📝 Author
 
