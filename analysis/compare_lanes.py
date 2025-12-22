@@ -1,4 +1,5 @@
 import os
+import sys
 import pickle
 
 import matplotlib.pyplot as plt
@@ -173,7 +174,7 @@ if __name__ == "__main__":
     BASE_DIR = r"f:/RunningProjects/LaneMappingTool"
     GITAM_NPY = os.path.join(BASE_DIR, "lanes", "Gitam_lanes", "Gitam.npy")
     TOOL_PICKLE = os.path.join(BASE_DIR, "web", "backend", "workspace", "output.pickle")
-    BUGGY_PICKLE = r"G:/RunningProjects/Buggy/vechicalFileByInfCmp/sb_main_gate1.pickel"
+    BUGGY_PICKLE = r"G:/RunningProjects/Buggy/vechicalFileByInfCmp/sb_main_gate.pickel"
 
     datasets = {}
 
@@ -190,14 +191,35 @@ if __name__ == "__main__":
         if tool_data is not None:
             datasets["Tool Output (output.pickle)"] = tool_data
 
-    # Load Buggy Reference (if simple file rename didn't work, might need to inspect actual content structure)
-    # For now trying as graph
-    if os.path.exists(BUGGY_PICKLE):
-        buggy_data = load_pickle_graph(BUGGY_PICKLE)
-        if buggy_data is not None:
-            datasets["Reference (sb_main_gate.pickel)"] = buggy_data
-        else:
-            print("Reference pickle failed to load as Graph. Might be raw data?")
+    # # Load Buggy Reference (if simple file rename didn't work, might need to inspect actual content structure)
+    # # For now trying as graph
+    # if os.path.exists(BUGGY_PICKLE):
+    #     buggy_data = load_pickle_graph(BUGGY_PICKLE)
+    #     if buggy_data is not None:
+    #          datasets["Reference (sb_main_gate.pickel)"] = buggy_data
+    #     else:
+    #          print("Reference pickle failed to load as Graph. Might be raw data?")
+    
+    # --- SIMULATION: Test the fixed DataLoader ---
+    try:
+        sys.path.append(BASE_DIR)
+        from utils.data_loader import DataLoader
+        
+        # Initialize loader pointing to the lanes directory
+        lanes_dir = os.path.dirname(GITAM_NPY)
+        loader = DataLoader(lanes_dir)
+        
+        # Load specifically Gitam.npy
+        nodes, _, _ = loader.load_data(specific_files=["Gitam.npy"])
+        
+        if nodes.shape[0] > 0:
+            # Nodes format from loader: [id, x, y, yaw, zone, width, indicator]
+            # We want [x, y, yaw]
+            sim_data = nodes[:, 1:4] 
+            datasets["Simulated Fix (DataLoader)"] = sim_data
+            print("Successfully ran DataLoader simulation.")
+    except Exception as e:
+        print(f"Simulation failed: {e}")
 
     if not datasets:
         print("No datasets loaded!")

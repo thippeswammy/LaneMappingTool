@@ -29,6 +29,13 @@ def find_path(edges, start_id, end_id):
         adj.setdefault(from_id, []).append(to_id)
         adj.setdefault(to_id, []).append(from_id)
 
+    try:
+        start_id = int(start_id)
+        end_id = int(end_id)
+    except ValueError:
+        print(f"Error: Invalid ID format for find_path: start={start_id}, end={end_id}")
+        return None
+
     if start_id not in adj:
         return None
 

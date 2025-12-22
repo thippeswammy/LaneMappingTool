@@ -774,6 +774,19 @@ def smooth_path_endpoint():
                  # Update X, Y
                  original_node[1] = smoothed_points[i][0]
                  original_node[2] = smoothed_points[i][1]
+                 
+                 # Recalculate Yaw
+                 # Use forward difference for all except last, backward for last
+                 if i < len(smoothed_points) - 1:
+                     dx = smoothed_points[i+1][0] - smoothed_points[i][0]
+                     dy = smoothed_points[i+1][1] - smoothed_points[i][1]
+                     original_node[3] = np.arctan2(dy, dx)
+                 elif i > 0:
+                     # Last point: use previous segment's yaw
+                     dx = smoothed_points[i][0] - smoothed_points[i-1][0]
+                     dy = smoothed_points[i][1] - smoothed_points[i-1][1]
+                     original_node[3] = np.arctan2(dy, dx)
+                 
                  preview_nodes.append(original_node)
 
         return jsonify({
