@@ -24,7 +24,7 @@ Compares two graph pickle files (`output.pickle`) to analyze differences in node
 python compare_pickles.py path/to/run1/output.pickle path/to/run2_folder
 ```
 ```bash
-python analysis/compare_pickles.py analysis/recorded_data/original_run/utput.pickle analysis/recorded_data/smoothed_run/output.pickle
+python analysis/compare_pickles.py analysis/recorded_data/original_run/output.pickle analysis/recorded_data/smoothed_run/output.pickle
 ```
 
 ### `compare_runs.py`
