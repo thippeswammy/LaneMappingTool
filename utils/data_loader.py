@@ -140,9 +140,14 @@ class DataLoader:
                     # Let's overwrite zone with lane_idx to be consistent with how the app manages zones.
                     nodes[:, 4] = lane_idx
                 else:
-                    # Raw data (x, y)
+                    # Raw data processing
+                    # Map X, Y
                     nodes[:, 1:3] = points[:, 0:2]
-                    # Leave yaw (col 3) as 0.0 for now
+                    
+                    # Check if Yaw exists (3rd column)
+                    if points.shape[1] >= 3:
+                        nodes[:, 3] = points[:, 2] # Map Yaw
+                    
                     # Map lane_idx to zone (col 4)
                     nodes[:, 4] = lane_idx
                     # width (col 5) and indicator (col 6) are 0 by default

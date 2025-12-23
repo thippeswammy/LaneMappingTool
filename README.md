@@ -60,21 +60,32 @@ npm run dev
 ```
 The application will be accessible at `http://localhost:5173` (or the port shown in the terminal).
 
+The application will be accessible at `http://localhost:5173` (or the port shown in the terminal).
+
+## 📊 Analysis Tools
+
+For information on recording vehicle data and analyzing runs, please see the [Analysis Module Documentation](analysis/README.md).
+
 ## 📂 Project Structure
 
 ```text
 LaneMappingTool
+├── analysis/              # [Analysis Tools](analysis/README.md)
+│   ├── recorded_data/     # Vehicle logs & graph data
+│   ├── recording/         # [Recording Tools](analysis/recording/README.md)
+│   ├── compare_pickles.py # Graph comparison script
+│   └── ...
 ├── web/
-│   ├── backend/           # Flask API & Python logic
+│   ├── backend/           # Flask API & Python logic ([Documentation](web/backend/README.md))
 │   │   ├── app.py         # Main entry point, API routes
-│   │   ├── utils/         # Core logic (data, plotting, curves)
+│   │   ├── workspace/     # Working directory for saved sessions
+│   │   ├── utils/         # Core logic
 │   │   └── ...
-│   └── frontend/          # React Application
+│   └── frontend/          # React Application ([Documentation](web/frontend/README.md))
 │       ├── src/           # Components & State
-│       ├── README.md      # Frontend documentation
 │       └── ...
 ├── lanes/                 # Raw input data (.npy files)
-├── workspace/             # Working directory for saved sessions
+├── utils/                 # [Shared Python utilities](utils/README.md)
 └── ...
 ```
 

@@ -18,6 +18,7 @@ export const useStore = create((set, get) => ({
   isFileLoaderOpen: false,
 
   // Selections & temporary data
+  // NOTE: When adding new temporary state, remember to add it to resetOperationState!
   selectedNodeIds: [],
   yawVerificationResults: null,
   operationStartNodeId: null,
@@ -36,8 +37,30 @@ export const useStore = create((set, get) => ({
   savedEdges: [],
   showSavedGraph: false,
 
+  // Path Direction Validation
+  pathDirectionStatus: null, // { overall_status, details }
+
   // Actions
   toggleShowYaw: () => set(state => ({ showYaw: !state.showYaw })),
+
+  checkPathDirection: async (startId, endId) => {
+    try {
+      set({ status: 'Checking Path Direction...' });
+      const response = await axios.post(`${API_URL}/api/check_path_direction`, {
+        start_id: startId,
+        end_id: endId
+      });
+      set({
+        pathDirectionStatus: response.data,
+        status: `Direction Check: ${response.data.overall_status}`
+      });
+    } catch (error) {
+      console.error("Error checking path direction:", error);
+      set({ status: 'Error checking direction.', pathDirectionStatus: null });
+    }
+  },
+
+  clearPathDirectionStatus: () => set({ pathDirectionStatus: null }),
 
 
   // Actions
@@ -260,17 +283,24 @@ export const useStore = create((set, get) => ({
     });
   },
 
-  setMode: (mode) => {
+  resetOperationState: () => {
     set({
-      mode,
-      status: `Mode: ${mode}`,
       selectedNodeIds: [],
       operationStartNodeId: null,
       smoothingPreview: null,
       smoothStartNodeId: null,
       smoothEndNodeId: null,
       drawPoints: [],
-      yawVerificationResults: null, // Clear verification when changing modes
+      yawVerificationResults: null,
+      pathDirectionStatus: null,
+    });
+  },
+
+  setMode: (mode) => {
+    get().resetOperationState();
+    set({
+      mode,
+      status: `Mode: ${mode}`,
     });
   },
 
@@ -333,12 +363,42 @@ export const useStore = create((set, get) => ({
           params: { start_id: startId, end_id: endId }
         }).then(response => {
           if (response.data.status === 'success') {
-            const pathIds = response.data.path_ids;
+            const pathIds = response.data.path_ids || [];
             set({ selectedNodeIds: pathIds, status: `Selected ${pathIds.length} nodes in path.`, mode: 'select' });
           }
-        }).catch(err => {
+        }).catch(async (err) => {
           console.error("Error finding path:", err);
-          set({ status: 'Error finding path.', mode: 'select' });
+          const response = err.response;
+
+          // Check if it's a "No directed path" error (404)
+          if (response && response.status === 404 && response.data.error_type === 'no_path') {
+            // Ask user if they want to force it
+            const confirmForce = window.confirm("No directed path found (lanes might be disconnected or wrong direction).\n\nDo you want to FORCE the selection using an undirected search?\n(Warning: This may create invalid 'zig-zag' paths.)");
+
+            if (confirmForce) {
+              set({ status: 'Forcing path finding (Undirected)...' });
+              try {
+                const retryResponse = await axios.post(`${API_URL}/api/operation`, {
+                  operation: 'get_path',
+                  params: { start_id: startId, end_id: endId, strict_direction: false }
+                });
+
+                if (retryResponse.data.status === 'success') {
+                  const pathIds = retryResponse.data.path_ids || [];
+                  set({ selectedNodeIds: pathIds, status: `Forced selection of ${pathIds.length} nodes (Undirected).`, mode: 'select' });
+                  return;
+                }
+              } catch (retryErr) {
+                console.error("Error forcing path:", retryErr);
+                const retryMsg = retryErr.response?.data?.message || 'Error forcing path.';
+                set({ status: `Error: ${retryMsg}`, mode: 'select' });
+                return;
+              }
+            }
+          }
+
+          const msg = response?.data?.message || 'Error finding path.';
+          set({ status: `Error: ${msg}`, mode: 'select' });
         });
       }
     } else if (['smooth', 'remove_between', 'reverse_path', 'connect'].includes(mode)) {
@@ -358,23 +418,77 @@ export const useStore = create((set, get) => ({
         } else if (mode === 'connect') {
           performOperation('add_edge', { from_id: startId, to_id: endId });
         } else if (mode === 'remove_between') {
-          performOperation('remove_between', { start_id: startId, end_id: endId });
+          // Logic with Retry for Remove Between
+          const executeRemove = async (strict = true) => {
+            try {
+              await axios.post(`${API_URL}/api/operation`, {
+                operation: 'remove_between',
+                params: { start_id: startId, end_id: endId, strict_direction: strict }
+              });
+              set({
+                status: `Removed nodes between ${startId} and ${endId}${!strict ? ' (Forced)' : ''}.`,
+                mode: 'select', selectedNodeIds: [], operationStartNodeId: null
+              });
+              // Refresh data
+              const { nodes, edges } = (await axios.get(`${API_URL}/api/data`)).data;
+              set({ nodes, edges });
+            } catch (err) {
+              const response = err.response;
+              if (strict && response && response.status === 404 && response.data.error_type === 'no_path') {
+                if (window.confirm("No directed path found for removal.\n\nForce remove along UNDIRECTED path?\n(Warning: May delete unintended nodes on 'zig-zag' path.)")) {
+                  await executeRemove(false);
+                  return;
+                }
+              }
+              console.error("Error removing:", err);
+              set({ status: `Error: ${response?.data?.message || 'Failed to remove.'}` });
+            }
+          };
+          executeRemove(true);
+
         } else if (mode === 'reverse_path') {
-          performOperation('reverse_path', { start_id: startId, end_id: endId });
+          // Logic with Retry for Reverse Path
+          const executeReverse = async (strict = true) => {
+            try {
+              await axios.post(`${API_URL}/api/operation`, {
+                operation: 'reverse_path',
+                params: { start_id: startId, end_id: endId, strict_direction: strict }
+              });
+              set({
+                status: `Reversed path ${startId}->${endId}${!strict ? ' (Forced)' : ''}.`,
+                mode: 'select', selectedNodeIds: [], operationStartNodeId: null
+              });
+              // Refresh data
+              const { nodes, edges } = (await axios.get(`${API_URL}/api/data`)).data;
+              set({ nodes, edges });
+            } catch (err) {
+              const response = err.response;
+              if (strict && response && response.status === 404 && response.data.error_type === 'no_path') {
+                if (window.confirm("No directed path found to reverse.\n\nForce reverse along UNDIRECTED path?\n(Warning: May reverse unintended segments.)")) {
+                  await executeReverse(false);
+                  return;
+                }
+              }
+              console.error("Error reversing:", err);
+              set({ status: `Error: ${response?.data?.message || 'Failed to reverse.'}` });
+            }
+          };
+          executeReverse(true);
         }
       }
     }
   },
 
-  previewSmooth: async (startId, endId) => {
+  previewSmooth: async (startId, endId, strict = true) => {
     const { smoothness, weight } = get();
     try {
-      set({ status: 'Generating smooth preview...' });
+      set({ status: `Generating smooth preview${!strict ? ' (Forced)' : ''}...` });
       const response = await axios.post(`${API_URL}/api/smooth`, {
         start_id: startId,
         end_id: endId,
         smoothness: smoothness,
         weight: weight,
+        strict_direction: strict
       });
       set({
         smoothingPreview: response.data.updated_nodes,
@@ -382,7 +496,16 @@ export const useStore = create((set, get) => ({
       });
     } catch (error) {
       console.error("Error generating smooth preview:", error);
-      const errorMessage = error.response?.data?.message || 'Error generating preview.';
+      const response = error.response;
+
+      if (strict && response && response.status === 404 && response.data.error_type === 'no_path') {
+        if (window.confirm("No directed path found to smooth.\n\nForce smooth along UNDIRECTED path?\n(Warning: May smooth across unrelated lanes.)")) {
+          get().previewSmooth(startId, endId, false);
+          return;
+        }
+      }
+
+      const errorMessage = response?.data?.message || 'Error generating preview.';
       set({ status: `Error: ${errorMessage}`, smoothingPreview: null });
     }
   },

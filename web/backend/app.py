@@ -633,23 +633,29 @@ def perform_operation():
         elif operation == 'reverse_path':
             start_id = params.get('start_id')
             end_id = params.get('end_id')
-            path = find_path(data_manager.edges, start_id, end_id)
+            strict_direction = params.get('strict_direction', True)
+            
+            path = find_path(data_manager.edges, start_id, end_id, directed=strict_direction)
             if path:
                 data_manager.reverse_path(path)
             else:
-                return jsonify({'status': 'error', 'message': 'No path found'}), 400
+                msg = f'No directed path found between {start_id} and {end_id}.' if strict_direction else f'No path found between {start_id} and {end_id}.'
+                return jsonify({'status': 'error', 'message': msg, 'error_type': 'no_path'}), 404
                 
         elif operation == 'remove_between':
             start_id = params.get('start_id')
             end_id = params.get('end_id')
-            path = find_path(data_manager.edges, start_id, end_id)
+            strict_direction = params.get('strict_direction', True)
+            
+            path = find_path(data_manager.edges, start_id, end_id, directed=strict_direction)
             if path:
                 # Delete nodes strictly between start and end
                 if len(path) > 2:
                     to_delete = path[1:-1]
                     data_manager.delete_points(to_delete)
             else:
-                 return jsonify({'status': 'error', 'message': 'No path found'}), 400
+                 msg = f'No directed path found between {start_id} and {end_id}.' if strict_direction else f'No path found between {start_id} and {end_id}.'
+                 return jsonify({'status': 'error', 'message': msg, 'error_type': 'no_path'}), 404
 
         elif operation == 'copy_points':
             data_manager.copy_points(params.get('point_ids'))
@@ -697,14 +703,28 @@ def perform_operation():
             # Helper to get path IDs for selection
             start_id = params.get('start_id')
             end_id = params.get('end_id')
-            path = find_path(data_manager.edges, start_id, end_id)
-            if path:
-                 return jsonify({
-                    'status': 'success',
-                    'path_ids': path
-                })
-            else:
-                return jsonify({'status': 'error', 'message': 'No path found'}), 404
+            
+            # Default to strict direction (True) unless explicitly set to False
+            strict_direction = params.get('strict_direction', True)
+            
+            print(f"DEBUG: get_path requested {start_id} -> {end_id} (Strict: {strict_direction})")
+            
+            try:
+                path = find_path(data_manager.edges, start_id, end_id, directed=strict_direction)
+                if path:
+                     return jsonify({
+                        'status': 'success',
+                        'path_ids': path
+                    })
+                else:
+                    if strict_direction:
+                        msg = f'No directed path found between {start_id} and {end_id}.'
+                    else:
+                        msg = f'No path found between {start_id} and {end_id} even in undirected mode.'
+                    return jsonify({'status': 'error', 'message': msg, 'error_type': 'no_path'}), 404
+            except Exception as e:
+                print(f"Error in find_path: {e}")
+                return jsonify({'status': 'error', 'message': f'Path finding error: {str(e)}'}), 500
 
         else:
             return jsonify({'status': 'error', 'message': f'Unknown operation: {operation}'}), 400
@@ -743,14 +763,16 @@ def smooth_path_endpoint():
         end_id = data.get('end_id')
         smoothness = float(data.get('smoothness', 1.0))
         weight = float(data.get('weight', 0.5))
+        strict_direction = data.get('strict_direction', True)
 
         if start_id is None or end_id is None:
             return jsonify({'status': 'error', 'message': 'Start and end IDs required'}), 400
 
         # Find path
-        path_indices = find_path(data_manager.edges, start_id, end_id)
+        path_indices = find_path(data_manager.edges, start_id, end_id, directed=strict_direction)
         if not path_indices:
-             return jsonify({'status': 'error', 'message': 'No path found between selected nodes'}), 400
+             msg = f'No directed path found between selected nodes.' if strict_direction else 'No path found between selected nodes.'
+             return jsonify({'status': 'error', 'message': msg, 'error_type': 'no_path'}), 404
 
         # Get points
         # path_indices is list of IDs. We need to map to indices in data_manager.nodes?
@@ -774,6 +796,19 @@ def smooth_path_endpoint():
                  # Update X, Y
                  original_node[1] = smoothed_points[i][0]
                  original_node[2] = smoothed_points[i][1]
+                 
+                 # Recalculate Yaw
+                 # Use forward difference for all except last, backward for last
+                 if i < len(smoothed_points) - 1:
+                     dx = smoothed_points[i+1][0] - smoothed_points[i][0]
+                     dy = smoothed_points[i+1][1] - smoothed_points[i][1]
+                     original_node[3] = np.arctan2(dy, dx)
+                 elif i > 0:
+                     # Last point: use previous segment's yaw
+                     dx = smoothed_points[i][0] - smoothed_points[i-1][0]
+                     dy = smoothed_points[i][1] - smoothed_points[i-1][1]
+                     original_node[3] = np.arctan2(dy, dx)
+                 
                  preview_nodes.append(original_node)
 
         return jsonify({
@@ -783,6 +818,77 @@ def smooth_path_endpoint():
 
     except Exception as e:
         print(f"Error smoothing path: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/check_path_direction', methods=['POST'])
+def check_path_direction():
+    try:
+        data = request.json
+        start_id = data.get('start_id')
+        end_id = data.get('end_id')
+        threshold_deg = float(data.get('threshold_deg', 45.0)) # Degrees
+        
+        if start_id is None or end_id is None:
+            return jsonify({'status': 'error', 'message': 'Start and end IDs required'}), 400
+
+        # Find path
+        path_indices = find_path(data_manager.edges, start_id, end_id)
+        if not path_indices:
+             return jsonify({'status': 'error', 'message': 'No path found between selected nodes'}), 400
+
+        # Validate Direction
+        results = []
+        node_map = {node[0]: node for node in data_manager.nodes}
+        
+        mismatch_count = 0
+        
+        for i in range(len(path_indices) - 1):
+            curr_id = path_indices[i]
+            next_id = path_indices[i+1]
+            
+            curr_node = node_map.get(curr_id)
+            next_node = node_map.get(next_id)
+            
+            if curr_node is None or next_node is None:
+                continue
+                
+            # Vector Check
+            dx = next_node[1] - curr_node[1]
+            dy = next_node[2] - curr_node[2]
+            path_yaw = np.arctan2(dy, dx)
+            
+            stored_yaw = curr_node[3]
+            
+            # Angle difference (normalized to -pi to pi)
+            diff = stored_yaw - path_yaw
+            diff = (diff + np.pi) % (2 * np.pi) - np.pi
+            diff_deg = np.degrees(np.abs(diff))
+            
+            status = 'ok'
+            if diff_deg > threshold_deg:
+                status = 'mismatch'
+                mismatch_count += 1
+                
+            results.append({
+                'id': int(curr_id),
+                'next_id': int(next_id),
+                'status': status,
+                'diff_deg': float(diff_deg),
+                'stored_yaw': float(stored_yaw),
+                'path_yaw': float(path_yaw)
+            })
+            
+        overall_status = "Consistent" if mismatch_count == 0 else f"Found {mismatch_count} mismatches"
+            
+        return jsonify({
+            'status': 'success',
+            'overall_status': overall_status,
+            'details': results
+        })
+
+    except Exception as e:
+        print(f"Error checking path direction: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 

@@ -10,6 +10,7 @@ Chart.register(...registerables, zoomPlugin);
 const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   console.log("Plot component rendering", { nodesCount: nodes?.length, edgesCount: edges?.length });
   const mode = useStore(state => state.mode);
+  const sidebarMode = useStore(state => state.sidebarMode);
   const handleNodeClick = useStore(state => state.handleNodeClick);
   const performOperation = useStore(state => state.performOperation);
   const selectedNodeIds = useStore(state => state.selectedNodeIds);
@@ -72,9 +73,12 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
 
   // Keep a ref for showYaw so the plugin can access the latest value without re-creation
   const showYawRef = useRef(showYaw);
+  const sidebarModeRef = useRef(sidebarMode); // Ref for sidebarMode
+
   useEffect(() => {
     showYawRef.current = showYaw;
-  }, [showYaw]);
+    sidebarModeRef.current = sidebarMode;
+  }, [showYaw, sidebarMode]);
 
 
   const chartRef = useRef(null);
@@ -131,7 +135,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     if (chart) {
       chart.update();
     }
-  }, [showYaw]);
+  }, [showYaw, sidebarMode]);
 
 
   // Performance Optimization: Prepare edge data
@@ -273,7 +277,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
             indicator: node[6]
           })) : [],
           backgroundColor: nodes ? nodes.map(node => {
-            if (selectedNodeIds.includes(node[0])) return 'red';
+            if (Array.isArray(selectedNodeIds) && selectedNodeIds.includes(node[0])) return 'red';
             if (operationStartNodeId === node[0]) return 'blue';
             return 'rgba(0,255,255,1)';
           }) : [],
@@ -380,7 +384,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const yawPlugin = useMemo(() => ({
     id: 'yawPlugin',
     afterDatasetsDraw(chart) {
-      if (!showYawRef.current) return;
+      if (!showYawRef.current || sidebarModeRef.current !== 'edit') return;
 
       const ctx = chart.ctx;
       const xAxis = chart.scales.x;
@@ -394,6 +398,18 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       ctx.lineWidth = 2;
       ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
 
+      // Calculate scales (pixels per data unit) locally to avoid precision issues with large coordinates
+      const midX = (xAxis.min + xAxis.max) / 2;
+      const midY = (yAxis.min + yAxis.max) / 2;
+
+      const originX = xAxis.getPixelForValue(midX);
+      const unitX = xAxis.getPixelForValue(midX + 1);
+      const scaleX = unitX - originX;
+
+      const originY = yAxis.getPixelForValue(midY);
+      const unitY = yAxis.getPixelForValue(midY + 1);
+      const scaleY = unitY - originY;
+
       currentNodes.forEach(node => {
         const x = xAxis.getPixelForValue(node[1]);
         const y = yAxis.getPixelForValue(node[2]);
@@ -401,12 +417,21 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
 
         if (x === undefined || y === undefined) return;
 
-        const arrowLen = 15;
-        const headLen = 5;
+        // Calculate direction vector in pixel space
+        // Yaw is in data space (CCW from East)
+        const dirX = Math.cos(yaw) * scaleX;
+        const dirY = Math.sin(yaw) * scaleY;
 
-        // End point (Flip Y for canvas)
-        const endX = x + arrowLen * Math.cos(yaw);
-        const endY = y - arrowLen * Math.sin(yaw);
+        // Normalize to fixed pixel length
+        const len = Math.sqrt(dirX * dirX + dirY * dirY);
+        if (len === 0) return;
+
+        const arrowLen = 15;
+        const ndx = dirX / len;
+        const ndy = dirY / len;
+
+        const endX = x + ndx * arrowLen;
+        const endY = y + ndy * arrowLen;
 
         // Draw line
         ctx.beginPath();
@@ -415,7 +440,9 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ctx.stroke();
 
         // Draw arrow head
-        const angle = Math.atan2(endY - y, endX - x);
+        // We calculate the angle of the PIXEL line for the arrow head rotation
+        const angle = Math.atan2(ndy, ndx);
+        const headLen = 5;
 
         ctx.beginPath();
         ctx.moveTo(endX, endY);
@@ -570,7 +597,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       const result = findNearestNode(xData, yData);
       if (result && result.node && result.dist < 5.0) { // Threshold
         const nodeId = result.node[0];
-        const currentSelected = selectedNodeIdsRef.current;
+        const currentSelected = selectedNodeIdsRef.current || [];
         if (!currentSelected.includes(nodeId)) {
           handleNodeClickRef.current(nodeId, true); // true for multi-select
         }
@@ -633,7 +660,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       // Update selection
       if (event.shiftKey) {
         // Add to existing
-        const currentSelected = selectedNodeIdsRef.current;
+        const currentSelected = selectedNodeIdsRef.current || [];
         const combined = [...new Set([...currentSelected, ...newSelectedIds])];
         setSelectedNodeIdsRef.current(combined);
       } else {

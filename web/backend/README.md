@@ -1,5 +1,7 @@
 # Lane Mapping Tool - Backend
 
+[← Back to Project Root](../../README.md)
+
 This directory contains the Flask-based backend for the Lane Mapping Tool. It handles graph operations, data persistence, and communicates with the React frontend.
 
 ## 🔧 Setup
