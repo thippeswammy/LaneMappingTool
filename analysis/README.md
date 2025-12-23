@@ -23,11 +23,17 @@ Compares two graph pickle files (`output.pickle`) to analyze differences in node
 ```bash
 python compare_pickles.py path/to/run1/output.pickle path/to/run2_folder
 ```
+```bash
+python analysis/compare_pickles.py analysis/recorded_data/original_run/utput.pickle analysis/recorded_data/smoothed_run/output.pickle
+```
 
 ### `compare_runs.py`
 Compares recorded CSV vehicle data (trajectory, steering, speed) between two runs.
 ```bash
 python compare_runs.py recorded_data/run1 recorded_data/run2
+```
+```bash
+python analysis/compare_runs.py analysis/recorded_data/original_run analysis/recorded_data/smoothed_run
 ```
 
 ### `compare_lanes.py`
