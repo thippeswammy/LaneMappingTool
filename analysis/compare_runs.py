@@ -94,7 +94,7 @@ def compare_runs(run1_path, run2_path, label1="Run 1", label2="Run 2"):
 
     plt.tight_layout()
     plt.show()
-    plt.savefig("comparison_result.png")
+    # plt.savefig("comparison_result.png")
     print("Comparison saved to comparison_result.png")
 
 

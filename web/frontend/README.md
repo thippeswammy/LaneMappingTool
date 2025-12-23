@@ -1,5 +1,7 @@
 # Lane Mapping Tool - Frontend
 
+[← Back to Project Root](../../README.md)
+
 This directory contains the React-based frontend for the Lane Mapping Tool. It provides an interactive interface for visualizing and editing lane graphs.
 
 ## 🔧 Setup

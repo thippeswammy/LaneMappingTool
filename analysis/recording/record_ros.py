@@ -15,7 +15,11 @@ class DataRecorder:
         rospy.init_node('vehicle_data_recorder', anonymous=True)
         
         self.run_name = run_name
-        self.output_dir = os.path.join(os.getcwd(), 'recorded_data', self.run_name)
+        
+        # Calculate path relative to this script: analysis/recording/../recorded_data
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        analysis_dir = os.path.dirname(script_dir)
+        self.output_dir = os.path.join(analysis_dir, 'recorded_data', self.run_name)
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
             
