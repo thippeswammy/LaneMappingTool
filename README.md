@@ -111,6 +111,25 @@ LaneMappingTool
 *   **Box Select:** Click and drag to select nodes within a rectangular area.
 *   **Path Select:** Click two nodes to select the shortest path between them.
 
+## 📋 Deployment Workflow
+**Steps to deploy the new map to the vehicle:**
+
+1. **Save Data**:
+   - Click the "Save Data" button in the web tool.
+   - This creates `output.json` in `web/backend/workspace/`.
+
+2. **Transfer Files**:
+   - Copy `output.json` from your computer to the vehicle.
+   - **Destination**: `AGC_ws/Network/` on the vehicle.
+
+3. **Convert to Pickle (On Vehicle)**:
+   - Ensure `json_to_pickle.py` is present in `AGC_ws/Network/`.
+   - Run the conversion script using the vehicle's python (Python 2.7):
+     ```bash
+     python json_to_pickle.py output.json output.pickle
+     ```
+   - This generates the Python 2.6/2.7 and networkx compatible `.pickle` file required by the autonomous stack.
+
 ## 📝 Author
 
 **Thippeswamy K.S.**
