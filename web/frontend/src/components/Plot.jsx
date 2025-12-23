@@ -277,7 +277,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
             indicator: node[6]
           })) : [],
           backgroundColor: nodes ? nodes.map(node => {
-            if (selectedNodeIds.includes(node[0])) return 'red';
+            if (Array.isArray(selectedNodeIds) && selectedNodeIds.includes(node[0])) return 'red';
             if (operationStartNodeId === node[0]) return 'blue';
             return 'rgba(0,255,255,1)';
           }) : [],
@@ -597,7 +597,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       const result = findNearestNode(xData, yData);
       if (result && result.node && result.dist < 5.0) { // Threshold
         const nodeId = result.node[0];
-        const currentSelected = selectedNodeIdsRef.current;
+        const currentSelected = selectedNodeIdsRef.current || [];
         if (!currentSelected.includes(nodeId)) {
           handleNodeClickRef.current(nodeId, true); // true for multi-select
         }
@@ -660,7 +660,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       // Update selection
       if (event.shiftKey) {
         // Add to existing
-        const currentSelected = selectedNodeIdsRef.current;
+        const currentSelected = selectedNodeIdsRef.current || [];
         const combined = [...new Set([...currentSelected, ...newSelectedIds])];
         setSelectedNodeIdsRef.current(combined);
       } else {

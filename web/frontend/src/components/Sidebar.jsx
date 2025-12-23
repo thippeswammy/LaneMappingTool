@@ -35,7 +35,7 @@ const Sidebar = () => {
     const weight = useStore(state => state.weight);
     const setSmoothness = useStore(state => state.setSmoothness);
     const setWeight = useStore(state => state.setWeight);
-    const selectedNodeIds = useStore(state => state.selectedNodeIds);
+    const selectedNodeIds = useStore(state => state.selectedNodeIds) || [];
     const setSelectedNodeIds = useStore(state => state.setSelectedNodeIds);
     const showYaw = useStore(state => state.showYaw);
     const toggleShowYaw = useStore(state => state.toggleShowYaw);
@@ -164,6 +164,39 @@ const Sidebar = () => {
                             <button className="toolbar-button" onClick={() => performOperation('copy_points', { point_ids: selectedNodeIds })}>
                                 <IconSave /> Copy Selected ({selectedNodeIds.length})
                             </button>
+                        </div>
+                    )}
+
+
+
+                    {selectedNodeIds.length > 1 && (
+                        <div className="sidebar-section">
+                            <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Path Validation</h4>
+                            <button className="toolbar-button" onClick={() => useStore.getState().checkPathDirection(selectedNodeIds[0], selectedNodeIds[selectedNodeIds.length - 1])}>
+                                <IconCheck /> Check Direction
+                            </button>
+                            {useStore(state => state.pathDirectionStatus) && (
+                                <div style={{
+                                    marginTop: '10px',
+                                    padding: '8px',
+                                    background: 'var(--bg-tertiary)',
+                                    borderRadius: '4px',
+                                    border: '1px solid var(--border-color)',
+                                    fontSize: '0.85rem'
+                                }}>
+                                    <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
+                                        {useStore.getState().pathDirectionStatus.overall_status}
+                                    </div>
+                                    {useStore.getState().pathDirectionStatus.details.some(d => d.status === 'mismatch') && (
+                                        <div style={{ color: '#ff6b6b' }}>
+                                            mismatches found!
+                                        </div>
+                                    )}
+                                    <button style={{ marginTop: '5px', width: '100%', padding: '4px', background: '#444', border: 'none', color: 'white', borderRadius: '2px', cursor: 'pointer' }} onClick={() => useStore.getState().clearPathDirectionStatus()}>
+                                        Clear
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 

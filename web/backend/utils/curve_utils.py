@@ -12,22 +12,27 @@ def _get_node_coords(nodes, point_id):
     return None
 
 
-def find_path(edges, start_id, end_id):
+def find_path(edges, start_id, end_id, directed=True):
     """Finds a path from start_id to end_id using bidirectional BFS.
     
-    This function constructs an adjacency list from the given edges and  performs a
-    breadth-first search (BFS) to find a path between the  specified start_id and
-    end_id. It handles cases where the edges  are empty or the start_id is not
-    present in the adjacency list,  returning None in such scenarios.
+    Args:
+        edges (np.array): Array of edges.
+        start_id (int): Start node ID.
+        end_id (int): End node ID.
+        directed (bool): If True, search respects edge direction. If False, treats graph as undirected.
     """
     if edges.size == 0:
         return None
 
+    # Adjacency List
     adj = {}
     for from_id, to_id in edges:
         from_id, to_id = int(from_id), int(to_id)
         adj.setdefault(from_id, []).append(to_id)
-        adj.setdefault(to_id, []).append(from_id)
+        
+        if not directed:
+            # Allow backward traversal if not directed (Force Mode)
+            adj.setdefault(to_id, []).append(from_id)
 
     try:
         start_id = int(start_id)
@@ -36,21 +41,36 @@ def find_path(edges, start_id, end_id):
         print(f"Error: Invalid ID format for find_path: start={start_id}, end={end_id}")
         return None
 
-    if start_id not in adj:
+    def bfs(s, e):
+        if s not in adj:
+            return None
+        queue = deque([(s, [s])])
+        visited = {s}
+        while queue:
+            current_id, path = queue.popleft()
+            if current_id == e:
+                return path
+            for neighbor_id in adj.get(current_id, []):
+                if neighbor_id not in visited:
+                    visited.add(neighbor_id)
+                    new_path = path + [neighbor_id]
+                    queue.append((neighbor_id, new_path))
         return None
 
-    queue = deque([(start_id, [start_id])])
-    visited = {start_id}
+    # 1. Forward Path (Start -> End)
+    # If directed=False, this effectively searches undirected graph A->B
+    path = bfs(start_id, end_id)
+    if path:
+        return path
 
-    while queue:
-        current_id, path = queue.popleft()
-        if current_id == end_id:
-            return path
-        for neighbor_id in adj.get(current_id, []):
-            if neighbor_id not in visited:
-                visited.add(neighbor_id)
-                new_path = path + [neighbor_id]
-                queue.append((neighbor_id, new_path))
+    if directed:
+        # 2. Try Reverse Selection (End -> Start) ONLY for directed mode check
+        # If user clicked B then A, and A->B exists, we return A->B.
+        # For undirected, bfs(start, end) would have found it if connectivity existed anyway.
+        path_reverse = bfs(end_id, start_id)
+        if path_reverse:
+            return path_reverse
+        
     return None
 
 
