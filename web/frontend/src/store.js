@@ -18,6 +18,7 @@ export const useStore = create((set, get) => ({
   isFileLoaderOpen: false,
 
   // Selections & temporary data
+  // NOTE: When adding new temporary state, remember to add it to resetOperationState!
   selectedNodeIds: [],
   yawVerificationResults: null,
   operationStartNodeId: null,
@@ -282,18 +283,24 @@ export const useStore = create((set, get) => ({
     });
   },
 
-  setMode: (mode) => {
+  resetOperationState: () => {
     set({
-      mode,
-      status: `Mode: ${mode}`,
       selectedNodeIds: [],
       operationStartNodeId: null,
       smoothingPreview: null,
       smoothStartNodeId: null,
       smoothEndNodeId: null,
       drawPoints: [],
-      yawVerificationResults: null, // Clear verification when changing modes
+      yawVerificationResults: null,
       pathDirectionStatus: null,
+    });
+  },
+
+  setMode: (mode) => {
+    get().resetOperationState();
+    set({
+      mode,
+      status: `Mode: ${mode}`,
     });
   },
 
