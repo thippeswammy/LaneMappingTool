@@ -112,7 +112,7 @@ LaneMappingTool
 *   **Path Select:** Click two nodes to select the shortest path between them.
 
 ## 📋 Deployment Workflow
-**Steps to deploy the new map to the vehicle:**
+**Steps to deploy the new Lane to the vehicle:**
 
 1. **Save Data**:
    - Click the "Save Data" button in the web tool.
