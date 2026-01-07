@@ -99,6 +99,14 @@ const Sidebar = () => {
         setSelectedNodeIds([]);
     };
 
+    const handleReverseIndicators = () => {
+        if (selectedNodeIds.length === 0) return;
+        performOperation('reverse_indicators', { point_ids: selectedNodeIds });
+        // Optional: Can keep selection or clear it. Let's keep it to see results if we refresh, 
+        // but performOperation usually triggers a refresh which might update our local node data.
+        // The store handles updates.
+    };
+
     const getButtonClass = (buttonMode) => {
         return mode === buttonMode ? 'toolbar-button active' : 'toolbar-button';
     };
@@ -427,6 +435,15 @@ const Sidebar = () => {
                             style={{ justifyContent: 'center', marginTop: '10px' }}
                         >
                             <IconCheck /> Apply to Selected ({selectedNodeIds.length})
+                        </button>
+
+                        <button
+                            className="toolbar-button"
+                            onClick={handleReverseIndicators}
+                            disabled={selectedNodeIds.length === 0}
+                            style={{ justifyContent: 'center', marginTop: '10px' }}
+                        >
+                            <IconReverse /> Reverse Indicators (2↔3)
                         </button>
 
                         {selectedNodeIds.length === 0 && (

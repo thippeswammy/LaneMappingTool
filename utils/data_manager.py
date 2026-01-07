@@ -324,6 +324,47 @@ class DataManager:
         except Exception as e:
             print(f"Error updating node properties: {e}")
 
+    def reverse_indicators(self, point_ids):
+        """Reverse indicator values (2 <-> 3) for the specified points."""
+        if not point_ids:
+            return
+        try:
+            point_ids = np.asarray(point_ids, dtype=int)
+            node_mask = np.isin(self.nodes[:, 0], point_ids)
+
+            if not np.any(node_mask):
+                print("No matching nodes found to reverse indicators.")
+                return
+
+            # Indices for 2 and 3
+            # We need to do this carefully to avoids overwriting
+            # 2 -> 3
+            # 3 -> 2
+            
+            # Nodes with indicator 2 (Right)
+            mask_2 = node_mask & (self.nodes[:, 6] == 2)
+            # Nodes with indicator 3 (Left) 
+            mask_3 = node_mask & (self.nodes[:, 6] == 3)
+
+            count_2 = np.sum(mask_2)
+            count_3 = np.sum(mask_3)
+
+            if count_2 > 0:
+                self.nodes[mask_2, 6] = 3
+            if count_3 > 0:
+                self.nodes[mask_3, 6] = 2
+
+            if count_2 > 0 or count_3 > 0:
+                self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
+                self.redo_stack = []
+                self._auto_save_backup()
+                print(f"Reversed indicators: {count_2} (Right->Left), {count_3} (Left->Right)")
+            else:
+                print("No indicators to reverse (only found 1s or 0s).")
+
+        except Exception as e:
+            print(f"Error reversing indicators: {e}")
+
     def remove_points_above(self, index, lane_id):
         print("Function 'remove_points_above' is not implemented for graph model.")
         pass

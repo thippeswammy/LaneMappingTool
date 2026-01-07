@@ -699,6 +699,10 @@ def perform_operation():
                 indicator=p_ind
             )
 
+        elif operation == 'reverse_indicators':
+            p_ids = params.get('point_ids')
+            data_manager.reverse_indicators(p_ids)
+
         elif operation == 'get_path':
             # Helper to get path IDs for selection
             start_id = params.get('start_id')
