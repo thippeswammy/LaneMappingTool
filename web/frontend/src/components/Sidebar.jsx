@@ -403,7 +403,7 @@ const Sidebar = () => {
                                         checked={indicatorVal === '2'}
                                         onChange={(e) => setIndicatorVal(e.target.value)}
                                     />
-                                    2. Right
+                                    2. Left
                                 </label>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                                     <input
@@ -413,7 +413,7 @@ const Sidebar = () => {
                                         checked={indicatorVal === '3'}
                                         onChange={(e) => setIndicatorVal(e.target.value)}
                                     />
-                                    3. Left
+                                    3. Right
                                 </label>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                                     <input

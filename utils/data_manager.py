@@ -59,6 +59,31 @@ class DataManager:
             print(f"Error adding node: {e}")
             return None
 
+    def get_node_lane_id(self, point_id):
+        """Get the original lane ID (zone) for a node."""
+        node_mask = (self.nodes[:, 0] == point_id)
+        if np.any(node_mask):
+            return int(self.nodes[node_mask][0, 4])
+        return 0
+
+    def update_node(self, point_id, x, y):
+        """Update the coordinates of an existing node."""
+        try:
+            point_id = int(point_id)
+            node_mask = self.nodes[:, 0] == point_id
+            if np.any(node_mask):
+                self.nodes[node_mask, 1] = x
+                self.nodes[node_mask, 2] = y
+                # Implicitly, we should probably update history, but add_node logic does.
+                # Do it here too.
+                # Actually, CurveManager might do batch updates, but here we do 1 by 1.
+                # It's fine for now.
+                return True
+            return False
+        except Exception as e:
+            print(f"Error updating node {point_id}: {e}")
+            return False
+
     def add_edge(self, from_point_id, to_point_id):
         try:
             if self.edges.size > 0:
@@ -341,9 +366,9 @@ class DataManager:
             # 2 -> 3
             # 3 -> 2
             
-            # Nodes with indicator 2 (Right)
+            # Nodes with indicator 2 (Left)
             mask_2 = node_mask & (self.nodes[:, 6] == 2)
-            # Nodes with indicator 3 (Left) 
+            # Nodes with indicator 3 (Right) 
             mask_3 = node_mask & (self.nodes[:, 6] == 3)
 
             count_2 = np.sum(mask_2)
@@ -358,7 +383,7 @@ class DataManager:
                 self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
                 self.redo_stack = []
                 self._auto_save_backup()
-                print(f"Reversed indicators: {count_2} (Right->Left), {count_3} (Left->Right)")
+                print(f"Reversed indicators: {count_2} (Left->Right), {count_3} (Right->Left)")
             else:
                 print("No indicators to reverse (only found 1s or 0s).")
 
@@ -624,22 +649,40 @@ class DataManager:
 
         try:
             # Create a mask for edges to *delete*
-            # delete_mask = (self.edges[:, 0] == point_id) | (self.edges[:, 1] == point_id)
-            delete_mask = (self.edges[:, 1] == point_id)
+            delete_mask = (self.edges[:, 0] == point_id) | (self.edges[:, 1] == point_id)
             # Mask for edges to *keep* is the inverse
             keep_mask = ~delete_mask
             deleted_count = np.sum(delete_mask)
             if deleted_count > 0:
                 self.edges = self.edges[keep_mask]
-                self.history.append((self.nodes.copy(), self.edges.copy()))
+                self.history.append((self.nodes.copy(), self.edges.copy(), list(self.file_names)))
                 self.redo_stack = []
                 self._auto_save_backup()
                 print(f"Deleted {deleted_count} edges for node {point_id}")
             else:
-                print(f"No edges found for node {point_id}")
+                pass # print(f"No edges found for node {point_id}")
 
         except Exception as e:
             print(f"Error deleting edges: {e}")
+
+    def remove_edge(self, u, v):
+        """Remove a specific directed edge from u to v."""
+        if self.edges.size == 0:
+            return
+        try:
+            # Identify edge to remove
+            mask = (self.edges[:, 0] == u) & (self.edges[:, 1] == v)
+            if np.any(mask):
+                self.edges = self.edges[~mask]
+                # self.history.append(...) # Optional for granularity
+                print(f"Removed edge {u} -> {v}")
+        except Exception as e:
+            print(f"Error removing edge {u}->{v}: {e}")
+
+    def remove_node(self, point_id):
+        """Remove a specific node and its connected edges."""
+        # This duplicates delete_points logic somewhat but for single node ID
+        self.delete_points([point_id])
 
     def remove_file(self, filename):
         """Remove all nodes and edges associated with a specific file (zone)."""
