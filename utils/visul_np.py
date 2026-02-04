@@ -3,7 +3,10 @@ import matplotlib.pyplot as plt
 import os
 
 # ===== FILE PATH (GIVEN) =====
-npy_file = r"/media/thippe/Thippeswamy/RunningProjects/LaneMappingTool/lanes/new/lane-03.npy"
+# Get the project root directory (parent of utils folder)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Construct the path dynamically
+npy_file = os.path.join(project_root, "lanes", "new", "lane-03.npy")
 
 # ===== LOAD & CHECK =====
 if not os.path.exists(npy_file):

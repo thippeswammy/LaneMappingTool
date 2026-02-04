@@ -163,7 +163,7 @@ def list_dirs_endpoint():
             if os.name == 'nt':
                 current_path = 'C:\\'
             else:
-                current_path = '/'
+                current_path = '~'
 
         if not os.path.exists(current_path):
             return jsonify({'error': 'Path does not exist', 'current_path': current_path}), 404

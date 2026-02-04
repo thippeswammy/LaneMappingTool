@@ -19,7 +19,7 @@ def main():
     also handles ID offsets to avoid conflicts and sets up the necessary components
     for further data processing and visualization.
     """
-    base_path = os.getcwd()
+    base_path = os.path.dirname(os.path.abspath(__file__))
     graph_dir = os.path.join(base_path, 'files')
     raw_data_path = os.path.join(base_path, 'lanes', 'Gitam_lanes')
 

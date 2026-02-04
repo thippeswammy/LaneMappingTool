@@ -231,7 +231,8 @@ def analyze_smoothness(nodes_array, label):
     }
 
 def main():
-    base_dir = r"F:\RunningProjects\LaneMappingTool\analysis\recorded_data"
+    analysis_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.join(analysis_dir, "recorded_data")
     original_pickle = os.path.join(base_dir, "original_run", "output.pickle")
     output_dir = os.path.join(base_dir, "new_smooth_analysis")
     os.makedirs(output_dir, exist_ok=True)
