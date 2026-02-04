@@ -23,23 +23,26 @@ const FileLoader = ({ onClose }) => {
     const currentRawDir = useStore(state => state.currentRawDir);
     const currentSavedDir = useStore(state => state.currentSavedDir);
 
+    const availableMaps = useStore(state => state.availableMaps);
+    const fetchMaps = useStore(state => state.fetchMaps);
+    const selectMap = useStore(state => state.selectMap);
+
     const [selectedRawFiles, setSelectedRawFiles] = useState([]);
     const [selectedSavedNodes, setSelectedSavedNodes] = useState(null);
     const [selectedSavedEdges, setSelectedSavedEdges] = useState(null);
     const [activeTab, setActiveTab] = useState('raw'); // 'raw' or 'saved'
-
-    // Raw Dir State
+    const [selectedMap, setSelectedMap] = useState('');
     const [isCustomDir, setIsCustomDir] = useState(false);
     const [customPath, setCustomPath] = useState('');
-    const [showBrowser, setShowBrowser] = useState(false);
-
-    // Saved Dir State
     const [isCustomSavedDir, setIsCustomSavedDir] = useState(false);
     const [customSavedPath, setCustomSavedPath] = useState('');
 
+    // ... (rest of state)
+
     useEffect(() => {
         fetchFiles();
-    }, [fetchFiles]);
+        fetchMaps();
+    }, [fetchFiles, fetchMaps]);
 
     // Update local custom dir state when store updates
     useEffect(() => {
@@ -112,6 +115,9 @@ const FileLoader = ({ onClose }) => {
 
     const handleLoad = () => {
         loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir);
+        if (selectedMap) {
+            selectMap(selectedMap);
+        }
         onClose();
     };
 
@@ -370,6 +376,44 @@ const FileLoader = ({ onClose }) => {
                             </div>
                         </div>
                     )}
+                </div>
+
+                <div className="map-selection" style={{ marginBottom: '15px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                    <div className="section-title" style={{ color: 'var(--text-secondary)', marginBottom: '5px' }}>Background Map</div>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                        <select
+                            value={selectedMap}
+                            onChange={(e) => setSelectedMap(e.target.value)}
+                            style={{ flex: 1, padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                        >
+                            <option value="">No Map</option>
+                            {availableMaps.map((map) => (
+                                <option key={map.name} value={map.name}>
+                                    {map.name} {map.processed ? '' : '(Needs Processing)'}
+                                </option>
+                            ))}
+                        </select>
+                        {selectedMap && (
+                            <button
+                                onClick={() => {
+                                    if (window.confirm(`Force re-process map "${selectedMap}"? This may take a few seconds.`)) {
+                                        selectMap(selectedMap, true);
+                                    }
+                                }}
+                                title="Force Reprocess (Update Image)"
+                                style={{
+                                    padding: '5px 10px',
+                                    borderRadius: '4px',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <IconRefresh size={16} />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>

@@ -12,15 +12,20 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 
 from utils.data_loader import DataLoader
 from utils.data_manager import DataManager
+from utils.map_manager import MapManager
 from web.backend.utils.curve_utils import find_path, smooth_segment
 
+# --- Data Setup ---
+base_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(base_dir, '../..'))
+
 # --- App Setup ---
-app = Flask(__name__)
+# Configure static folder to serve map images
+static_folder = os.path.join(base_dir, "static")
+app = Flask(__name__, static_folder=static_folder)
 CORS(app)
 
 # --- Data Loading ---
-base_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(base_dir, '../..'))
 
 # Data is expected to be in lanes/Gitam_lanes relative to project root
 # Default paths as requested
@@ -28,6 +33,11 @@ graph_dir = os.path.join(base_dir, "workspace")
 lanes_root = os.path.join(project_root, 'lanes')
 raw_data_path = os.path.join(lanes_root, 'Gitam_lanes')
 TEMP_LANES_DIR = os.path.join(graph_dir, "temp_lanes")
+
+# Map Configuration
+maps_dir = os.path.join(project_root, 'Maps')
+static_maps_dir = os.path.join(static_folder, "maps")
+map_manager = MapManager(maps_dir, static_maps_dir)
 
 # Paths for saved working state
 nodes_path = os.path.join(graph_dir, 'graph_nodes0.npy')
@@ -1029,5 +1039,53 @@ def get_saved_graph_endpoint():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+# In imports
+from utils.map_manager import MapManager
+
+# In App Setup, after base_dir definitions
+maps_dir = os.path.join(project_root, 'Maps')
+static_maps_dir = os.path.join(app.static_folder, "maps")
+
+map_manager = MapManager(maps_dir, static_maps_dir)
+
+# ...
+
+@app.route('/api/maps', methods=['GET'])
+def list_maps_endpoint():
+    try:
+        maps = map_manager.list_maps()
+        return jsonify({'status': 'success', 'maps': maps})
+    except Exception as e:
+        print(f"Error listing maps: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/load_map', methods=['POST'])
+def load_map_endpoint():
+    try:
+        data = request.json
+        map_name = data.get('map_name')
+        force_process = data.get('force_process', False)
+        if not map_name:
+             return jsonify({'status': 'error', 'message': 'Map name required'}), 400
+             
+        metadata = map_manager.load_map(map_name, force_process=force_process)
+        
+        # Add URL
+        image_filename = metadata.get("image_file")
+        if image_filename:
+             # Construct URL properly
+             # Assuming standard flask static serving
+             metadata["image_url"] = f"http://localhost:5001/static/maps/{image_filename}"
+             
+        return jsonify({'status': 'success', 'metadata': metadata})
+    except Exception as e:
+        print(f"Error loading map: {e}")
+
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 if __name__ == '__main__':
+    # Ensure static/maps exists
+    if app.static_folder:
+        os.makedirs(os.path.join(app.static_folder, "maps"), exist_ok=True)
     app.run(debug=True, port=5001)
+

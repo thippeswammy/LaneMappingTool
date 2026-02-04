@@ -80,6 +80,59 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     sidebarModeRef.current = sidebarMode;
   }, [showYaw, sidebarMode]);
 
+  const mapMetadata = useStore(state => state.mapMetadata);
+  // Removed fetchMapMetadata call as it is no longer in the store.
+  // Map metadata should be loaded via selectMap or initial state.
+  const mapImageRef = useRef(null);
+
+  useEffect(() => {
+    if (mapMetadata && mapMetadata.image_url) {
+      const img = new Image();
+      img.src = mapMetadata.image_url;
+      img.onload = () => {
+        mapImageRef.current = img;
+        if (chartRef.current) chartRef.current.update();
+      };
+    }
+  }, [mapMetadata]);
+
+  const backgroundPlugin = useMemo(() => ({
+    id: 'backgroundPlugin',
+    beforeDraw(chart) {
+      if (!mapImageRef.current || !mapMetadata) return;
+
+      const ctx = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+
+      const { min_x, min_y, max_x, max_y } = mapMetadata;
+
+      // Map bounds to pixel coordinates
+      // Map Y is flipped relative to Chart.js usually?
+      // Chart.js: Y increases upwards (Cartesian) if we set it so?
+      // Default Chart.js (Line): usually Y increases upwards for 'linear' scale? Yes.
+      // Map Image: Top-Left origin.
+      // We need to draw the image such that its corners align with data min_x/max_y etc.
+      // Metadata: origin_top_left = True.
+      // Image Top-Left corresponds to (min_x, max_y) in Cartesian world.
+      // Image Bottom-Right corresponds to (max_x, min_y).
+
+      const left = xAxis.getPixelForValue(min_x);
+      const right = xAxis.getPixelForValue(max_x);
+      const top = yAxis.getPixelForValue(max_y);  // High Y value = Low pixel Y (top)
+      const bottom = yAxis.getPixelForValue(min_y); // Low Y value = High pixel Y (bottom)
+
+      const width = right - left;
+      const height = bottom - top;
+
+      ctx.save();
+      ctx.globalAlpha = 0.5; // Transparency
+      // ctx.drawImage(image, dx, dy, dWidth, dHeight)
+      ctx.drawImage(mapImageRef.current, left, top, width, height);
+      ctx.restore();
+    }
+  }), [mapMetadata]);
+
 
   const chartRef = useRef(null);
   const lastDrawnNodeId = useRef(null);
@@ -109,13 +162,23 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   useEffect(() => {
     const chart = chartRef.current;
     if (chart) {
+      let { minX, maxX, minY, maxY } = boundsRef.current;
+
+      // Adjust using Map Metadata if available
+      if (mapMetadata) {
+        minX = minX !== Infinity ? Math.min(minX, mapMetadata.min_x) : mapMetadata.min_x;
+        maxX = maxX !== -Infinity ? Math.max(maxX, mapMetadata.max_x) : mapMetadata.max_x;
+        minY = minY !== Infinity ? Math.min(minY, mapMetadata.min_y) : mapMetadata.min_y;
+        maxY = maxY !== -Infinity ? Math.max(maxY, mapMetadata.max_y) : mapMetadata.max_y;
+      }
+
       chart.options.scales.x.suggestedMin = minX !== Infinity ? minX : undefined;
       chart.options.scales.x.suggestedMax = maxX !== -Infinity ? maxX : undefined;
       chart.options.scales.y.suggestedMin = minY !== Infinity ? minY : undefined;
       chart.options.scales.y.suggestedMax = maxY !== -Infinity ? maxY : undefined;
       chart.update('none');
     }
-  }, [minX, maxX, minY, maxY]);
+  }, [minX, maxX, minY, maxY, mapMetadata]);
 
   // Imperatively update pan enablement based on mode
   useEffect(() => {
@@ -776,7 +839,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ref={chartRef}
         data={chartDataWithSelection}
         options={options}
-        plugins={[yawPlugin, arrowPlugin]}
+        plugins={[backgroundPlugin, yawPlugin, arrowPlugin]}
         onClick={handleCanvasClick}
       />
     </div>

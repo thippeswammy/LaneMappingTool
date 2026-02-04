@@ -118,6 +118,38 @@ export const useStore = create((set, get) => ({
     }
   },
 
+  availableMaps: [],
+  mapMetadata: null, // Store map metadata
+
+  fetchMaps: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/maps`);
+      if (response.data.status === 'success') {
+        set({ availableMaps: response.data.maps });
+      }
+    } catch (error) {
+      console.error("Error fetching maps:", error);
+    }
+  },
+
+  selectMap: async (mapName, force = false) => {
+    try {
+      const response = await axios.post(`${API_URL}/api/load_map`, { map_name: mapName, force_process: force });
+      if (response.data.status === 'success') {
+        set({ mapMetadata: response.data.metadata });
+        // Refresh available maps list if we forced a process (to update 'processed' status)
+        if (force) {
+          get().fetchMaps();
+        }
+      }
+    } catch (error) {
+      console.error("Error loading map:", error);
+    }
+  },
+
+  // fetchMapMetadata refactored to just default load if needed, 
+  // but for now, we rely on user selection or default via useEffect in component.
+
   loadData: async (rawFiles, savedNodesFile, savedEdgesFile, rawDataDir, savedGraphDir) => {
     try {
       set({ loading: true, status: 'Loading selected files...' });
