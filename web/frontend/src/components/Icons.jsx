@@ -106,3 +106,12 @@ export const IconRefresh = ({ size = 20, color = 'currentColor' }) => (
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
     </svg>
 );
+
+export const IconTwoWay = ({ size = 20, color = 'currentColor' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="5" y1="8" x2="19" y2="8"></line>
+        <line x1="5" y1="16" x2="19" y2="16"></line>
+        <polyline points="15 4 19 8 15 12"></polyline>
+        <polyline points="9 20 5 16 9 12"></polyline>
+    </svg>
+);

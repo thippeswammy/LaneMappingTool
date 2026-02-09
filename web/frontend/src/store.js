@@ -347,9 +347,37 @@ export const useStore = create((set, get) => ({
   },
 
   addDrawPoint: (point) => {
-    set(state => ({
-      drawPoints: [...state.drawPoints, point]
-    }));
+    set(state => {
+      const lastPoint = state.drawPoints[state.drawPoints.length - 1];
+      const newPoints = [];
+
+      if (lastPoint) {
+        // Calculate distance between last point and new point
+        const dx = point.x - lastPoint.x;
+        const dy = point.y - lastPoint.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Interpolate points at 0.5m intervals if distance is sufficient
+        const SPACING = 0.5;
+        if (distance > SPACING) {
+          const numSegments = Math.floor(distance / SPACING);
+          for (let i = 1; i <= numSegments; i++) {
+            const t = (i * SPACING) / distance;
+            newPoints.push({
+              x: lastPoint.x + dx * t,
+              y: lastPoint.y + dy * t
+            });
+          }
+        }
+      }
+
+      // Always add the clicked point at the end
+      newPoints.push(point);
+
+      return {
+        drawPoints: [...state.drawPoints, ...newPoints]
+      };
+    });
   },
 
   finalizeDraw: async () => {
@@ -433,7 +461,7 @@ export const useStore = create((set, get) => ({
           set({ status: `Error: ${msg}`, mode: 'select' });
         });
       }
-    } else if (['smooth', 'remove_between', 'reverse_path', 'connect'].includes(mode)) {
+    } else if (['smooth', 'remove_between', 'reverse_path', 'connect', 'two_way_road'].includes(mode)) {
       if (!operationStartNodeId) {
         set({ operationStartNodeId: nodeId, status: `Start node ${nodeId} selected.` });
       } else {
@@ -506,6 +534,34 @@ export const useStore = create((set, get) => ({
             }
           };
           executeReverse(true);
+        } else if (mode === 'two_way_road') {
+          // Logic with Retry for Two Way Road
+          const executeTwoWay = async (strict = true) => {
+            try {
+              await axios.post(`${API_URL}/api/operation`, {
+                operation: 'two_way_road',
+                params: { start_id: startId, end_id: endId, strict_direction: strict }
+              });
+              set({
+                status: `Created two-way road between ${startId} and ${endId}${!strict ? ' (Forced)' : ''}.`,
+                mode: 'select', selectedNodeIds: [], operationStartNodeId: null
+              });
+              // Refresh data
+              const { nodes, edges } = (await axios.get(`${API_URL}/api/data`)).data;
+              set({ nodes, edges });
+            } catch (err) {
+              const response = err.response;
+              if (strict && response && response.status === 404 && response.data.error_type === 'no_path') {
+                if (window.confirm("No directed path found for Two-Way Road.\n\nForce creation along UNDIRECTED path?\n(Warning: May Create unintended paths.)")) {
+                  await executeTwoWay(false);
+                  return;
+                }
+              }
+              console.error("Error creating two-way road:", err);
+              set({ status: `Error: ${response?.data?.message || 'Failed to create two-way road.'}` });
+            }
+          };
+          executeTwoWay(true);
         }
       }
     }

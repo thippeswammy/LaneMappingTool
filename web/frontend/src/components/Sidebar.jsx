@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import './Toolbar.css';
 import {
-    IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel, IconZoom
+    IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel, IconZoom, IconTwoWay
 } from './Icons';
 
 /**
@@ -264,6 +264,10 @@ const Sidebar = () => {
 
                         <button className={getButtonClass('reverse_path')} onClick={() => setMode('reverse_path')}>
                             <IconReverse /> Reverse Path
+                        </button>
+
+                        <button className={getButtonClass('two_way_road')} onClick={() => setMode('two_way_road')}>
+                            <IconTwoWay /> Two-Way Road
                         </button>
 
                         <label className="toolbar-button" style={{ justifyContent: 'flex-start', cursor: 'pointer' }}>

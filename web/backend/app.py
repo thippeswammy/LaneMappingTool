@@ -673,6 +673,18 @@ def perform_operation():
         elif operation == 'copy_points':
             data_manager.copy_points(params.get('point_ids'))
             
+        elif operation == 'two_way_road':
+            start_id = params.get('start_id')
+            end_id = params.get('end_id')
+            strict_direction = params.get('strict_direction', True)
+            
+            path = find_path(data_manager.edges, start_id, end_id, directed=strict_direction)
+            if path:
+                data_manager.create_two_way_road(path)
+            else:
+                msg = f'No directed path found between {start_id} and {end_id}.' if strict_direction else f'No path found between {start_id} and {end_id}.'
+                return jsonify({'status': 'error', 'message': msg, 'error_type': 'no_path'}), 404
+            
         elif operation == 'batch_add_nodes':
             points = params.get('points')
             lane_id = params.get('lane_id')
