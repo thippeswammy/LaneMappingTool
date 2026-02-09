@@ -270,25 +270,27 @@ const Sidebar = () => {
                             <IconTwoWay /> Two-Way Road
                         </button>
 
-                        <label className="toolbar-button" style={{ justifyContent: 'flex-start', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={showYaw}
-                                onChange={toggleShowYaw}
-                                style={{ marginRight: '10px' }}
-                            />
-                            Show Yaw
-                        </label>
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                            <label className="toolbar-button" style={{ justifyContent: 'center', cursor: 'pointer', flex: 1, fontSize: '0.8rem', padding: '5px' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={showYaw}
+                                    onChange={toggleShowYaw}
+                                    style={{ marginRight: '5px' }}
+                                />
+                                Show Yaw
+                            </label>
 
-                        <label className="toolbar-button" style={{ justifyContent: 'flex-start', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={showSavedGraph}
-                                onChange={toggleShowSavedGraph}
-                                style={{ marginRight: '10px' }}
-                            />
-                            Show Saved Layout
-                        </label>
+                            <label className="toolbar-button" style={{ justifyContent: 'center', cursor: 'pointer', flex: 1, fontSize: '0.8rem', padding: '5px' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={showSavedGraph}
+                                    onChange={toggleShowSavedGraph}
+                                    style={{ marginRight: '5px' }}
+                                />
+                                Show Saved
+                            </label>
+                        </div>
                     </div>
                 </>
             )}
