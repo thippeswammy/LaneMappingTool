@@ -28,6 +28,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
 
   // Refs for state access in callbacks to avoid re-creating options
   const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
   const modeRef = useRef(mode);
   const selectedNodeIdsRef = useRef(selectedNodeIds);
   const performOperationRef = useRef(performOperation);
@@ -61,6 +62,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   // Update refs on render
   useEffect(() => {
     nodesRef.current = nodes;
+    edgesRef.current = edges;
     modeRef.current = mode;
     selectedNodeIdsRef.current = selectedNodeIds;
     performOperationRef.current = performOperation;
@@ -69,7 +71,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     setSelectedNodeIdsRef.current = setSelectedNodeIds;
     addDrawPointRef.current = addDrawPoint;
     setSelectedNodeIdsRef.current = setSelectedNodeIds;
-  }, [nodes, mode, selectedNodeIds, performOperation, handleNodeClick, addDrawPoint, setSelectedNodeIds]);
+  }, [nodes, edges, mode, selectedNodeIds, performOperation, handleNodeClick, addDrawPoint, setSelectedNodeIds]);
 
   // Keep a ref for showYaw so the plugin can access the latest value without re-creation
   const showYawRef = useRef(showYaw);
@@ -453,13 +455,29 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       const xAxis = chart.scales.x;
       const yAxis = chart.scales.y;
       const currentNodes = nodesRef.current;
+      const currentEdges = edgesRef.current;
 
       if (!currentNodes) return;
 
+      // Identify danger nodes (nodes involving bi-directional edges: A->B and B->A)
+      const dangerNodes = new Set();
+      if (currentEdges) {
+        const edgeSet = new Set();
+        currentEdges.forEach(e => edgeSet.add(`${e[0]},${e[1]}`));
+        currentEdges.forEach(e => {
+          if (edgeSet.has(`${e[1]},${e[0]}`)) {
+            dangerNodes.add(e[0]);
+            dangerNodes.add(e[1]);
+          }
+        });
+      }
+
       ctx.save();
-      ctx.strokeStyle = 'rgba(255, 165, 0, 0.8)'; // Orange
+      // Default color
+      const defaultColor = 'rgba(255, 165, 0, 0.8)'; // Orange
+      const dangerColor = 'red';
+
       ctx.lineWidth = 2;
-      ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
 
       // Calculate scales (pixels per data unit) locally to avoid precision issues with large coordinates
       const midX = (xAxis.min + xAxis.max) / 2;
@@ -479,6 +497,11 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         const yaw = node[3]; // format: [id, x, y, yaw, ...]
 
         if (x === undefined || y === undefined) return;
+
+        // Set color based on danger status
+        const isDanger = dangerNodes.has(node[0]);
+        ctx.strokeStyle = isDanger ? dangerColor : defaultColor;
+        ctx.fillStyle = isDanger ? dangerColor : defaultColor;
 
         // Calculate direction vector in pixel space
         // Yaw is in data space (CCW from East)
