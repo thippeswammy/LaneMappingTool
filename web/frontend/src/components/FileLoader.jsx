@@ -30,7 +30,8 @@ const FileLoader = ({ onClose }) => {
     const [selectedRawFiles, setSelectedRawFiles] = useState([]);
     const [selectedSavedNodes, setSelectedSavedNodes] = useState(null);
     const [selectedSavedEdges, setSelectedSavedEdges] = useState(null);
-    const [activeTab, setActiveTab] = useState('raw'); // 'raw' or 'saved'
+    const [selectedPickleFile, setSelectedPickleFile] = useState(null);
+    const [activeTab, setActiveTab] = useState('raw'); // 'raw', 'saved', 'pickle'
     const [selectedMap, setSelectedMap] = useState('');
     const [isCustomDir, setIsCustomDir] = useState(false);
     const [customPath, setCustomPath] = useState('');
@@ -114,7 +115,7 @@ const FileLoader = ({ onClose }) => {
     };
 
     const handleLoad = () => {
-        loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir);
+        loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir, selectedPickleFile);
         if (selectedMap) {
             selectMap(selectedMap);
         }
@@ -179,6 +180,19 @@ const FileLoader = ({ onClose }) => {
                         }}
                     >
                         Saved Graphs
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('pickle')}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: activeTab === 'pickle' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                            fontWeight: activeTab === 'pickle' ? 'bold' : 'normal',
+                            cursor: 'pointer',
+                            padding: '5px 10px'
+                        }}
+                    >
+                        Pickle (NetworkX)
                     </button>
                 </div>
 
@@ -373,6 +387,28 @@ const FileLoader = ({ onClose }) => {
                                 >
                                     <IconCancel size={14} /> Unload Graph Data
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'pickle' && (
+                        <div>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                Select a .pickle file containing a NetworkX graph from <code>point_save/</code>.
+                            </p>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <h5 style={{ margin: '0 0 5px 0', color: 'var(--text-secondary)' }}>Pickle File</h5>
+                                <select
+                                    value={selectedPickleFile || ''}
+                                    onChange={(e) => setSelectedPickleFile(e.target.value)}
+                                    style={{ width: '100%', padding: '5px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                >
+                                    <option value="">Select Pickle File</option>
+                                    {availableFiles.pickle_files && availableFiles.pickle_files.map(file => (
+                                        <option key={file} value={file}>{file}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     )}

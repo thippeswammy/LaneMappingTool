@@ -4,6 +4,7 @@ import subprocess
 import json
 
 import numpy as np
+import traceback
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -33,6 +34,7 @@ graph_dir = os.path.join(base_dir, "workspace")
 lanes_root = os.path.join(project_root, 'lanes')
 raw_data_path = os.path.join(lanes_root, 'Gitam_lanes')
 TEMP_LANES_DIR = os.path.join(graph_dir, "temp_lanes")
+SIMULATION_DIR = os.path.join(project_root, "point_save")
 
 # Map Configuration
 maps_dir = os.path.join(project_root, 'Maps')
@@ -138,6 +140,12 @@ def get_files():
         if os.path.exists(current_raw_path):
             raw_files = [f for f in os.listdir(current_raw_path) if f.endswith('.npy')]
 
+        # List pickle files in point_save
+        point_save_dir = os.path.join(project_root, "point_save")
+        pickle_files = []
+        if os.path.exists(point_save_dir):
+            pickle_files = [f for f in os.listdir(point_save_dir) if f.endswith('.pickle') or f.endswith('.pkl')]
+
         # List available subdirectories in 'lanes'
         subdirs = []
         if os.path.exists(lanes_root):
@@ -151,6 +159,8 @@ def get_files():
         return jsonify({
             'raw_files': raw_files,
             'saved_files': saved_files,
+            'pickle_files': pickle_files,
+            'raw_path': current_raw_path,
             'raw_path': current_raw_path,
             'saved_path': current_saved_path,
             'subdirs': subdirs,
@@ -201,6 +211,9 @@ def list_dirs_endpoint():
 
 
 import shutil
+import pandas as pd
+import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 # ... (imports)
 
@@ -217,9 +230,10 @@ def load_data_endpoint():
         saved_edges_file = data.get('saved_edges_file')
         raw_data_dir = data.get('raw_data_dir')
         saved_graph_dir = data.get('saved_graph_dir')  # New parameter
+        pickle_file = data.get('pickle_file')
 
         print(
-            f"Loading data: raw={raw_files}, nodes={saved_nodes_file}, edges={saved_edges_file}, dir={raw_data_dir}, saved_dir={saved_graph_dir}")
+            f"Loading data: raw={raw_files}, nodes={saved_nodes_file}, edges={saved_edges_file}, pickle={pickle_file}, dir={raw_data_dir}, saved_dir={saved_graph_dir}")
 
         # Update loader if a directory is specified
         if raw_data_dir:
@@ -287,6 +301,60 @@ def load_data_endpoint():
                 print(f"Loaded and merged saved graph: {g_nodes.shape[0]} nodes")
             else:
                 print("Saved graph files not found.")
+        
+        # Load Pickle File (NetworkX Graph)
+        elif pickle_file:
+            point_save_dir = os.path.join(project_root, "point_save")
+            pickle_path = os.path.join(point_save_dir, pickle_file)
+            
+            if os.path.exists(pickle_path):
+                try:
+                    import pickle
+                    import networkx as nx
+                    
+                    with open(pickle_path, 'rb') as f:
+                        G = pickle.load(f)
+                    
+                    if isinstance(G, nx.Graph):
+                        print(f"Loaded graph from {pickle_file}: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+                        
+                        # Convert NetworkX graph to DataManager format
+                        # Nodes: [id, x, y, yaw, zone, width, indicator]
+                        final_nodes_list = []
+                        for node_id, attr in G.nodes(data=True):
+                            # Default values if missing
+                            x = attr.get('x', 0.0)
+                            y = attr.get('y', 0.0)
+                            yaw = attr.get('yaw', 0.0)
+                            zone = attr.get('zone', 0.0)
+                            width = attr.get('width', 3.5)
+                            indicator = attr.get('indicator', 0.0)
+                            
+                            final_nodes_list.append([node_id, x, y, yaw, zone, width, indicator])
+                            
+                        # Edges: [u, v]
+                        final_edges_list = []
+                        for u, v in G.edges():
+                            final_edges_list.append([u, v])
+                            
+                        final_nodes = np.array(final_nodes_list) if final_nodes_list else np.array([])
+                        final_edges = np.array(final_edges_list) if final_edges_list else np.array([])
+                        file_names = [pickle_file]
+                        D = 1.0 # Default
+                    else:
+                        print(f"Loaded pickle is not a NetworkX graph: {type(G)}")
+                        final_nodes = np.array([])
+                        final_edges = np.array([])
+                        file_names = []
+                        
+                except Exception as e:
+                    print(f"Error loading pickle file {pickle_file}: {e}")
+                    traceback.print_exc()
+                    final_nodes = np.array([])
+                    final_edges = np.array([])
+                    file_names = []
+            else:
+                print(f"Pickle file not found: {pickle_path}")
         else:
             # We are NOT loading a saved graph, so preserve existing data
             final_nodes = data_manager.nodes.copy() if data_manager.nodes.size > 0 else np.array([])
@@ -445,6 +513,12 @@ def load_data_endpoint():
             final_edges = np.array([])
 
         data_manager = DataManager(final_nodes, final_edges, file_names)
+        
+        # Initialize NetworkX graph for pathfinding and simulation operations
+        if data_manager.nodes.size > 0:
+            data_manager.G = data_manager._create_networkx_graph()
+            print(f"Initialized NetworkX graph: {data_manager.G.number_of_nodes()} nodes, {data_manager.G.number_of_edges()} edges")
+
 
         return jsonify({
             'status': 'success',
@@ -1094,6 +1168,245 @@ def load_map_endpoint():
         print(f"Error loading map: {e}")
 
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/simulation/files', methods=['GET'])
+def list_simulation_files():
+    try:
+        if not os.path.exists(SIMULATION_DIR):
+            os.makedirs(SIMULATION_DIR)
+        files = [f for f in os.listdir(SIMULATION_DIR) if f.endswith('.pkl')]
+        return jsonify({'status': 'success', 'files': files})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/simulation/load', methods=['POST'])
+def load_simulation_file():
+    try:
+        data = request.json
+        filename = data.get('filename')
+        if not filename:
+            return jsonify({'status': 'error', 'message': 'Filename is required'}), 400
+            
+        filepath = os.path.join(SIMULATION_DIR, filename)
+        if not os.path.exists(filepath):
+            return jsonify({'status': 'error', 'message': 'File not found'}), 404
+
+        df = pd.read_pickle(filepath)
+        
+        # Expected columns: ['angle', 'name', 'orientation', 'position']
+        # We want to return a list of dicts: { name, x, y, z, yaw }
+        
+        points = []
+        for index, row in df.iterrows():
+            pos = row['position']
+            orient = row['orientation'] # [x, y, z, w]
+            name = row['name']
+            
+            # Convert quaternion to yaw
+            r = R.from_quat(orient)
+            yaw = r.as_euler('xyz', degrees=False)[2] # Get Z rotation (yaw)
+            
+            points.append({
+                'name': name,
+                'x': float(pos[0]),
+                'y': float(pos[1]),
+                'z': float(pos[2]),
+                'yaw': float(yaw)
+            })
+            
+        return jsonify({'status': 'success', 'points': points})
+    except Exception as e:
+        print(f"Error loading simulation file: {e}")
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+def find_nearest_node(x, y, yaw=None, max_yaw_diff_deg=90):
+    """
+    Find the nearest node to the given (x, y) coordinates.
+    If yaw is provided, only consider nodes whose yaw is within max_yaw_diff_deg.
+    
+    Args:
+        x, y: Target coordinates
+        yaw: Target yaw in radians (optional)
+        max_yaw_diff_deg: Maximum yaw difference in degrees (default 90)
+    
+    Returns:
+        node_id of nearest node, or None if no suitable node found
+    """
+    print(f"\n{'='*60}")
+    print(f"FIND_NEAREST_NODE: Searching for node near ({x:.2f}, {y:.2f})")
+    if yaw is not None:
+        print(f"  Query yaw: {yaw:.3f} rad ({np.degrees(yaw):.1f}°)")
+        print(f"  Max yaw diff: ±{max_yaw_diff_deg}°")
+    else:
+        print(f"  No yaw filter (distance only)")
+    
+    if not data_manager or not data_manager.G:
+        print(f"  ❌ ERROR: No graph loaded!")
+        return None
+    
+    min_dist = float('inf')
+    nearest_node = None
+    compatible_nodes = []
+    rejected_nodes = []
+    
+    for node_id, node_data in data_manager.G.nodes(data=True):
+        node_x = node_data.get('x')
+        node_y = node_data.get('y')
+        node_yaw = node_data.get('yaw', 0)
+        
+        if node_x is None or node_y is None:
+            continue
+        
+        # Calculate distance
+        dist = np.sqrt((x - node_x)**2 + (y - node_y)**2)
+        
+        # If yaw is provided, check yaw compatibility
+        if yaw is not None:
+            # Normalize angles to [-pi, pi]
+            def normalize_angle(angle):
+                while angle > np.pi:
+                    angle -= 2 * np.pi
+                while angle < -np.pi:
+                    angle += 2 * np.pi
+                return angle
+            
+            yaw_diff = abs(normalize_angle(node_yaw - yaw))
+            max_yaw_diff_rad = np.radians(max_yaw_diff_deg)
+            yaw_diff_deg = np.degrees(yaw_diff)
+            
+            # Skip nodes with incompatible yaw (more than ±90 degrees)
+            if yaw_diff > max_yaw_diff_rad:
+                rejected_nodes.append((node_id, dist, yaw_diff_deg, node_yaw))
+                continue
+            else:
+                compatible_nodes.append((node_id, dist, yaw_diff_deg, node_yaw))
+        
+        # Update nearest if this is closer
+        if dist < min_dist:
+            min_dist = dist
+            nearest_node = node_id
+    
+    # Log results
+    print(f"\n  Total nodes checked: {len(data_manager.G.nodes)}")
+    if yaw is not None:
+        print(f"  Compatible nodes (yaw within ±{max_yaw_diff_deg}°): {len(compatible_nodes)}")
+        print(f"  Rejected nodes (yaw too different): {len(rejected_nodes)}")
+        
+        if len(compatible_nodes) > 0:
+            print(f"\n  Top 3 compatible nodes:")
+            for node_id, dist, yaw_diff, node_yaw in sorted(compatible_nodes, key=lambda x: x[1])[:3]:
+                print(f"    Node {node_id}: dist={dist:.2f}m, yaw_diff={yaw_diff:.1f}°, node_yaw={np.degrees(node_yaw):.1f}°")
+        
+        if len(rejected_nodes) > 0 and len(compatible_nodes) == 0:
+            print(f"\n  ⚠️  Closest rejected nodes (wrong direction):")
+            for node_id, dist, yaw_diff, node_yaw in sorted(rejected_nodes, key=lambda x: x[1])[:3]:
+                print(f"    Node {node_id}: dist={dist:.2f}m, yaw_diff={yaw_diff:.1f}° ❌, node_yaw={np.degrees(node_yaw):.1f}°")
+    
+    if nearest_node:
+        print(f"\n  ✅ SELECTED: Node {nearest_node} (distance: {min_dist:.2f}m)")
+    else:
+        print(f"\n  ❌ NO COMPATIBLE NODE FOUND!")
+        if yaw is not None:
+            print(f"     Reason: No nodes within ±{max_yaw_diff_deg}° of query yaw")
+    
+    print(f"{'='*60}\n")
+    return nearest_node
+
+
+@app.route('/api/simulation/compute_path', methods=['POST'])
+def compute_simulation_path():
+    try:
+        print("\n" + "="*70)
+        print("COMPUTE_SIMULATION_PATH called")
+        data = request.json
+        print(f"Request data: {data}")
+        start_point = data.get('start') # {x, y, yaw}
+        end_point = data.get('end')     # {x, y, yaw}
+        print(f"Start point: {start_point}")
+        print(f"End point: {end_point}")
+        
+        if not start_point or not end_point:
+             return jsonify({'status': 'error', 'message': 'Start and End points required'}), 400
+
+        # find_path expects node IDs. simulating "finding nearest node"
+        # We can use data_manager.nodes to find nearest
+        
+        # 1. Find nearest nodes in graph (with yaw awareness)
+        # Only select nodes whose yaw is within ±90 degrees of the query yaw
+        print("\nFinding nearest START node...")
+        start_node_id = find_nearest_node(
+            start_point['x'], 
+            start_point['y'], 
+            yaw=start_point.get('yaw'),
+            max_yaw_diff_deg=90
+        )
+        print(f"Start node ID: {start_node_id}")
+        
+        print("\nFinding nearest END node...")
+        end_node_id = find_nearest_node(
+            end_point['x'], 
+            end_point['y'], 
+            yaw=end_point.get('yaw'),
+            max_yaw_diff_deg=90
+        )
+        print(f"End node ID: {end_node_id}")
+        
+        if start_node_id is None or end_node_id is None:
+            error_msg = 'Could not find nearest nodes on map with compatible direction'
+            print(f"\n❌ ERROR: {error_msg}")
+            print(f"   Start node found: {start_node_id is not None}")
+            print(f"   End node found: {end_node_id is not None}")
+            print("="*70 + "\n")
+            return jsonify({'status': 'error', 'message': error_msg}), 404
+            
+        # 2. Get Path using DataManager
+        
+        # Try Directed Path First
+        success, path_ids = data_manager.get_path(start_node_id, end_node_id, strict_direction=True)
+        path_type = "directed"
+        
+        if not success:
+            print("No directed path found. Trying undirected...")
+            # Try Undirected Path
+            success, path_ids = data_manager.get_path(start_node_id, end_node_id, strict_direction=False)
+            path_type = "undirected"
+            
+            if not success:
+                 return jsonify({'status': 'error', 'message': 'No path found between points (even undirected)'}), 404
+            
+        # 3. Convert path_ids to coordinates
+        path_coords = []
+        for node_id in path_ids:
+            node = data_manager.G.nodes[node_id]
+            # Node data: x, y, z, yaw...
+            path_coords.append({
+                'id': int(node_id),
+                'x': node['x'],
+                'y': node['y'],
+                'yaw': node.get('yaw', 0)
+            })
+            
+        message = "Path computed successfully."
+        if path_type == "undirected":
+            message = "Warning: No directed path found. Showing UNDIRECTED path (ignoring one-way constraints)."
+            
+        return jsonify({
+            'status': 'success', 
+            'path': path_coords,
+            'path_type': path_type,
+            'message': message
+        })
+            
+        return jsonify({'status': 'success', 'path': path_coords})
+
+    except Exception as e:
+        print(f"\n❌ EXCEPTION in compute_simulation_path: {e}")
+        traceback.print_exc()
+        print("="*70 + "\n")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 if __name__ == '__main__':
     # Ensure static/maps exists

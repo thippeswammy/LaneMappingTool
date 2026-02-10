@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import axios from 'axios';
 
-const API_URL = ''; // Use relative paths
+const API_URL = 'http://localhost:5001'; // Flask backend server
+
 
 export const useStore = create((set, get) => ({
   // State
@@ -37,8 +38,20 @@ export const useStore = create((set, get) => ({
   savedEdges: [],
   showSavedGraph: false,
 
+
   // Path Direction Validation
   pathDirectionStatus: null, // { overall_status, details }
+
+  // Simulation State
+  simulationMode: false,
+  simulationFiles: [],
+  simulationPoints: [],      // Loaded points {name, x, y, yaw}
+  activeSimulationPath: [],  // Path for animation
+  activeSimulationPath: [],  // Path for animation
+  simulationPathType: 'directed', // 'directed' or 'undirected'
+  carPosition: null, // Current position of the car animation {x, y, yaw}
+  isSimulating: false,
+  simulationStatus: '',
 
   // Actions
   toggleShowYaw: () => set(state => ({ showYaw: !state.showYaw })),
@@ -60,7 +73,93 @@ export const useStore = create((set, get) => ({
     }
   },
 
+
   clearPathDirectionStatus: () => set({ pathDirectionStatus: null }),
+
+  // Simulation Actions
+  toggleSimulationMode: () => set(state => ({ simulationMode: !state.simulationMode })),
+
+  fetchSimulationFiles: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/simulation/files`);
+      if (response.data.status === 'success') {
+        set({ simulationFiles: response.data.files });
+      }
+    } catch (error) {
+      console.error("Error fetching simulation files:", error);
+    }
+  },
+
+  loadSimulationPoints: async (filename) => {
+    try {
+      set({ status: `Loading simulation file: ${filename}...` });
+      const response = await axios.post(`${API_URL}/api/simulation/load`, { filename });
+      if (response.data.status === 'success') {
+        set({
+          simulationPoints: response.data.points,
+          status: `Loaded ${response.data.points.length} simulation points.`
+        });
+      }
+    } catch (error) {
+      console.error("Error loading simulation points:", error);
+      set({ status: 'Error loading simulation points.' });
+    }
+  },
+
+  computeSimulationPath: async (startName, endName) => {
+    console.log("=".repeat(70));
+    console.log("computeSimulationPath called!");
+    console.log("Start name:", startName);
+    console.log("End name:", endName);
+
+    const { simulationPoints } = get();
+    console.log("Simulation points loaded:", simulationPoints?.length || 0);
+
+    const startPoint = simulationPoints.find(p => p.name === startName);
+    const endPoint = simulationPoints.find(p => p.name === endName);
+
+    console.log("Start point found:", startPoint);
+    console.log("End point found:", endPoint);
+
+    if (!startPoint || !endPoint) {
+      console.error("❌ Start or end point not found!");
+      set({ status: 'Error: Start or End point not found in loaded data.' });
+      return;
+    }
+
+    try {
+      set({ status: `Computing path from ${startName} to ${endName}...` });
+      console.log("Sending request to:", `${API_URL}/api/simulation/compute_path`);
+      console.log("Request payload:", { start: startPoint, end: endPoint });
+
+      const response = await axios.post(`${API_URL}/api/simulation/compute_path`, {
+        start: startPoint,
+        end: endPoint
+      });
+
+      console.log("Response received:", response.data);
+
+      if (response.data.status === 'success') {
+        console.log("✅ Path computed successfully!");
+        set({
+          activeSimulationPath: response.data.path,
+          simulationPathType: response.data.path_type || 'directed',
+          status: response.data.message || 'Path computed. Ready to simulate.'
+        });
+        return response.data.path;
+      }
+    } catch (error) {
+      console.error("❌ Error computing simulation path:", error);
+      console.error("Error response:", error.response?.data);
+      set({ status: 'Error computing path.' });
+    }
+    return null;
+  },
+
+  startSimulation: () => set({ isSimulating: true }),
+  startSimulation: () => set({ isSimulating: true }),
+  stopSimulation: () => set({ isSimulating: false, carPosition: null }),
+  setCarPosition: (pos) => set({ carPosition: pos }),
 
 
   // Actions
@@ -150,13 +249,14 @@ export const useStore = create((set, get) => ({
   // fetchMapMetadata refactored to just default load if needed, 
   // but for now, we rely on user selection or default via useEffect in component.
 
-  loadData: async (rawFiles, savedNodesFile, savedEdgesFile, rawDataDir, savedGraphDir) => {
+  loadData: async (rawFiles, savedNodesFile, savedEdgesFile, rawDataDir, savedGraphDir, pickleFile) => {
     try {
       set({ loading: true, status: 'Loading selected files...' });
       const response = await axios.post(`${API_URL}/api/load`, {
         raw_files: rawFiles,
         saved_nodes_file: savedNodesFile,
         saved_edges_file: savedEdgesFile,
+        pickle_file: pickleFile,
         raw_data_dir: rawDataDir,
         saved_graph_dir: savedGraphDir
       });

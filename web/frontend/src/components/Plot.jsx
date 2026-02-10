@@ -26,6 +26,13 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const savedNodes = useStore(state => state.savedNodes);
   const savedEdges = useStore(state => state.savedEdges);
 
+  // Simulation State
+  const simulationPoints = useStore(state => state.simulationPoints);
+  const activeSimulationPath = useStore(state => state.activeSimulationPath);
+  const simulationPathType = useStore(state => state.simulationPathType);
+  const isSimulating = useStore(state => state.isSimulating);
+  const carPosition = useStore(state => state.carPosition);
+
   // Refs for state access in callbacks to avoid re-creating options
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
@@ -81,6 +88,43 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     showYawRef.current = showYaw;
     sidebarModeRef.current = sidebarMode;
   }, [showYaw, sidebarMode]);
+
+  // Animation Ref
+  const animationRef = useRef({ index: 0, startTime: 0 });
+  const requestRef = useRef();
+
+  useEffect(() => {
+    if (isSimulating && activeSimulationPath.length > 0) {
+      animationRef.current.index = 0;
+
+      const animate = () => {
+        if (!chartRef.current) return;
+
+        // Speed control
+        animationRef.current.index += 0.5; // Adjust speed here
+
+        if (animationRef.current.index >= activeSimulationPath.length) {
+          animationRef.current.index = activeSimulationPath.length - 1;
+          // Optional: Auto stop or loop?
+        }
+
+        chartRef.current.update('none'); // Update without full re-render
+
+        if (isSimulating && animationRef.current.index < activeSimulationPath.length - 1) {
+          requestRef.current = requestAnimationFrame(animate);
+        }
+      };
+      requestRef.current = requestAnimationFrame(animate);
+    } else {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      if (chartRef.current) chartRef.current.update('none');
+    }
+
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [isSimulating, activeSimulationPath]);
+
 
   const mapMetadata = useStore(state => state.mapMetadata);
   // Removed fetchMapMetadata call as it is no longer in the store.
@@ -206,15 +250,70 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   // Performance Optimization: Prepare edge data
   const chartData = useMemo(() => {
     const edgeData = [];
+    const reverseEdgeData = []; // Declare here for proper scope
+
     if (nodes && edges) {
       const nodeMap = new Map(nodes.map(n => [n[0], n]));
-      edges.forEach(edge => {
+
+      // Filter edges if simulating
+      let edgesToRender = edges;
+      let reverseEdges = [];
+
+      if (isSimulating && activeSimulationPath.length > 0) {
+        // Get IDs in path
+        const pathIds = new Set(activeSimulationPath.map(p => p.id));
+
+        // Build forward path segments (consecutive pairs in path)
+        const forwardSegments = new Set();
+        for (let i = 0; i < activeSimulationPath.length - 1; i++) {
+          const from = activeSimulationPath[i].id;
+          const to = activeSimulationPath[i + 1].id;
+          forwardSegments.add(`${from}->${to}`);
+        }
+
+        // Separate edges into forward path edges and reverse edges
+        const filteredEdges = edges.filter(e => pathIds.has(e[0]) && pathIds.has(e[1]));
+
+        edgesToRender = [];
+        reverseEdges = [];
+
+        filteredEdges.forEach(edge => {
+          const segmentKey = `${edge[0]}->${edge[1]}`;
+          const reverseKey = `${edge[1]}->${edge[0]}`;
+
+          // If this edge is in the forward path, it's a forward edge
+          if (forwardSegments.has(segmentKey)) {
+            edgesToRender.push(edge);
+          }
+          // If the reverse of this edge is in the forward path, it's a reverse edge
+          else if (forwardSegments.has(reverseKey)) {
+            reverseEdges.push(edge);
+          }
+          // Otherwise, it's just a normal edge between path nodes (not part of the sequential path)
+          else {
+            edgesToRender.push(edge);
+          }
+        });
+      }
+
+      edgesToRender.forEach(edge => {
         const fromNode = nodeMap.get(edge[0]);
         const toNode = nodeMap.get(edge[1]);
         if (fromNode && toNode) {
           edgeData.push({ x: fromNode[1], y: fromNode[2] });
           edgeData.push({ x: toNode[1], y: toNode[2] });
           edgeData.push({ x: NaN, y: NaN });
+        }
+      });
+
+      // Populate reverse edge data
+      reverseEdges.forEach(edge => {
+        const fromNode = nodeMap.get(edge[0]);
+        const toNode = nodeMap.get(edge[1]);
+        if (fromNode && toNode) {
+          reverseEdgeData.push({ x: fromNode[1], y: fromNode[2] });
+          reverseEdgeData.push({ x: toNode[1], y: toNode[2] });
+          reverseEdgeData.push({ x: NaN, y: NaN });
         }
       });
     }
@@ -230,7 +329,22 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           showLine: true,
           type: 'line',
           spanGaps: false,
+          arrowColor: 'rgba(200, 200, 200, 0.8)' // Enable arrows for main edges
         },
+        // Reverse Edges (opposite direction to path) - show with large red arrows
+        ...((isSimulating && reverseEdgeData && reverseEdgeData.length > 0) ? [{
+          label: 'Reverse Path Edges',
+          data: reverseEdgeData,
+          borderColor: 'rgba(255, 0, 0, 0.9)', // Bright Red
+          borderWidth: 3,
+          pointRadius: 0,
+          showLine: true,
+          type: 'line',
+          spanGaps: false,
+          arrowColor: 'rgba(255, 0, 0, 0.9)', // Red arrows
+          arrowSize: 20, // Larger arrows
+          order: -6 // On top of everything
+        }] : []),
         // Verification Datasets
         ...(yawVerificationResults ? [
           {
@@ -330,22 +444,62 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           }
         ] : []),
 
+        ...(simulationPoints && simulationPoints.length > 0 ? [{
+          label: 'Simulation Points',
+          data: simulationPoints.map(p => ({ x: p.x, y: p.y })),
+          backgroundColor: '#00FF00', // Lime Green
+          pointRadius: 4,
+          type: 'scatter',
+          order: -3 // Top of everything
+        }] : []),
+
+        ...(carPosition ? [{
+          label: 'Car',
+          data: [{ x: carPosition.x, y: carPosition.y }],
+          backgroundColor: '#FF00FF', // Magenta Car
+          pointRadius: 8,
+          pointHoverRadius: 8,
+          type: 'scatter',
+          order: -5 // Top check
+        }] : []),
+
+        ...(activeSimulationPath && activeSimulationPath.length > 0 ? [{
+          label: 'Simulation Path',
+          data: activeSimulationPath.map(p => ({ x: p.x, y: p.y })),
+          borderColor: simulationPathType === 'directed' ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 100, 0, 0.8)', // Green or Orange
+          borderWidth: 4,
+          borderDash: simulationPathType === 'directed' ? [] : [10, 5],
+          pointRadius: 0,
+          showLine: true,
+          type: 'line',
+          spanGaps: false,
+          order: -4 // Top of simulation points
+        }] : []),
+
         {
           label: 'Nodes',
-          data: nodes ? nodes.map(node => ({
-            x: node[1],
-            y: node[2],
-            id: node[0],
-            yaw: node[3],
-            zone: node[4],
-            width: node[5],
-            indicator: node[6]
-          })) : [],
-          backgroundColor: nodes ? nodes.map(node => {
-            if (Array.isArray(selectedNodeIds) && selectedNodeIds.includes(node[0])) return 'red';
-            if (operationStartNodeId === node[0]) return 'blue';
-            return 'rgba(0,255,255,1)';
-          }) : [],
+          ...(() => {
+            const nodesToRender = (nodes && isSimulating && activeSimulationPath.length > 0)
+              ? nodes.filter(n => activeSimulationPath.some(p => p.id === n[0]))
+              : (nodes || []);
+
+            return {
+              data: nodesToRender.map(node => ({
+                x: node[1],
+                y: node[2],
+                id: node[0],
+                yaw: node[3],
+                zone: node[4],
+                width: node[5],
+                indicator: node[6]
+              })),
+              backgroundColor: nodesToRender.map(node => {
+                if (Array.isArray(selectedNodeIds) && selectedNodeIds.includes(node[0])) return 'red';
+                if (operationStartNodeId === node[0]) return 'blue';
+                return 'rgba(0,255,255,1)';
+              })
+            };
+          })(),
           pointRadius: pointSize,
           pointHitRadius: 10,
           type: 'scatter',
@@ -376,7 +530,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         }] : []),
       ]
     };
-  }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize, yawVerificationResults, showSavedGraph, savedNodes, savedEdges]);
+  }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize, yawVerificationResults, showSavedGraph, savedNodes, savedEdges, simulationPoints, activeSimulationPath, simulationPathType, isSimulating, carPosition]);
 
   const arrowPlugin = useMemo(() => ({
     id: 'arrowPlugin',
@@ -391,9 +545,9 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           // Only draw if dataset is visible
           if (!meta.hidden && meta.data.length > 0) {
             ctx.save();
-            // Use a distinct high-contrast color for arrows if requested, otherwise default to dataset prop
-            // User requested "different color". Let's use Magenta for visibility against the blue line.
-            const arrowColor = 'rgba(255, 0, 255, 1)';
+            // Use the dataset's arrowColor
+            const arrowColor = dataset.arrowColor || 'rgba(200, 200, 200, 0.8)';
+            const arrowSize = dataset.arrowSize || 6; // Default size 6, or custom from dataset
             ctx.fillStyle = arrowColor;
             ctx.strokeStyle = arrowColor;
 
@@ -417,14 +571,13 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
               const angle = Math.atan2(y2 - y1, x2 - x1);
 
               // Offset from the end node to avoid covering it
-              // Saved nodes have radius 3, let's give it 6px clearance
               const offset = 8;
 
               // Arrow tip position
               const tipX = x2 - offset * Math.cos(angle);
               const tipY = y2 - offset * Math.sin(angle);
 
-              const headLen = 6; // Arrow head length (smaller than point size)
+              const headLen = arrowSize; // Use custom arrow size
 
               ctx.beginPath();
               ctx.moveTo(tipX, tipY);
@@ -795,6 +948,168 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     return data;
   }, [chartData, selectionBox]);
 
+  // Simulation Plugins
+  const drawSimulationPoints = useMemo(() => ({
+    id: 'drawSimulationPoints',
+    afterDatasetsDraw(chart) {
+      if (simulationPoints.length === 0) return;
+
+      const ctx = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+
+      ctx.save();
+      ctx.lineWidth = 2;
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 12px Arial';
+
+      simulationPoints.forEach(point => {
+        const x = xAxis.getPixelForValue(point.x);
+        const y = yAxis.getPixelForValue(point.y);
+
+        // Skip if out of bounds (optimization)
+        // if (x < 0 || x > chart.width || y < 0 || y > chart.height) return;
+
+        // Draw Arrow (Yaw)
+        const arrowLen = 20; // Longer arrow
+        const angle = point.yaw;
+
+        const tipX = x + arrowLen * Math.cos(angle);
+        const tipY = y + arrowLen * Math.sin(angle);
+
+        // Arrow Shaft
+        ctx.beginPath();
+        ctx.strokeStyle = '#00FF00'; // Lime Green
+        ctx.moveTo(x, y);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        // Arrow Head
+        const headLen = 8;
+        ctx.beginPath();
+        ctx.fillStyle = '#00FF00';
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(
+          tipX - headLen * Math.cos(angle - Math.PI / 6),
+          tipY - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+          tipX - headLen * Math.cos(angle + Math.PI / 6),
+          tipY - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.fill();
+
+        // Draw Point Circle
+        ctx.beginPath();
+        ctx.fillStyle = '#FFFF00'; // Yellow center
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw Label
+        ctx.fillStyle = '#FFFFFF';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.strokeText(point.name, x, y - 10);
+        ctx.fillText(point.name, x, y - 10);
+      });
+
+      ctx.restore();
+    }
+  }), [simulationPoints]);
+
+  const drawSimulationPath = useMemo(() => ({
+    id: 'drawSimulationPath',
+    beforeDatasetsDraw(chart) {
+      if (activeSimulationPath.length === 0) return;
+
+      const ctx = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.strokeStyle = '#FFFF00'; // Yellow
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+
+      activeSimulationPath.forEach((point, index) => {
+        const x = xAxis.getPixelForValue(point.x);
+        const y = yAxis.getPixelForValue(point.y);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+
+      ctx.stroke();
+      ctx.restore();
+    }
+  }), [activeSimulationPath]);
+
+  const carAnimationPlugin = useMemo(() => ({
+    id: 'carAnimationPlugin',
+    afterDatasetsDraw(chart) {
+      if (!isSimulating || activeSimulationPath.length === 0) return;
+
+      const idx = animationRef.current.index;
+      const floorIdx = Math.floor(idx);
+      const ceilIdx = Math.min(floorIdx + 1, activeSimulationPath.length - 1);
+      const ratio = idx - floorIdx;
+
+      const p1 = activeSimulationPath[floorIdx];
+      const p2 = activeSimulationPath[ceilIdx];
+
+      if (!p1 || !p2) return;
+
+      // Linear interpolation
+      const currentX = p1.x + (p2.x - p1.x) * ratio;
+      const currentY = p1.y + (p2.y - p1.y) * ratio;
+      // Interpolate yaw too ?
+      // If we don't have yaw in path, compute it from p1->p2
+      let currentYaw = p1.yaw;
+      if (currentYaw === undefined) {
+        currentYaw = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      }
+
+      const ctx = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+
+      const screenX = xAxis.getPixelForValue(currentX);
+      const screenY = yAxis.getPixelForValue(currentY);
+      // Yaw is in global coords, need to convert to screen rotation?
+      // Screen Y is flipped? check map metadata or assumption. 
+      // Usually standard math angle works if we flip Y logic or if both are cartesian.
+      // Since arrow plugin uses sin/cos directly, let's assume standard.
+
+      ctx.save();
+      ctx.translate(screenX, screenY);
+      // Rotate context
+      // If Y axis is flipped (pixels increase downwards), positive angle (CCW) might need sign change.
+      // Chart.js default: Y increases downwards.
+      // Our data: Y increases... depends on data.
+      // Assuming standard rotation.
+      ctx.rotate(currentYaw);
+
+      // Draw Car
+      ctx.fillStyle = '#00BFFF'; // Deep Sky Blue
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+
+      // Car Body (Rectangle)
+      ctx.fillRect(-10, -5, 20, 10);
+      ctx.strokeRect(-10, -5, 20, 10);
+
+      // Headlights / Direction indicator
+      ctx.fillStyle = '#FFFF00';
+      ctx.beginPath();
+      ctx.arc(8, -3, 2, 0, 2 * Math.PI); // Front Left
+      ctx.arc(8, 3, 2, 0, 2 * Math.PI);  // Front Right
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }), [isSimulating, activeSimulationPath, animationRef]); // Depend on animationRef?
+
+
   const options = useMemo(() => ({
     responsive: true,
     animation: false,
@@ -862,7 +1177,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ref={chartRef}
         data={chartDataWithSelection}
         options={options}
-        plugins={[backgroundPlugin, yawPlugin, arrowPlugin]}
+        plugins={[backgroundPlugin, yawPlugin, arrowPlugin, drawSimulationPoints, drawSimulationPath, carAnimationPlugin]}
         onClick={handleCanvasClick}
       />
     </div>

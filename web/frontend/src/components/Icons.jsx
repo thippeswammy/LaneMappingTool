@@ -115,3 +115,11 @@ export const IconTwoWay = ({ size = 20, color = 'currentColor' }) => (
         <polyline points="9 20 5 16 9 12"></polyline>
     </svg>
 );
+
+export const IconCar = ({ size = 20, color = 'currentColor' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 16H9m10 9v-4m-14 4v-4m2-14h10l2 12h-14z" />
+        <circle cx="9" cy="16" r="2" />
+        <circle cx="15" cy="16" r="2" />
+    </svg>
+);

@@ -23,6 +23,8 @@ class DataManager:
         self.last_backup = time.time()
         self.backup_interval = 300  # 5 minutes
 
+        self.G = None  # Initialize NetworkX graph container
+
         print(f"DataManager initialized with {len(self.nodes)} nodes and {len(self.edges)} edges.")
 
     def sync_next_id(self):
@@ -572,6 +574,44 @@ class DataManager:
                 G.add_edge(u, v, weight=weight)
 
         return G
+
+    def get_path(self, start_node_id, end_node_id, strict_direction=True):
+        """Find the shortest path between two nodes using NetworkX."""
+        try:
+            # We need to make sure we have a graph. 
+            # Ideally G should be cached, but for now we recreate it or cache it.
+            # _create_networkx_graph is relatively fast for small graphs.
+            if not hasattr(self, 'G') or self.G is None:
+                self.G = self._create_networkx_graph()
+            
+            # Rebuild G to ensure sync with current nodes/edges state
+            self.G = self._create_networkx_graph() 
+            
+            if not self.G.has_node(start_node_id):
+                 print(f"Start node {start_node_id} not in graph.")
+                 return False, []
+            if not self.G.has_node(end_node_id):
+                 print(f"End node {end_node_id} not in graph.")
+                 return False, []
+
+            try:
+                path_ids = nx.shortest_path(self.G, source=int(start_node_id), target=int(end_node_id), weight='weight')
+                return True, path_ids
+            except nx.NetworkXNoPath:
+                if not strict_direction:
+                    print(f"No directed path found. Trying undirected path between {start_node_id} and {end_node_id}...")
+                    G_undirected = self.G.to_undirected()
+                    path_ids = nx.shortest_path(G_undirected, source=int(start_node_id), target=int(end_node_id), weight='weight')
+                    return True, path_ids
+                else:
+                    raise
+
+        except nx.NetworkXNoPath:
+            print(f"No path found between {start_node_id} and {end_node_id}")
+            return False, []
+        except Exception as e:
+            print(f"Error finding path: {e}")
+            return False, []
 
     def clear_data(self):
         try:
