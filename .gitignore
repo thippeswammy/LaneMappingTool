@@ -16,3 +16,6 @@ web/backend/utils/__pycache__/
 /web/backend/workspace/
 /web/backend/workspace-Backup/
 /files_test/*.npy
+lanes/copy*
+web/backend/workspace.zip
+web/backend/static/maps/*

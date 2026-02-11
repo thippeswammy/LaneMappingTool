@@ -32,6 +32,12 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const simulationPathType = useStore(state => state.simulationPathType);
   const isSimulating = useStore(state => state.isSimulating);
   const carPosition = useStore(state => state.carPosition);
+  const simStartPose = useStore(state => state.simStartPose);
+  const setSimStartPose = useStore(state => state.setSimStartPose);
+  const simEndPose = useStore(state => state.simEndPose);
+  const setSimEndPose = useStore(state => state.setSimEndPose);
+  const tempSimPose = useStore(state => state.tempSimPose);
+  const setTempSimPose = useStore(state => state.setTempSimPose);
 
   // Refs for state access in callbacks to avoid re-creating options
   const nodesRef = useRef(nodes);
@@ -42,6 +48,10 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const handleNodeClickRef = useRef(handleNodeClick);
   const addDrawPointRef = useRef(addDrawPoint);
   const setSelectedNodeIdsRef = useRef(setSelectedNodeIds);
+  const setSimStartPoseRef = useRef(setSimStartPose);
+  const setSimEndPoseRef = useRef(setSimEndPose);
+  const setTempSimPoseRef = useRef(setTempSimPose);
+  const setModeRef = useRef(useStore.getState().setMode);
 
   // Persistent bounds to prevent axis shrinking
   const boundsRef = useRef({ minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
@@ -76,9 +86,10 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     handleNodeClickRef.current = handleNodeClick;
     addDrawPointRef.current = addDrawPoint;
     setSelectedNodeIdsRef.current = setSelectedNodeIds;
-    addDrawPointRef.current = addDrawPoint;
-    setSelectedNodeIdsRef.current = setSelectedNodeIds;
-  }, [nodes, edges, mode, selectedNodeIds, performOperation, handleNodeClick, addDrawPoint, setSelectedNodeIds]);
+    setSimStartPoseRef.current = setSimStartPose;
+    setSimEndPoseRef.current = setSimEndPose;
+    setTempSimPoseRef.current = setTempSimPose;
+  }, [nodes, edges, mode, selectedNodeIds, performOperation, handleNodeClick, addDrawPoint, setSelectedNodeIds, setSimStartPose, setSimEndPose, setTempSimPose]);
 
   // Keep a ref for showYaw so the plugin can access the latest value without re-creation
   const showYawRef = useRef(showYaw);
@@ -101,7 +112,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         if (!chartRef.current) return;
 
         // Speed control
-        animationRef.current.index += 0.5; // Adjust speed here
+        animationRef.current.index += 2.5; // Adjust speed here (increased 5x)
 
         if (animationRef.current.index >= activeSimulationPath.length) {
           animationRef.current.index = activeSimulationPath.length - 1;
@@ -230,13 +241,21 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   useEffect(() => {
     const chart = chartRef.current;
     if (chart) {
-      const isSelectionMode = mode === 'brush_select' || mode === 'box_select';
+      const isSelectionMode = mode === 'brush_select' || mode === 'box_select' || mode === 'set_sim_start' || mode === 'set_sim_end';
       if (chart.options.plugins.zoom.pan.enabled !== !isSelectionMode) {
         chart.options.plugins.zoom.pan.enabled = !isSelectionMode;
         chart.update('none');
       }
     }
   }, [mode]);
+
+  // Update chart when simulation poses change
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (chart) {
+      chart.update('none');
+    }
+  }, [simStartPose, simEndPose, tempSimPose]);
 
   // Force update when showYaw toggles to ensure plugin draws/clears
   useEffect(() => {
@@ -528,9 +547,36 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
           spanGaps: false,
           order: -2
         }] : []),
+        ...(simStartPose ? [{
+          label: 'Sim Start Pose',
+          data: [{ x: simStartPose.x, y: simStartPose.y }],
+          backgroundColor: '#00FF00', // Green
+          pointRadius: 6,
+          type: 'scatter',
+          order: -10,
+          pose: simStartPose // For custom drawing
+        }] : []),
+        ...(simEndPose ? [{
+          label: 'Sim End Pose',
+          data: [{ x: simEndPose.x, y: simEndPose.y }],
+          backgroundColor: '#0000FF', // Blue
+          pointRadius: 6,
+          type: 'scatter',
+          order: -10,
+          pose: simEndPose
+        }] : []),
+        ...(tempSimPose ? [{
+          label: 'Temp Pose',
+          data: [{ x: tempSimPose.x, y: tempSimPose.y }],
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          pointRadius: 4,
+          type: 'scatter',
+          order: -10,
+          pose: tempSimPose
+        }] : []),
       ]
     };
-  }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize, yawVerificationResults, showSavedGraph, savedNodes, savedEdges, simulationPoints, activeSimulationPath, simulationPathType, isSimulating, carPosition]);
+  }, [nodes, edges, selectedNodeIds, operationStartNodeId, smoothingPreview, drawPoints, pointSize, yawVerificationResults, showSavedGraph, savedNodes, savedEdges, simulationPoints, activeSimulationPath, simulationPathType, isSimulating, carPosition, simStartPose, simEndPose, tempSimPose]);
 
   const arrowPlugin = useMemo(() => ({
     id: 'arrowPlugin',
@@ -598,6 +644,66 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       });
     }
   }), []);
+
+  const poseArrowPlugin = useMemo(() => ({
+    id: 'poseArrowPlugin',
+    afterDatasetsDraw(chart) {
+      const poses = [];
+      if (simStartPose) poses.push({ ...simStartPose, color: '#00FF00' });
+      if (simEndPose) poses.push({ ...simEndPose, color: '#0000FF' });
+      if (tempSimPose) poses.push({ ...tempSimPose, color: '#FFFFFF' });
+
+      if (poses.length === 0) return;
+
+      const ctx = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+
+      ctx.save();
+      poses.forEach(pose => {
+        const x = xAxis.getPixelForValue(pose.x);
+        const y = yAxis.getPixelForValue(pose.y);
+        const angle = pose.yaw;
+
+        const arrowLen = 30;
+        const tipX = x + arrowLen * Math.cos(angle);
+        const tipY = y + arrowLen * Math.sin(angle);
+
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = pose.color;
+        ctx.fillStyle = pose.color;
+
+        // Shaft
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        // Head
+        const headLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(
+          tipX - headLen * Math.cos(angle - Math.PI / 6),
+          tipY - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+          tipX - headLen * Math.cos(angle + Math.PI / 6),
+          tipY - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.fill();
+
+        // Base dot
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+  }), [simStartPose, simEndPose, tempSimPose]);
 
   const yawPlugin = useMemo(() => ({
     id: 'yawPlugin',
@@ -815,7 +921,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
 
   const handleCanvasMouseDown = useCallback((event) => {
     const currentMode = modeRef.current;
-    if (currentMode !== 'brush_select' && currentMode !== 'box_select') return;
+    if (currentMode !== 'brush_select' && currentMode !== 'box_select' && currentMode !== 'set_sim_start' && currentMode !== 'set_sim_end') return;
 
     const chart = chartRef.current;
     if (!chart) return;
@@ -829,7 +935,9 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     isDraggingRef.current = true;
     dragStartRef.current = { x: xData, y: yData, pixelX: x, pixelY: y };
 
-    if (currentMode === 'box_select') {
+    if (currentMode === 'set_sim_start' || currentMode === 'set_sim_end') {
+      setTempSimPoseRef.current({ x: xData, y: yData, yaw: 0, type: currentMode });
+    } else if (currentMode === 'box_select') {
       setSelectionBox({ startX: xData, startY: yData, endX: xData, endY: yData });
     } else if (currentMode === 'brush_select') {
       // Initial click in brush mode also selects
@@ -847,7 +955,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const handleCanvasMouseMove = useCallback((event) => {
     if (!isDraggingRef.current) return;
     const currentMode = modeRef.current;
-    if (currentMode !== 'brush_select' && currentMode !== 'box_select') return;
+    if (currentMode !== 'brush_select' && currentMode !== 'box_select' && currentMode !== 'set_sim_start' && currentMode !== 'set_sim_end') return;
 
     const chart = chartRef.current;
     if (!chart) return;
@@ -858,7 +966,12 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     const xData = chart.scales.x.getValueForPixel(x);
     const yData = chart.scales.y.getValueForPixel(y);
 
-    if (currentMode === 'box_select') {
+    if (currentMode === 'set_sim_start' || currentMode === 'set_sim_end') {
+      const dx = xData - dragStartRef.current.x;
+      const dy = yData - dragStartRef.current.y;
+      const yaw = Math.atan2(dy, dx);
+      setTempSimPoseRef.current({ ...dragStartRef.current, yaw, type: currentMode });
+    } else if (currentMode === 'box_select') {
       setSelectionBox(prev => ({ ...prev, endX: xData, endY: yData }));
     } else if (currentMode === 'brush_select') {
       const result = findNearestNode(xData, yData);
@@ -877,7 +990,16 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
     isDraggingRef.current = false;
     const currentMode = modeRef.current;
 
-    if (currentMode === 'box_select' && selectionBox) {
+    if (currentMode === 'set_sim_start' || currentMode === 'set_sim_end') {
+      const { x, y, yaw } = useStore.getState().tempSimPose || {};
+      if (x !== undefined) {
+        const pose = { x, y, yaw, name: `Manual_${currentMode === 'set_sim_start' ? 'Start' : 'End'}` };
+        if (currentMode === 'set_sim_start') setSimStartPoseRef.current(pose);
+        else setSimEndPoseRef.current(pose);
+      }
+      setTempSimPoseRef.current(null);
+      setModeRef.current('select');
+    } else if (currentMode === 'box_select' && selectionBox) {
       // Finalize box selection
       const { startX, startY, endX, endY } = selectionBox;
       const minX = Math.min(startX, endX);
@@ -1177,7 +1299,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
         ref={chartRef}
         data={chartDataWithSelection}
         options={options}
-        plugins={[backgroundPlugin, yawPlugin, arrowPlugin, drawSimulationPoints, drawSimulationPath, carAnimationPlugin]}
+        plugins={[backgroundPlugin, yawPlugin, arrowPlugin, drawSimulationPoints, drawSimulationPath, carAnimationPlugin, poseArrowPlugin]}
         onClick={handleCanvasClick}
       />
     </div>

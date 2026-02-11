@@ -46,7 +46,9 @@ export const useStore = create((set, get) => ({
   simulationMode: false,
   simulationFiles: [],
   simulationPoints: [],      // Loaded points {name, x, y, yaw}
-  activeSimulationPath: [],  // Path for animation
+  simStartPose: null,        // Selected start pose {x, y, yaw, name}
+  simEndPose: null,          // Selected end pose {x, y, yaw, name}
+  tempSimPose: null,         // Temporary pose during drag {x, y, yaw, type}
   activeSimulationPath: [],  // Path for animation
   simulationPathType: 'directed', // 'directed' or 'undirected'
   carPosition: null, // Current position of the car animation {x, y, yaw}
@@ -115,15 +117,20 @@ export const useStore = create((set, get) => ({
     const { simulationPoints } = get();
     console.log("Simulation points loaded:", simulationPoints?.length || 0);
 
-    const startPoint = simulationPoints.find(p => p.name === startName);
-    const endPoint = simulationPoints.find(p => p.name === endName);
+    const startPoint = typeof startName === 'string'
+      ? simulationPoints.find(p => p.name === startName)
+      : startName; // Assume it's an object {x, y, yaw}
 
-    console.log("Start point found:", startPoint);
-    console.log("End point found:", endPoint);
+    const endPoint = typeof endName === 'string'
+      ? simulationPoints.find(p => p.name === endName)
+      : endName; // Assume it's an object {x, y, yaw}
+
+    console.log("Start point resolved:", startPoint);
+    console.log("End point resolved:", endPoint);
 
     if (!startPoint || !endPoint) {
       console.error("❌ Start or end point not found!");
-      set({ status: 'Error: Start or End point not found in loaded data.' });
+      set({ status: 'Error: Start or End point not found.' });
       return;
     }
 
@@ -157,9 +164,17 @@ export const useStore = create((set, get) => ({
   },
 
   startSimulation: () => set({ isSimulating: true }),
-  startSimulation: () => set({ isSimulating: true }),
   stopSimulation: () => set({ isSimulating: false, carPosition: null }),
   setCarPosition: (pos) => set({ carPosition: pos }),
+  setSimStartPose: (pose) => set({
+    simStartPose: pose,
+    status: pose ? `Start Pose set to (${pose.x.toFixed(2)}, ${pose.y.toFixed(2)}) @ ${((pose.yaw * 180) / Math.PI).toFixed(1)}°` : ''
+  }),
+  setSimEndPose: (pose) => set({
+    simEndPose: pose,
+    status: pose ? `End Pose set to (${pose.x.toFixed(2)}, ${pose.y.toFixed(2)}) @ ${((pose.yaw * 180) / Math.PI).toFixed(1)}°` : ''
+  }),
+  setTempSimPose: (pose) => set({ tempSimPose: pose }),
 
 
   // Actions
@@ -297,9 +312,20 @@ export const useStore = create((set, get) => ({
       set({ loading: true, status: 'Unloading graph data...' });
       const response = await axios.post(`${API_URL}/api/unload_graph`);
       set({
-        nodes: response.data.nodes,
-        edges: response.data.edges,
-        fileNames: response.data.file_names,
+        nodes: response.data.nodes || [],
+        edges: response.data.edges || [],
+        fileNames: response.data.file_names || [],
+        selectedNodeIds: [],
+        operationStartNodeId: null,
+        smoothingPreview: null,
+        drawPoints: [],
+        simulationPoints: [],
+        activeSimulationPath: [],
+        simStartPose: null,
+        simEndPose: null,
+        tempSimPose: null,
+        pathDirectionStatus: null,
+        yawVerificationResults: null,
         loading: false,
         status: 'Graph data unloaded.'
       });
@@ -425,6 +451,7 @@ export const useStore = create((set, get) => ({
       drawPoints: [],
       yawVerificationResults: null,
       pathDirectionStatus: null,
+      tempSimPose: null,
     });
   },
 

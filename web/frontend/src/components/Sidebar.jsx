@@ -56,8 +56,11 @@ const Sidebar = () => {
     const startSimulation = useStore(state => state.startSimulation);
     const stopSimulation = useStore(state => state.stopSimulation);
     const computeSimulationPath = useStore(state => state.computeSimulationPath);
-    const simulationStatus = useStore(state => state.simulationStatus);
     const setCarPosition = useStore(state => state.setCarPosition);
+    const simStartPose = useStore(state => state.simStartPose);
+    const setSimStartPose = useStore(state => state.setSimStartPose);
+    const simEndPose = useStore(state => state.simEndPose);
+    const setSimEndPose = useStore(state => state.setSimEndPose);
 
     // Initial Fetch for Sim Files
     useEffect(() => {
@@ -67,8 +70,6 @@ const Sidebar = () => {
     }, [sidebarMode, fetchSimulationFiles]);
 
     const [selectedSimFile, setSelectedSimFile] = useState('');
-    const [simStartPoint, setSimStartPoint] = useState('');
-    const [simEndPoint, setSimEndPoint] = useState('');
 
     const handleLoadSimFile = () => {
         if (selectedSimFile) {
@@ -77,8 +78,10 @@ const Sidebar = () => {
     };
 
     const handlePlayPath = async () => {
-        if (simStartPoint && simEndPoint) {
-            const path = await computeSimulationPath(simStartPoint, simEndPoint);
+        const start = simStartPose;
+        const end = simEndPose;
+        if (start && end) {
+            const path = await computeSimulationPath(start, end);
             if (path && path.length > 0) {
                 startSimulation();
 
@@ -614,29 +617,66 @@ const Sidebar = () => {
                                 {/* Manual Test */}
                                 <h5 style={{ margin: '0 0 10px 0', color: 'var(--text-secondary)' }}>Manual Test</h5>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
-                                    <select
-                                        value={simStartPoint}
-                                        onChange={(e) => setSimStartPoint(e.target.value)}
-                                        style={{ padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
-                                    >
-                                        <option value="">Start Point...</option>
-                                        {simulationPoints.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-                                    </select>
-                                    <select
-                                        value={simEndPoint}
-                                        onChange={(e) => setSimEndPoint(e.target.value)}
-                                        style={{ padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
-                                    >
-                                        <option value="">End Point...</option>
-                                        {simulationPoints.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-                                    </select>
+                                    {/* Start Pose */}
+                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                        <select
+                                            value={simStartPose?.name || ''}
+                                            onChange={(e) => {
+                                                if (e.target.value.startsWith('Manual_')) return;
+                                                const p = simulationPoints.find(pt => pt.name === e.target.value);
+                                                if (p) setSimStartPose(p);
+                                            }}
+                                            style={{ flex: 1, padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                        >
+                                            <option value="">Start Point...</option>
+                                            {simStartPose?.name?.startsWith('Manual_') && (
+                                                <option value={simStartPose.name}>{simStartPose.name}</option>
+                                            )}
+                                            {simulationPoints.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+                                        </select>
+                                        <button
+                                            className={`toolbar-button ${mode === 'set_sim_start' ? 'active' : ''}`}
+                                            onClick={() => setMode('set_sim_start')}
+                                            title="Set Start Pose by Click & Drag"
+                                            style={{ padding: '5px' }}
+                                        >
+                                            <IconCar size={16} />
+                                        </button>
+                                    </div>
+
+                                    {/* End Pose */}
+                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                        <select
+                                            value={simEndPose?.name || ''}
+                                            onChange={(e) => {
+                                                if (e.target.value.startsWith('Manual_')) return;
+                                                const p = simulationPoints.find(pt => pt.name === e.target.value);
+                                                if (p) setSimEndPose(p);
+                                            }}
+                                            style={{ flex: 1, padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                        >
+                                            <option value="">End Point...</option>
+                                            {simEndPose?.name?.startsWith('Manual_') && (
+                                                <option value={simEndPose.name}>{simEndPose.name}</option>
+                                            )}
+                                            {simulationPoints.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+                                        </select>
+                                        <button
+                                            className={`toolbar-button ${mode === 'set_sim_end' ? 'active' : ''}`}
+                                            onClick={() => setMode('set_sim_end')}
+                                            title="Set End Pose by Click & Drag"
+                                            style={{ padding: '5px' }}
+                                        >
+                                            <IconCar size={16} />
+                                        </button>
+                                    </div>
 
                                     <div style={{ display: 'flex', gap: '5px' }}>
                                         <button
                                             className="toolbar-button confirm"
                                             onClick={handlePlayPath}
-                                            disabled={!simStartPoint || !simEndPoint || isSimulating}
-                                            style={{ justifyContent: 'center' }}
+                                            disabled={!simStartPose || !simEndPose || isSimulating}
+                                            style={{ justifyContent: 'center', flex: 1 }}
                                         >
                                             <IconCar /> Play Path
                                         </button>
@@ -683,9 +723,23 @@ const Sidebar = () => {
             <div style={{ flex: 1 }}></div>
 
             <div className="sidebar-section">
-                <button className="toolbar-button" onClick={() => useStore.getState().setFileLoaderOpen(true)}>
-                    <IconSave /> Load Data
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button className="toolbar-button" onClick={() => useStore.getState().setFileLoaderOpen(true)} style={{ flex: 1 }}>
+                        <IconSave /> Load Data
+                    </button>
+                    <button
+                        className="toolbar-button"
+                        onClick={() => {
+                            if (window.confirm("Are you sure you want to unload all graph data? Unsaved changes will be lost.")) {
+                                useStore.getState().unloadGraph();
+                            }
+                        }}
+                        style={{ background: '#d32f2f', color: 'white', flex: 1 }}
+                        title="Unload all data from the graph"
+                    >
+                        Unload Data
+                    </button>
+                </div>
                 <button className="toolbar-button" onClick={saveData} style={{ marginTop: '10px' }}>
                     <IconSave /> Save Data
                 </button>

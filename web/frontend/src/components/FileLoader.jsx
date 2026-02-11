@@ -18,6 +18,7 @@ const FileLoader = ({ onClose }) => {
     const fetchFiles = useStore(state => state.fetchFiles);
     const loadData = useStore(state => state.loadData);
     const unloadData = useStore(state => state.unloadData);
+    const unloadGraph = useStore(state => state.unloadGraph);
     const refreshLane = useStore(state => state.refreshLane);
     const loadedFileNames = useStore(state => state.fileNames);
     const currentRawDir = useStore(state => state.currentRawDir);
@@ -148,7 +149,27 @@ const FileLoader = ({ onClose }) => {
                 border: '1px solid var(--border-color)'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Load Data</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Load Data</h3>
+                        <button
+                            onClick={() => {
+                                if (window.confirm("Are you sure you want to unload all graph data? Unsaved changes will be lost.")) {
+                                    unloadGraph();
+                                }
+                            }}
+                            style={{
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                background: '#d32f2f',
+                                color: 'white',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem'
+                            }}
+                        >
+                            Unload All
+                        </button>
+                    </div>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                         <IconCancel />
                     </button>
