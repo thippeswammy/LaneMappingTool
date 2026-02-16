@@ -156,11 +156,19 @@ def get_files():
         if os.path.exists(current_saved_path):
             saved_files = [f for f in os.listdir(current_saved_path) if f.endswith('.npy')]
 
+        # List JSON files (new)
+        json_files = []
+        if os.path.exists(current_saved_path):   # Check in workspace/saved_path
+             json_files = [f for f in os.listdir(current_saved_path) if f.endswith('.json')]
+        
+        # Also check point_save for consistency if needed, but primarily workspace for now.
+
+
         return jsonify({
             'raw_files': raw_files,
             'saved_files': saved_files,
             'pickle_files': pickle_files,
-            'raw_path': current_raw_path,
+            'json_files': json_files, # Add to response
             'raw_path': current_raw_path,
             'saved_path': current_saved_path,
             'subdirs': subdirs,
@@ -231,9 +239,10 @@ def load_data_endpoint():
         raw_data_dir = data.get('raw_data_dir')
         saved_graph_dir = data.get('saved_graph_dir')  # New parameter
         pickle_file = data.get('pickle_file')
+        json_file = data.get('json_file') # New parameter
 
         print(
-            f"Loading data: raw={raw_files}, nodes={saved_nodes_file}, edges={saved_edges_file}, pickle={pickle_file}, dir={raw_data_dir}, saved_dir={saved_graph_dir}")
+            f"Loading data: raw={raw_files}, nodes={saved_nodes_file}, edges={saved_edges_file}, pickle={pickle_file}, json={json_file}, dir={raw_data_dir}, saved_dir={saved_graph_dir}")
 
         # Update loader if a directory is specified
         if raw_data_dir:
@@ -355,6 +364,81 @@ def load_data_endpoint():
                     file_names = []
             else:
                 print(f"Pickle file not found: {pickle_path}")
+
+        # Load JSON File (NetworkX Graph)
+        elif json_file:
+            # Determine path for JSON file
+            if saved_graph_dir:
+                if os.path.isabs(saved_graph_dir):
+                    load_path = saved_graph_dir
+                else:
+                    load_path = os.path.join(graph_dir, saved_graph_dir)
+            else:
+                load_path = graph_dir
+
+            json_path = os.path.join(load_path, json_file)
+
+            if os.path.exists(json_path):
+                try:
+                    import json
+                    from networkx.readwrite import json_graph
+                    import networkx as nx
+
+                    with open(json_path, 'r') as f:
+                        json_data = json.load(f)
+                    
+                    G = json_graph.node_link_graph(json_data)
+                    # Relabel nodes to int if they are strings (JSON conversion often does this)
+                    # Check first node type
+                    if G.number_of_nodes() > 0:
+                        first_node = list(G.nodes())[0]
+                        if isinstance(first_node, str) and first_node.isdigit():
+                             G = nx.relabel_nodes(G, int)
+
+                    print(f"Loaded graph from {json_file}: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+
+                    final_nodes_list = []
+                    # Nodes: [id, x, y, yaw, zone, width, indicator]
+                    for node_id, attr in G.nodes(data=True):
+                         # Default values if missing
+                        x = attr.get('x', 0.0)
+                        y = attr.get('y', 0.0)
+                        yaw = attr.get('yaw', 0.0)
+                        zone = attr.get('zone', 0.0)
+                        width = attr.get('width', 3.5)
+                        indicator = attr.get('indicator', 0.0)
+                        
+                        # Ensure node_id is int for the array
+                        try:
+                           nid = int(node_id)
+                        except:
+                           nid = 0 # Fallback or error?
+
+                        final_nodes_list.append([nid, x, y, yaw, zone, width, indicator])
+
+                    # Edges: [u, v]
+                    final_edges_list = []
+                    for u, v in G.edges():
+                        # Ensure u, v are ints
+                        try:
+                            uid = int(u)
+                            vid = int(v)
+                            final_edges_list.append([uid, vid])
+                        except:
+                            pass
+
+                    final_nodes = np.array(final_nodes_list) if final_nodes_list else np.array([])
+                    final_edges = np.array(final_edges_list) if final_edges_list else np.array([])
+                    file_names = [json_file]
+                    D = 1.0 # Default
+                except Exception as e:
+                    print(f"Error loading JSON file {json_file}: {e}")
+                    traceback.print_exc()
+                    final_nodes = np.array([])
+                    final_edges = np.array([])
+                    file_names = []
+            else:
+                print(f"JSON file not found: {json_path}")
         else:
             # We are NOT loading a saved graph, so preserve existing data
             final_nodes = data_manager.nodes.copy() if data_manager.nodes.size > 0 else np.array([])

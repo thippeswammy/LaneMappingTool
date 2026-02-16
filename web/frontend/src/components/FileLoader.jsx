@@ -32,7 +32,8 @@ const FileLoader = ({ onClose }) => {
     const [selectedSavedNodes, setSelectedSavedNodes] = useState(null);
     const [selectedSavedEdges, setSelectedSavedEdges] = useState(null);
     const [selectedPickleFile, setSelectedPickleFile] = useState(null);
-    const [activeTab, setActiveTab] = useState('raw'); // 'raw', 'saved', 'pickle'
+    const [selectedJsonFile, setSelectedJsonFile] = useState(null);
+    const [activeTab, setActiveTab] = useState('raw'); // 'raw', 'saved', 'pickle', 'json'
     const [selectedMap, setSelectedMap] = useState('');
     const [isCustomDir, setIsCustomDir] = useState(false);
     const [customPath, setCustomPath] = useState('');
@@ -116,7 +117,7 @@ const FileLoader = ({ onClose }) => {
     };
 
     const handleLoad = () => {
-        loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir, selectedPickleFile);
+        loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir, selectedPickleFile, selectedJsonFile);
         if (selectedMap) {
             selectMap(selectedMap);
         }
@@ -214,6 +215,19 @@ const FileLoader = ({ onClose }) => {
                         }}
                     >
                         Pickle (NetworkX)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('json')}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: activeTab === 'json' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                            fontWeight: activeTab === 'json' ? 'bold' : 'normal',
+                            cursor: 'pointer',
+                            padding: '5px 10px'
+                        }}
+                    >
+                        JSON (NetworkX)
                     </button>
                 </div>
 
@@ -427,6 +441,28 @@ const FileLoader = ({ onClose }) => {
                                 >
                                     <option value="">Select Pickle File</option>
                                     {availableFiles.pickle_files && availableFiles.pickle_files.map(file => (
+                                        <option key={file} value={file}>{file}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'json' && (
+                        <div>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                Select a .json file containing a NetworkX graph (node-link format) from <code>workspace/</code>.
+                            </p>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <h5 style={{ margin: '0 0 5px 0', color: 'var(--text-secondary)' }}>JSON File</h5>
+                                <select
+                                    value={selectedJsonFile || ''}
+                                    onChange={(e) => setSelectedJsonFile(e.target.value)}
+                                    style={{ width: '100%', padding: '5px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                >
+                                    <option value="">Select JSON File</option>
+                                    {availableFiles.json_files && availableFiles.json_files.map(file => (
                                         <option key={file} value={file}>{file}</option>
                                     ))}
                                 </select>

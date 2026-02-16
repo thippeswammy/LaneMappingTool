@@ -9,7 +9,7 @@ export const useStore = create((set, get) => ({
   nodes: [],
   edges: [],
   fileNames: [],
-  availableFiles: { raw_files: [], saved_files: [], raw_path: '', saved_path: '', subdirs: [], current_subdir: 'Gitam_lanes', current_saved_subdir: '' },
+  availableFiles: { raw_files: [], saved_files: [], pickle_files: [], json_files: [], raw_path: '', saved_path: '', subdirs: [], current_subdir: 'Gitam_lanes', current_saved_subdir: '' },
   currentRawDir: 'Gitam_lanes',
   currentSavedDir: '',
   loading: true,
@@ -264,7 +264,7 @@ export const useStore = create((set, get) => ({
   // fetchMapMetadata refactored to just default load if needed, 
   // but for now, we rely on user selection or default via useEffect in component.
 
-  loadData: async (rawFiles, savedNodesFile, savedEdgesFile, rawDataDir, savedGraphDir, pickleFile) => {
+  loadData: async (rawFiles, savedNodesFile, savedEdgesFile, rawDataDir, savedGraphDir, pickleFile, jsonFile) => {
     try {
       set({ loading: true, status: 'Loading selected files...' });
       const response = await axios.post(`${API_URL}/api/load`, {
@@ -272,6 +272,7 @@ export const useStore = create((set, get) => ({
         saved_nodes_file: savedNodesFile,
         saved_edges_file: savedEdgesFile,
         pickle_file: pickleFile,
+        json_file: jsonFile,
         raw_data_dir: rawDataDir,
         saved_graph_dir: savedGraphDir
       });
