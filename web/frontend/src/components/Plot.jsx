@@ -25,6 +25,7 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
   const showSavedGraph = useStore(state => state.showSavedGraph);
   const savedNodes = useStore(state => state.savedNodes);
   const savedEdges = useStore(state => state.savedEdges);
+  const focusTarget = useStore(state => state.focusTarget); // Subscribe to focus requests
 
   // Simulation State
   const simulationPoints = useStore(state => state.simulationPoints);
@@ -264,6 +265,32 @@ const Plot = forwardRef(({ nodes, edges, width, height }, ref) => {
       chart.update();
     }
   }, [showYaw, sidebarMode]);
+
+  // Handle Focus Target
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (chart && focusTarget) {
+      // Zoom to point
+      const { x, y } = focusTarget;
+
+      // We want to center on (x,y) with a reasonable zoom level
+      // Current boundaries?
+      const zoomWidth = 10; // View 10 meters width
+      const zoomHeight = 10;
+
+      const newMinX = x - zoomWidth / 2;
+      const newMaxX = x + zoomWidth / 2;
+      const newMinY = y - zoomHeight / 2;
+      const newMaxY = y + zoomHeight / 2;
+
+      chart.options.scales.x.min = newMinX;
+      chart.options.scales.x.max = newMaxX;
+      chart.options.scales.y.min = newMinY;
+      chart.options.scales.y.max = newMaxY;
+
+      chart.update();
+    }
+  }, [focusTarget]);
 
 
   // Performance Optimization: Prepare edge data

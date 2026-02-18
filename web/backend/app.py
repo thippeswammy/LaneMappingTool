@@ -15,6 +15,7 @@ from utils.data_loader import DataLoader
 from utils.data_manager import DataManager
 from utils.map_manager import MapManager
 from web.backend.utils.curve_utils import find_path, smooth_segment
+from web.backend.utils import yaw_fixer
 
 # --- Data Setup ---
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -757,6 +758,63 @@ def reset_temp_file_endpoint():
             
     except Exception as e:
         print(f"Error resetting temp file: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# --- Yaw Analysis & Fix Endpoints ---
+
+@app.route('/api/analyze_yaw', methods=['POST'])
+def analyze_yaw_endpoint():
+    """Analyzes current graph nodes for yaw anomalies."""
+    try:
+        # Use current in-memory nodes
+        if data_manager.nodes.size == 0:
+            return jsonify({'status': 'error', 'message': 'No data loaded to analyze.'}), 400
+
+        nodes = data_manager.nodes
+        
+        # Detect
+        anomalies = yaw_fixer.detect_anomalies(nodes)
+        
+        # Get profile data for plotting
+        profile_data = yaw_fixer.get_yaw_profile(nodes)
+        
+        return jsonify({
+            'status': 'success',
+            'anomalies': anomalies,
+            'total_nodes': nodes.shape[0],
+            'profile': profile_data
+        })
+    except Exception as e:
+        print(f"Error analyzing yaw: {e}")
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/fix_yaw', methods=['POST'])
+def fix_yaw_endpoint():
+    """Fixes detected yaw anomalies in the current graph."""
+    try:
+        if data_manager.nodes.size == 0:
+            return jsonify({'status': 'error', 'message': 'No data loaded to fix.'}), 400
+
+        # Run fix
+        fixed_nodes, report = yaw_fixer.fix_anomalies(data_manager.nodes)
+        
+        # Update DataManager
+        data_manager.nodes = fixed_nodes
+        
+        # Return new data and report
+        return jsonify({
+            'status': 'success',
+            'nodes': fixed_nodes.tolist(),
+            'edges': data_manager.edges.tolist(), # Edges don't change but frontend might expect them
+            'report': report,
+            'message': f"Fixed {len(report)} anomalies."
+        })
+    except Exception as e:
+        print(f"Error fixing yaw: {e}")
+        traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 

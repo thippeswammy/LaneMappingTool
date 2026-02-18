@@ -22,6 +22,8 @@ export const useStore = create((set, get) => ({
   // NOTE: When adding new temporary state, remember to add it to resetOperationState!
   selectedNodeIds: [],
   yawVerificationResults: null,
+  yawAnalysisResult: null, // Stores { anomalies, profile, total_nodes }
+  isAnalyzingYaw: false,
   operationStartNodeId: null,
   smoothingPreview: null,
   smoothStartNodeId: null,
@@ -32,6 +34,8 @@ export const useStore = create((set, get) => ({
   plotWidth: 100, // Default plot width in %
   drawPoints: [], // Temporary points for Draw mode
   showYaw: false, // Toggle for showing yaw arrows
+  focusTarget: null, // { x, y, random: Math.random() } to trigger focus
+
 
   // Saved Graph Overlay
   savedNodes: [],
@@ -373,6 +377,49 @@ export const useStore = create((set, get) => ({
     }
   },
 
+  analyzeYaw: async () => {
+    try {
+      set({ status: 'Analyzing Yaw...', isAnalyzingYaw: true, yawAnalysisResult: null });
+      const response = await axios.post(`${API_URL}/api/analyze_yaw`);
+      if (response.data.status === 'success') {
+        set({
+          yawAnalysisResult: response.data,
+          status: `Analysis Complete. Found ${response.data.anomalies.length} anomalies.`
+        });
+      } else {
+        set({ status: 'Error: ' + response.data.message });
+      }
+    } catch (error) {
+      console.error("Error analyzing yaw:", error);
+      set({ status: 'Error analyzing yaw.' });
+    } finally {
+      set({ isAnalyzingYaw: false });
+    }
+  },
+
+  applyYawFix: async () => {
+    try {
+      set({ status: 'Applying Yaw Fix...', isAnalyzingYaw: true });
+      const response = await axios.post(`${API_URL}/api/fix_yaw`);
+      if (response.data.status === 'success') {
+        set({
+          nodes: response.data.nodes,
+          // Edges usually don't chang but update just in case
+          edges: response.data.edges || get().edges,
+          status: `Fixed ${response.data.report.length} anomalies. Please SAVE data.`,
+          yawAnalysisResult: null // Clear result as it is now stale
+        });
+      } else {
+        set({ status: 'Error: ' + response.data.message });
+      }
+    } catch (error) {
+      console.error("Error fixing yaw:", error);
+      set({ status: 'Error fixing yaw.' });
+    } finally {
+      set({ isAnalyzingYaw: false });
+    }
+  },
+
   toggleShowSavedGraph: async () => {
     const { showSavedGraph, savedNodes } = get();
 
@@ -468,6 +515,19 @@ export const useStore = create((set, get) => ({
 
   setFileLoaderOpen: (isOpen) => {
     set({ isFileLoaderOpen: isOpen });
+  },
+
+  focusOnNode: (nodeId) => {
+    const { nodes } = get();
+    const node = nodes.find(n => n[0] === nodeId);
+    if (node) {
+      // Toggle random to ensure effect triggers even for same node click
+      set({
+        focusTarget: { x: node[1], y: node[2], random: Math.random() },
+        selectedNodeIds: [nodeId], // Also select it
+        mode: 'select'
+      });
+    }
   },
 
   setSelectedNodeIds: (ids) => {

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import './Toolbar.css';
 import {
-    IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel, IconZoom, IconTwoWay, IconCar
+    IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel, IconZoom, IconTwoWay, IconCar, IconGraph
 } from './Icons';
+import YawAnalysisTool from './YawAnalysisTool';
 
 /**
  * Renders the sidebar component for tool and operation selection.
@@ -228,27 +229,35 @@ const Sidebar = () => {
             overflowY: 'auto'
         }}>
             {/* Mode Switcher */}
-            <div style={{ display: 'flex', gap: '10px' }}>
+            {/* Mode Switcher */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <button
                     className={`toolbar-button ${sidebarMode === 'edit' ? 'active' : ''}`}
                     onClick={() => setSidebarMode('edit')}
-                    style={{ flex: 1, justifyContent: 'center' }}
+                    style={{ justifyContent: 'center' }}
                 >
                     Edit
                 </button>
                 <button
                     className={`toolbar-button ${sidebarMode === 'control' ? 'active' : ''}`}
                     onClick={() => setSidebarMode('control')}
-                    style={{ flex: 1, justifyContent: 'center' }}
+                    style={{ justifyContent: 'center' }}
                 >
                     Config
                 </button>
                 <button
                     className={`toolbar-button ${sidebarMode === 'simulation' ? 'active' : ''}`}
                     onClick={() => setSidebarMode('simulation')}
-                    style={{ flex: 1, justifyContent: 'center' }}
+                    style={{ justifyContent: 'center' }}
                 >
                     Sim
+                </button>
+                <button
+                    className={`toolbar-button ${sidebarMode === 'analysis' ? 'active' : ''}`}
+                    onClick={() => setSidebarMode('analysis')}
+                    style={{ justifyContent: 'center' }}
+                >
+                    Graph
                 </button>
             </div>
 
@@ -719,6 +728,14 @@ const Sidebar = () => {
                         )}
                     </div>
                 )}
+
+            {
+                sidebarMode === 'analysis' && (
+                    <div className="sidebar-section">
+                        <YawAnalysisTool />
+                    </div>
+                )
+            }
 
             <div style={{ flex: 1 }}></div>
 
