@@ -4,7 +4,7 @@ import './Toolbar.css';
 import {
     IconDraw, IconSmooth, IconConnect, IconRemove, IconReverse, IconSave, IconCheck, IconCancel, IconZoom, IconTwoWay, IconCar, IconGraph
 } from './Icons';
-import YawAnalysisTool from './YawAnalysisTool';
+// import YawAnalysisTool from './YawAnalysisTool'; // Moved to main panel
 
 /**
  * Renders the sidebar component for tool and operation selection.
@@ -732,7 +732,11 @@ const Sidebar = () => {
             {
                 sidebarMode === 'analysis' && (
                     <div className="sidebar-section">
-                        <YawAnalysisTool />
+                        <div style={{ padding: '10px', color: '#aaa', fontSize: '0.9rem', textAlign: 'center' }}>
+                            <IconGraph size={32} style={{ marginBottom: '10px', opacity: 0.5 }} />
+                            <p>Graph Analysis Mode Active</p>
+                            <p style={{ fontSize: '0.8rem' }}>Detailed analysis is now shown in the right panel.</p>
+                        </div>
                     </div>
                 )
             }

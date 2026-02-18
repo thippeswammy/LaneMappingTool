@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import BottomBar from './components/BottomBar';
 import FileLoader from './components/FileLoader';
 import { IconMenu } from './components/Icons';
+import YawAnalysisPanel from './components/YawAnalysisPanel';
 import './App.css';
 
 /**
@@ -26,6 +27,7 @@ function App() {
   const edges = useStore(state => state.edges);
   const isFileLoaderOpen = useStore(state => state.isFileLoaderOpen);
   const setFileLoaderOpen = useStore(state => state.setFileLoaderOpen);
+  const sidebarMode = useStore(state => state.sidebarMode);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [plotDimensions, setPlotDimensions] = useState({ width: 0, height: 0 });
@@ -131,16 +133,34 @@ function App() {
           </div>
         </header>
 
-        {/* Plot Area */}
-        <main className="plot-area" ref={plotContainerRef} style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#121212' }}>
-          {loading ? (
-            <div className="loading-overlay" style={{ color: 'var(--text-primary)' }}>Loading...</div>
-          ) : (
-            plotDimensions.width > 0 && plotDimensions.height > 0 && (
-              <Plot ref={plotRef} nodes={nodes} edges={edges} width={plotDimensions.width} height={plotDimensions.height} />
-            )
+        {/* Plot Area & Analysis Panel Container */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+
+          {/* Map Plot - Flex Basis changes based on mode */}
+          <main className="plot-area" ref={plotContainerRef} style={{
+            flex: sidebarMode === 'analysis' ? '0 0 50%' : '1',
+            position: 'relative',
+            overflow: 'hidden',
+            background: '#121212',
+            transition: 'flex 0.3s ease-in-out'
+          }}>
+            {loading ? (
+              <div className="loading-overlay" style={{ color: 'var(--text-primary)' }}>Loading...</div>
+            ) : (
+              plotDimensions.width > 0 && plotDimensions.height > 0 && (
+                <Plot ref={plotRef} nodes={nodes} edges={edges} width={plotDimensions.width} height={plotDimensions.height} />
+              )
+            )}
+          </main>
+
+          {/* Analysis Panel - Only visible in analysis mode */}
+          {sidebarMode === 'analysis' && (
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <YawAnalysisPanel />
+            </div>
           )}
-        </main>
+
+        </div>
 
         {/* Bottom Bar */}
         <footer className="bottom-bar" style={{ flexShrink: 0 }}>
