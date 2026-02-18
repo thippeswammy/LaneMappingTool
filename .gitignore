@@ -19,3 +19,4 @@ web/backend/utils/__pycache__/
 lanes/copy*
 web/backend/workspace.zip
 web/backend/static/maps/*
+Maps/
