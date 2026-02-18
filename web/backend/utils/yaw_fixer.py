@@ -76,14 +76,27 @@ def detect_anomalies(nodes):
         if wrapped_diff < ZERO_DIFF_THRESH:
             curvature = local_curvature(yaws, i)
             if curvature > CURVE_THRESH:
-                anomalies.append({
-                    'index': int(i),
-                    'id': int(ids[i]),
-                    'type': 'ZERO_DIFF',
-                    'yaw': float(curr_yaw),
-                    'prev_yaw': float(prev_yaw),
-                    'info': f"Diff: {wrapped_diff:.6f}, Curv: {curvature:.6f}"
-                })
+                # FIX: Check local trend to avoid false positives on straight lines with noise
+                # If the broader context (e.g. i-2 to i+2) is also flat/straight, 
+                # then this "curvature" is likely just high-frequency noise, and the Zero Diff is actually correct.
+                
+                is_locally_flat = False
+                check_window = 2
+                if i >= check_window and i < len(nodes) - check_window:
+                    trend_diff = abs(angle_diff(yaws[i-check_window], yaws[i+check_window]))
+                    # If the trend over 4 steps is very small, we are likely on a straight path
+                    if trend_diff < ZERO_DIFF_THRESH * 4: # Scaling expected diff by distance roughly
+                        is_locally_flat = True
+                
+                if not is_locally_flat:
+                    anomalies.append({
+                        'index': int(i),
+                        'id': int(ids[i]),
+                        'type': 'ZERO_DIFF',
+                        'yaw': float(curr_yaw),
+                        'prev_yaw': float(prev_yaw),
+                        'info': f"Diff: {wrapped_diff:.6f}, Curv: {curvature:.6f}"
+                    })
                 continue
                 
         # Check 2: Large Corrective Jump
