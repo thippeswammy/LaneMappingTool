@@ -23,6 +23,8 @@ class DataManager:
         self.last_backup = time.time()
         self.backup_interval = 300  # 5 minutes
 
+        self.G = None  # Initialize NetworkX graph container
+
         print(f"DataManager initialized with {len(self.nodes)} nodes and {len(self.edges)} edges.")
 
     def sync_next_id(self):
@@ -203,6 +205,129 @@ class DataManager:
 
         except Exception as e:
             print(f"Error reversing path: {e}")
+
+    def create_two_way_road(self, path_ids):
+        """
+        Replaces the path defined by path_ids with two parallel paths.
+        Left Path: Original + 0.2m (Normal)
+        Right Path: Original - 0.2m (Normal), Reversed Direction
+        """
+        if not path_ids or len(path_ids) < 2:
+            print("Path too short for two-way road.")
+            return
+
+        try:
+            # 1. Get original points in order
+            # path_ids is assumed to be ordered (e.g. from find_path)
+            path_ids = np.array(path_ids, dtype=int)
+            
+            # Verify availability
+            node_mask = np.isin(self.nodes[:, 0], path_ids)
+            
+            # Map ID to row for ordered retrieval
+            id_to_node = {row[0]: row for row in self.nodes[node_mask]}
+            
+            original_points = []
+            valid_ids = []
+            for pid in path_ids:
+                if pid in id_to_node:
+                    original_points.append(id_to_node[pid])
+                    valid_ids.append(pid)
+            
+            if len(original_points) < 2:
+                print("Not enough valid points found.")
+                return
+
+            original_points = np.array(original_points)
+            
+            # 2. Calculate Offsets
+            coords = original_points[:, 1:3]
+            x = coords[:, 0]
+            y = coords[:, 1]
+            
+            # Gradients for tangents
+            dx = np.gradient(x)
+            dy = np.gradient(y)
+            
+            norms = np.hypot(dx, dy)
+            norms[norms < 1e-6] = 1.0 # Avoid division by zero
+            
+            tx = dx / norms
+            ty = dy / norms
+            
+            # Normal vector (-ty, tx) corresponds to Left (counter-clockwise 90 deg)
+            nx_vec = -ty
+            ny_vec = tx
+            
+            OFFSET = 0.2
+            
+            left_x = x + nx_vec * OFFSET
+            left_y = y + ny_vec * OFFSET
+            
+            right_x = x - nx_vec * OFFSET
+            right_y = y - ny_vec * OFFSET
+            
+            # 3. Create New Nodes
+            zones = original_points[:, 4]
+            indicators = original_points[:, 6]
+            
+            # Optimize ID generation
+            start_id = self._next_point_id
+            self._next_point_id += len(original_points) * 2
+            
+            new_nodes_list = []
+            new_left_ids = []
+            new_right_ids = []
+            
+            # Left Path Points
+            for i in range(len(original_points)):
+                nid = start_id + i
+                new_left_ids.append(nid)
+                # Yaw default 0.0, updated later
+                new_nodes_list.append([nid, left_x[i], left_y[i], 0.0, zones[i], 0.0, indicators[i]])
+                
+            # Right Path Points
+            for i in range(len(original_points)):
+                nid = start_id + len(original_points) + i
+                new_right_ids.append(nid)
+                new_nodes_list.append([nid, right_x[i], right_y[i], 0.0, zones[i], 0.0, indicators[i]])
+                
+            if self.nodes.size > 0:
+                self.nodes = np.vstack([self.nodes, np.array(new_nodes_list)])
+            else:
+                self.nodes = np.array(new_nodes_list)
+
+            # 4. Create Edges
+            new_edges_list = []
+            
+            # Left Path: Forward (0 -> 1 -> ... -> N)
+            for i in range(len(new_left_ids) - 1):
+                new_edges_list.append([new_left_ids[i], new_left_ids[i+1]])
+                
+            # Right Path: Reverse (N -> N-1 -> ... -> 0)
+            # Points are geometrically parallel to Left, so flow connects higher index to lower index?
+            # Index 0 is "start" of original. Index N is "end" of original.
+            # Right path flows End -> Start. So Index N -> ... -> Index 0.
+            for i in range(len(new_right_ids) - 1, 0, -1):
+                new_edges_list.append([new_right_ids[i], new_right_ids[i-1]])
+                
+            if new_edges_list:
+                new_edges_arr = np.array(new_edges_list)
+                if self.edges.size > 0:
+                    self.edges = np.vstack([self.edges, new_edges_arr])
+                else:
+                    self.edges = new_edges_arr
+                    
+                # Update yaws for new edges
+                self._update_yaws(new_edges_list)
+
+            # 5. Delete Original Points
+            # This handles history, cleanup, etc.
+            print(f"Replacing {len(valid_ids)} original points with 2 parallel paths.")
+            self.delete_points(valid_ids)
+
+        except Exception as e:
+            print(f"Error creating two-way road: {e}")
 
     def delete_points(self, point_ids_to_delete):
         """Delete specified points and their associated edges from the graph."""
@@ -449,6 +574,44 @@ class DataManager:
                 G.add_edge(u, v, weight=weight)
 
         return G
+
+    def get_path(self, start_node_id, end_node_id, strict_direction=True):
+        """Find the shortest path between two nodes using NetworkX."""
+        try:
+            # We need to make sure we have a graph. 
+            # Ideally G should be cached, but for now we recreate it or cache it.
+            # _create_networkx_graph is relatively fast for small graphs.
+            if not hasattr(self, 'G') or self.G is None:
+                self.G = self._create_networkx_graph()
+            
+            # Rebuild G to ensure sync with current nodes/edges state
+            self.G = self._create_networkx_graph() 
+            
+            if not self.G.has_node(start_node_id):
+                 print(f"Start node {start_node_id} not in graph.")
+                 return False, []
+            if not self.G.has_node(end_node_id):
+                 print(f"End node {end_node_id} not in graph.")
+                 return False, []
+
+            try:
+                path_ids = nx.shortest_path(self.G, source=int(start_node_id), target=int(end_node_id), weight='weight')
+                return True, path_ids
+            except nx.NetworkXNoPath:
+                if not strict_direction:
+                    print(f"No directed path found. Trying undirected path between {start_node_id} and {end_node_id}...")
+                    G_undirected = self.G.to_undirected()
+                    path_ids = nx.shortest_path(G_undirected, source=int(start_node_id), target=int(end_node_id), weight='weight')
+                    return True, path_ids
+                else:
+                    raise
+
+        except nx.NetworkXNoPath:
+            print(f"No path found between {start_node_id} and {end_node_id}")
+            return False, []
+        except Exception as e:
+            print(f"Error finding path: {e}")
+            return False, []
 
     def clear_data(self):
         try:

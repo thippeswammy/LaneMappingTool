@@ -18,28 +18,34 @@ const FileLoader = ({ onClose }) => {
     const fetchFiles = useStore(state => state.fetchFiles);
     const loadData = useStore(state => state.loadData);
     const unloadData = useStore(state => state.unloadData);
+    const unloadGraph = useStore(state => state.unloadGraph);
     const refreshLane = useStore(state => state.refreshLane);
     const loadedFileNames = useStore(state => state.fileNames);
     const currentRawDir = useStore(state => state.currentRawDir);
     const currentSavedDir = useStore(state => state.currentSavedDir);
 
+    const availableMaps = useStore(state => state.availableMaps);
+    const fetchMaps = useStore(state => state.fetchMaps);
+    const selectMap = useStore(state => state.selectMap);
+
     const [selectedRawFiles, setSelectedRawFiles] = useState([]);
     const [selectedSavedNodes, setSelectedSavedNodes] = useState(null);
     const [selectedSavedEdges, setSelectedSavedEdges] = useState(null);
-    const [activeTab, setActiveTab] = useState('raw'); // 'raw' or 'saved'
-
-    // Raw Dir State
+    const [selectedPickleFile, setSelectedPickleFile] = useState(null);
+    const [selectedJsonFile, setSelectedJsonFile] = useState(null);
+    const [activeTab, setActiveTab] = useState('raw'); // 'raw', 'saved', 'pickle', 'json'
+    const [selectedMap, setSelectedMap] = useState('');
     const [isCustomDir, setIsCustomDir] = useState(false);
     const [customPath, setCustomPath] = useState('');
-    const [showBrowser, setShowBrowser] = useState(false);
-
-    // Saved Dir State
     const [isCustomSavedDir, setIsCustomSavedDir] = useState(false);
     const [customSavedPath, setCustomSavedPath] = useState('');
 
+    // ... (rest of state)
+
     useEffect(() => {
         fetchFiles();
-    }, [fetchFiles]);
+        fetchMaps();
+    }, [fetchFiles, fetchMaps]);
 
     // Update local custom dir state when store updates
     useEffect(() => {
@@ -111,7 +117,10 @@ const FileLoader = ({ onClose }) => {
     };
 
     const handleLoad = () => {
-        loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir);
+        loadData(selectedRawFiles, selectedSavedNodes, selectedSavedEdges, currentRawDir, currentSavedDir, selectedPickleFile, selectedJsonFile);
+        if (selectedMap) {
+            selectMap(selectedMap);
+        }
         onClose();
     };
 
@@ -141,7 +150,27 @@ const FileLoader = ({ onClose }) => {
                 border: '1px solid var(--border-color)'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Load Data</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Load Data</h3>
+                        <button
+                            onClick={() => {
+                                if (window.confirm("Are you sure you want to unload all graph data? Unsaved changes will be lost.")) {
+                                    unloadGraph();
+                                }
+                            }}
+                            style={{
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                background: '#d32f2f',
+                                color: 'white',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem'
+                            }}
+                        >
+                            Unload All
+                        </button>
+                    </div>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                         <IconCancel />
                     </button>
@@ -173,6 +202,32 @@ const FileLoader = ({ onClose }) => {
                         }}
                     >
                         Saved Graphs
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('pickle')}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: activeTab === 'pickle' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                            fontWeight: activeTab === 'pickle' ? 'bold' : 'normal',
+                            cursor: 'pointer',
+                            padding: '5px 10px'
+                        }}
+                    >
+                        Pickle (NetworkX)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('json')}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: activeTab === 'json' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                            fontWeight: activeTab === 'json' ? 'bold' : 'normal',
+                            cursor: 'pointer',
+                            padding: '5px 10px'
+                        }}
+                    >
+                        JSON (NetworkX)
                     </button>
                 </div>
 
@@ -370,6 +425,88 @@ const FileLoader = ({ onClose }) => {
                             </div>
                         </div>
                     )}
+
+                    {activeTab === 'pickle' && (
+                        <div>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                Select a .pickle file containing a NetworkX graph from <code>point_save/</code>.
+                            </p>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <h5 style={{ margin: '0 0 5px 0', color: 'var(--text-secondary)' }}>Pickle File</h5>
+                                <select
+                                    value={selectedPickleFile || ''}
+                                    onChange={(e) => setSelectedPickleFile(e.target.value)}
+                                    style={{ width: '100%', padding: '5px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                >
+                                    <option value="">Select Pickle File</option>
+                                    {availableFiles.pickle_files && availableFiles.pickle_files.map(file => (
+                                        <option key={file} value={file}>{file}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'json' && (
+                        <div>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                Select a .json file containing a NetworkX graph (node-link format) from <code>workspace/</code>.
+                            </p>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <h5 style={{ margin: '0 0 5px 0', color: 'var(--text-secondary)' }}>JSON File</h5>
+                                <select
+                                    value={selectedJsonFile || ''}
+                                    onChange={(e) => setSelectedJsonFile(e.target.value)}
+                                    style={{ width: '100%', padding: '5px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                                >
+                                    <option value="">Select JSON File</option>
+                                    {availableFiles.json_files && availableFiles.json_files.map(file => (
+                                        <option key={file} value={file}>{file}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="map-selection" style={{ marginBottom: '15px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                    <div className="section-title" style={{ color: 'var(--text-secondary)', marginBottom: '5px' }}>Background Map</div>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                        <select
+                            value={selectedMap}
+                            onChange={(e) => setSelectedMap(e.target.value)}
+                            style={{ flex: 1, padding: '5px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+                        >
+                            <option value="">No Map</option>
+                            {availableMaps.map((map) => (
+                                <option key={map.name} value={map.name}>
+                                    {map.name} {map.processed ? '' : '(Needs Processing)'}
+                                </option>
+                            ))}
+                        </select>
+                        {selectedMap && (
+                            <button
+                                onClick={() => {
+                                    if (window.confirm(`Force re-process map "${selectedMap}"? This may take a few seconds.`)) {
+                                        selectMap(selectedMap, true);
+                                    }
+                                }}
+                                title="Force Reprocess (Update Image)"
+                                style={{
+                                    padding: '5px 10px',
+                                    borderRadius: '4px',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <IconRefresh size={16} />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>

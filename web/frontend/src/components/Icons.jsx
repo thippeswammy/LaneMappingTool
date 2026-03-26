@@ -106,3 +106,28 @@ export const IconRefresh = ({ size = 20, color = 'currentColor' }) => (
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
     </svg>
 );
+
+export const IconTwoWay = ({ size = 20, color = 'currentColor' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="5" y1="8" x2="19" y2="8"></line>
+        <line x1="5" y1="16" x2="19" y2="16"></line>
+        <polyline points="15 4 19 8 15 12"></polyline>
+        <polyline points="9 20 5 16 9 12"></polyline>
+    </svg>
+);
+
+export const IconCar = ({ size = 20, color = 'currentColor' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 16H9m10 9v-4m-14 4v-4m2-14h10l2 12h-14z" />
+        <circle cx="9" cy="16" r="2" />
+        <circle cx="15" cy="16" r="2" />
+    </svg>
+);
+
+export const IconGraph = ({ size = 20, color = 'currentColor' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="3" y1="9" x2="21" y2="9"></line>
+        <line x1="9" y1="21" x2="9" y2="9"></line>
+    </svg>
+);
