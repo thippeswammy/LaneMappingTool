@@ -82,6 +82,7 @@ def find_oscillation_hotspots(data, window_size=50):
     return max_idx, max_density
 
 def main():
+    """Main function to analyze vehicle data and generate statistics and plots."""
     analysis_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.join(analysis_dir, "recorded_data")
     original_path = os.path.join(base_dir, "original_run", "vehicle_data.csv")
