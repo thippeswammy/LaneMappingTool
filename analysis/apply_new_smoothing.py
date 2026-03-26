@@ -24,6 +24,8 @@ class MockPlotManager:
         self.selected_indices = []
     
     def update_plot(self, *args, **kwargs):
+        """Update the plot with the given arguments."""
+        """Update the plot with the given arguments."""
         pass
 
 class MockEventHandler:
@@ -36,6 +38,14 @@ class MockEventHandler:
         pass
 
 def load_graph_nodes(pickle_path):
+    """Load graph nodes and edges from a pickle file.
+    
+    Args:
+        pickle_path: The path to the pickle file containing the graph.
+    
+    Returns:
+        A tuple of numpy arrays containing the nodes and edges.
+    """
     print(f"Loading graph from {pickle_path}...")
     try:
         with open(pickle_path, 'rb') as f:
@@ -159,6 +169,18 @@ def load_graph_nodes(pickle_path):
     return np.array(dm_nodes), np.array(dm_edges)
 
 def get_longest_path(nodes, edges):
+    """Retrieve the longest path in a graph defined by nodes and edges.
+    
+    This function constructs a graph using the provided nodes and edges,
+    identifies the largest connected component, and then determines the  longest
+    path within that component. It utilizes NetworkX to handle  graph operations,
+    including finding connected components and the  shortest path between nodes.
+    The function returns the longest path  as a list of nodes.
+    
+    Args:
+        nodes: A 2D array-like structure containing node identifiers.
+        edges: A list of tuples representing edges between nodes.
+    """
     import networkx as nx
     G = nx.Graph()
     G.add_nodes_from(nodes[:, 0])
@@ -193,6 +215,15 @@ def get_longest_path(nodes, edges):
 
 def analyze_smoothness(nodes_array, label):
     # Calculate geometric properties
+    """Analyze the smoothness of a given set of nodes.
+    
+    Args:
+        nodes_array: An array of node coordinates.
+        label: A label for the output.
+    
+    Returns:
+        A dictionary containing coordinates, curvature, and distances.
+    """
     coords = nodes_array[:, 1:3]
     
     # 1. Spacing
@@ -231,6 +262,7 @@ def analyze_smoothness(nodes_array, label):
     }
 
 def main():
+    """Main function to perform data analysis and smoothing."""
     analysis_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.join(analysis_dir, "recorded_data")
     original_pickle = os.path.join(base_dir, "original_run", "output.pickle")
