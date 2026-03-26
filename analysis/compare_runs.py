@@ -82,7 +82,8 @@ def find_oscillation_hotspots(data, window_size=50):
     return max_idx, max_density
 
 def main():
-    base_dir = r"F:\RunningProjects\LaneMappingTool\analysis\recorded_data"
+    analysis_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.join(analysis_dir, "recorded_data")
     original_path = os.path.join(base_dir, "original_run", "vehicle_data.csv")
     smoothed_path = os.path.join(base_dir, "smoothed_run", "vehicle_data.csv")
     

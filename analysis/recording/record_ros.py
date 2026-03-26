@@ -44,10 +44,16 @@ class DataRecorder:
         # Start ROS Bag recording for VLP16
         print(f"Starting ROS Bag recording to {self.bag_path}...")
         # Record /points_raw and /ndt_pose (for extrinsic calibration/visualization later)
-        self.bag_process = subprocess.Popen(
-            ['rosbag', 'record', '-O', self.bag_path, '/points_raw', '/ndt_pose'],
-            preexec_fn=os.setsid # Create new session to easily kill group later
-        )
+        if os.name == 'posix':
+            self.bag_process = subprocess.Popen(
+                ['rosbag', 'record', '-O', self.bag_path, '/points_raw', '/ndt_pose'],
+                preexec_fn=os.setsid # Create new session to easily kill group later
+            )
+        else:
+             # Windows fallback
+             self.bag_process = subprocess.Popen(
+                ['rosbag', 'record', '-O', self.bag_path, '/points_raw', '/ndt_pose']
+            )
         
     def pose_callback(self, msg):
         self.current_pose = msg
@@ -96,7 +102,11 @@ class DataRecorder:
         # Terminate ROS Bag process
         if self.bag_process:
             print("Stopping rosbag record...")
-            os.killpg(os.getpgid(self.bag_process.pid), signal.SIGINT)
+            if os.name == 'posix':
+                os.killpg(os.getpgid(self.bag_process.pid), signal.SIGINT)
+            else:
+                self.bag_process.terminate()
+            
             self.bag_process.wait()
             print("Rosbag saved.")
 

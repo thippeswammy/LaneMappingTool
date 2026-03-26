@@ -1,9 +1,16 @@
 import pickle
+import os
 
 import matplotlib.pyplot as plt
 import networkx as nx
 
-graph_file_path = r"F:\RunningProjects\AutoSegmentor\DataVisualizationEditingTool\files\output.pickle"
+
+# Calculate path relative to this script
+# Assuming structure: utils/network_view2.py and files/output.pickle is in root/files ? 
+# No, `files` directory is usually in root. 
+# base_dir is utils/.. = root.
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+graph_file_path = os.path.join(BASE_DIR, "files", "output.pickle")
 
 
 def network_view2():
