@@ -22,6 +22,8 @@ class MockPlotManager:
         self.selected_indices = []
     
     def update_plot(self, *args, **kwargs):
+        """Update the plot with the given arguments."""
+        """Update the plot with the given arguments."""
         pass
 
 class MockEventHandler:
@@ -35,6 +37,15 @@ class MockEventHandler:
         print(f"Status: {msg}")
 
 def test_smoothing():
+    """Test the smoothing logic for a set of nodes.
+    
+    This function sets up a DataManager with a linear path and creates  nodes at
+    regular intervals. It then defines a selection of nodes to  smooth and
+    resample, applying the smoothing logic through a  CurveManager. The function
+    checks the results by verifying the  new node count and the average spacing of
+    the smoothed path,  ensuring that the spacing is close to the target and that
+    the  node count has increased.
+    """
     print("--- Test: Smoothing Logic (Context + Resample) ---")
     
     # 1. Setup DataManager with a linear path
