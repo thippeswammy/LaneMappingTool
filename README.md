@@ -66,6 +66,55 @@ The application will be accessible at `http://localhost:5173` (or the port shown
 
 For information on recording vehicle data and analyzing runs, please see the [Analysis Module Documentation](analysis/README.md).
 
+## 🏗️ Architecture Flow
+
+```mermaid
+flowchart TD
+    %% Data Ingestion
+    subgraph Input ["Data Input"]
+        RawData[("Raw Vehicle Data\n(.npy files)")]
+    end
+
+    %% Backend Layer
+    subgraph Backend ["Backend (Flask & Python)"]
+        direction TB
+        API{"REST API endpoints\n(/api/data, /api/smooth)"}
+        DataManager["Data Manager\n(Graph Logic, Undo/Redo & File I/O)"]
+        CurveUtils["Curve Utils\n(B-Spline & Yaw Calculation)"]
+        Workspace[("Workspace\n(Temp Session Files)")]
+
+        API <--> DataManager
+        DataManager <--> CurveUtils
+        DataManager <--> Workspace
+    end
+
+    %% Frontend Layer
+    subgraph Frontend ["Frontend (React & Vite)"]
+        direction TB
+        UI["User Interface\n(Sidebar, Controls, Dialogs)"]
+        State["Application State\n(Interactions & Modes)"]
+        Canvas["Canvas Renderer\n(Chart.js Graph Visualization)"]
+
+        UI <--> State
+        State <--> Canvas
+    end
+
+    %% Deployment Layer
+    subgraph Deployment ["Vehicle Deployment (AGC_ws/Network/)"]
+        Export[/"Saved Network Map\n(output.json)"/]
+        Converter[["json_to_pickle.py\n(Python 2.7 Environment)"]]
+        AVStack[("Autonomous AV Stack\n(output.pickle)")]
+
+        Export --> Converter
+        Converter --> AVStack
+    end
+
+    %% Cross-layer connections
+    RawData -->|Loads| DataManager
+    State <-->|HTTP JSON Requests| API
+    Workspace -.->|User clicks 'Save Data'| Export
+```
+
 ## 📂 Project Structure
 
 ```text

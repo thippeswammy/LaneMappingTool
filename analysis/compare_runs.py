@@ -85,8 +85,8 @@ def main():
     """Main function to analyze vehicle data and generate statistics and plots."""
     analysis_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.join(analysis_dir, "recorded_data")
-    original_path = os.path.join(base_dir, "original_run", "vehicle_data.csv")
-    smoothed_path = os.path.join(base_dir, "smoothed_run", "vehicle_data.csv")
+    original_path = os.path.join(base_dir, "original_run_day_18", "vehicle_data.csv")
+    smoothed_path = os.path.join(base_dir, "original_run_day_18", "vehicle_data.csv")
     
     output_dir = os.path.join(base_dir, "comparison_results")
     if not os.path.exists(output_dir):
